@@ -475,7 +475,7 @@ const ItineraryApp = () => {
         item.id === id ? { ...item, checked: !item.checked } : item,
       ),
     );
-  };
+  }, [tripConfig, showToast]);
   // 🆕 新增項目
   const handleAddItem = () => {
     if (!newItemText.trim()) return; // 防止空字串
@@ -725,7 +725,6 @@ const ItineraryApp = () => {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
-  }, [tripConfig, showToast]);
 
     const fetchLocalWeather = async (
       latitude,
