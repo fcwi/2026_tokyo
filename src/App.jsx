@@ -908,7 +908,7 @@ const ItineraryApp = () => {
       try {
         document.execCommand("copy");
         showToast("位置連結已複製！");
-      } catch (err) {
+      } catch {
         showToast("複製失敗", "error");
       }
       document.body.removeChild(textArea);
