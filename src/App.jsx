@@ -475,7 +475,7 @@ const ItineraryApp = () => {
         item.id === id ? { ...item, checked: !item.checked } : item,
       ),
     );
-  }, [tripConfig, showToast]);
+  };
   // 🆕 新增項目
   const handleAddItem = () => {
     if (!newItemText.trim()) return; // 防止空字串
@@ -849,7 +849,7 @@ const ItineraryApp = () => {
         maximumAge: 600000, // 接受 10 分鐘內的快取
       },
     );
-  };
+  }, []);
 
   // --- 定時更新位置與天氣邏輯 ---
   useEffect(() => {
@@ -1834,7 +1834,7 @@ const ItineraryApp = () => {
                                 </div>
                                 <button
                                   onClick={() => handleCopy(hotel.address)}
-                                  className={`text-[10px] flex items-start gap-1.5 ...`}
+                                  className={`text-[10px] flex items-start gap-1.5`}
                                   title="點擊複製地址"
                                 >
                                   <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
