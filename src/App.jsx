@@ -854,7 +854,7 @@ const ItineraryApp = () => {
         },
       );
     },
-    [tripConfig, showToast, getWeatherInfo],
+    [showToast, getWeatherInfo],
   );
 
   // --- 定時更新位置與天氣邏輯 ---
