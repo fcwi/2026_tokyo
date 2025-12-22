@@ -1,5 +1,0 @@
-0000000000000000000000000000000000000000 3109c9f66ddd2cc5dc34b6a3bd88287d5721ef3b unknown <fcwi@holtek.com.tw> 1765421247 +0800	commit (initial): My Tokyo Trip App
-3109c9f66ddd2cc5dc34b6a3bd88287d5721ef3b 3109c9f66ddd2cc5dc34b6a3bd88287d5721ef3b unknown <fcwi@holtek.com.tw> 1765421252 +0800	Branch: renamed refs/heads/master to refs/heads/main
-3109c9f66ddd2cc5dc34b6a3bd88287d5721ef3b 63c9bc5714d504a7fd9fba48c5b1a8db98bc4fa0 unknown <fcwi@holtek.com.tw> 1765421520 +0800	commit: Deploy version
-63c9bc5714d504a7fd9fba48c5b1a8db98bc4fa0 30754e14d471c167a6ebca7a8c89ea2ec1eb19a8 unknown <fcwi@holtek.com.tw> 1765421761 +0800	commit: Update config for 2026_tokyo
-30754e14d471c167a6ebca7a8c89ea2ec1eb19a8 69ff652ed34ab4057858836657c2f5d829baa79a fcwi <wadashihamin@gmail.com> 1766048299 +0800	commit (amend): Update config for 2026_tokyo
