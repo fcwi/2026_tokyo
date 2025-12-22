@@ -1,10 +1,11 @@
 {
   "name": "東京輕井澤之旅",
   "short_name": "東京旅遊",
-  "start_url": ".",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "scope": "./",
   "icons": [
     {
       "src": "icon-192.png",
