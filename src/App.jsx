@@ -599,10 +599,10 @@ const ItineraryApp = () => {
   }, [messages, activeTab]);
 
   // Show Toast Helper
-  const showToast = (message, type = "success") => {
+  const showToast = React.useCallback((message, type = "success") => {
     setToast({ show: true, message, type });
-    setTimeout(() => setToast({ ...toast, show: false }), 3000);
-  };
+    setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
+  }, []);
 
   // ... existing map and weather helpers ...
   // 1. Get Google Map Link
@@ -705,7 +705,7 @@ const ItineraryApp = () => {
 
   // ... existing location fetch logic ...
   // --- User Location Weather Logic ---
-  const getUserLocationWeather = (isSilent = false) => {
+  const getUserLocationWeather = React.useCallback((isSilent = false) => {
     const KNOWN_LOCATIONS = [
       ...tripConfig.locations, // 直接展開我們的設定
       { name: "台北", lat: 25.033, lon: 121.5654 }, // 保留台北當作預設
@@ -725,6 +725,7 @@ const ItineraryApp = () => {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
+  }, [tripConfig, showToast]);
 
     const fetchLocalWeather = async (
       latitude,
@@ -867,7 +868,7 @@ const ItineraryApp = () => {
       // 3. 清除定時器 (當元件卸載或重登時)
       return () => clearInterval(intervalId);
     }
-  }, [isVerified]);
+  }, [isVerified, getUserLocationWeather]);
 
   const handleShareLocation = () => {
     // 1. 檢查是否有已儲存的位置資料
