@@ -705,151 +705,157 @@ const ItineraryApp = () => {
 
   // ... existing location fetch logic ...
   // --- User Location Weather Logic ---
-  const getUserLocationWeather = React.useCallback((isSilent = false) => {
-    const KNOWN_LOCATIONS = [
-      ...tripConfig.locations, // 直接展開我們的設定
-      { name: "台北", lat: 25.033, lon: 121.5654 }, // 保留台北當作預設
-      { name: "桃園機場", lat: 25.0796, lon: 121.2342 },
-    ];
+  const getUserLocationWeather = React.useCallback(
+    (isSilent = false) => {
+      const KNOWN_LOCATIONS = [
+        ...tripConfig.locations, // 直接展開我們的設定
+        { name: "台北", lat: 25.033, lon: 121.5654 }, // 保留台北當作預設
+        { name: "桃園機場", lat: 25.0796, lon: 121.2342 },
+      ];
 
-    const getDistance = (lat1, lon1, lat2, lon2) => {
-      const R = 6371; // km
-      const dLat = ((lat2 - lat1) * Math.PI) / 180;
-      const dLon = ((lon2 - lon1) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-          Math.cos((lat2 * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    };
+      const getDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371; // km
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
 
-    const fetchLocalWeather = async (
-      latitude,
-      longitude,
-      customName = null,
-    ) => {
-      try {
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true`;
-        const weatherRes = await fetch(weatherUrl);
-        const weatherData = await weatherRes.json();
+      const fetchLocalWeather = async (
+        latitude,
+        longitude,
+        customName = null,
+      ) => {
+        try {
+          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true`;
+          const weatherRes = await fetch(weatherUrl);
+          const weatherData = await weatherRes.json();
 
-        let city = customName;
-        if (!city) {
-          const matchedLocation = KNOWN_LOCATIONS.find(
-            (loc) => getDistance(latitude, longitude, loc.lat, loc.lon) < 20,
-          );
-          if (matchedLocation) city = matchedLocation.name;
-        }
-
-        if (!city) {
-          try {
-            const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW`;
-            const geoRes = await fetch(geoUrl);
-            const geoData = await geoRes.json();
-            if (geoData && geoData.address) {
-              city =
-                geoData.address.city ||
-                geoData.address.town ||
-                geoData.address.village ||
-                geoData.address.county ||
-                geoData.address.state ||
-                "您的位置";
-            }
-          } catch {
-            console.warn("Geo lookup failed, using default name");
-            city = "目前位置";
+          let city = customName;
+          if (!city) {
+            const matchedLocation = KNOWN_LOCATIONS.find(
+              (loc) => getDistance(latitude, longitude, loc.lat, loc.lon) < 20,
+            );
+            if (matchedLocation) city = matchedLocation.name;
           }
+
+          if (!city) {
+            try {
+              const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW`;
+              const geoRes = await fetch(geoUrl);
+              const geoData = await geoRes.json();
+              if (geoData && geoData.address) {
+                city =
+                  geoData.address.city ||
+                  geoData.address.town ||
+                  geoData.address.village ||
+                  geoData.address.county ||
+                  geoData.address.state ||
+                  "您的位置";
+              }
+            } catch {
+              console.warn("Geo lookup failed, using default name");
+              city = "目前位置";
+            }
+          }
+
+          const info = getWeatherInfo(weatherData.current_weather.weathercode);
+
+          setUserWeather({
+            temp: Math.round(weatherData.current_weather.temperature),
+            desc: info.text,
+            weatherCode: weatherData.current_weather.weathercode,
+            //icon: info.icon,
+            locationName: city || "未知地點",
+            lat: latitude,
+            lon: longitude,
+            loading: false,
+            error: null,
+          });
+        } catch (err) {
+          console.error("Weather Fetch Error:", err);
+          setUserWeather((prev) => ({
+            ...prev,
+            loading: false,
+            locationName: "天氣載入失敗",
+            error: "無法連線",
+          }));
+        } finally {
+          // 關鍵新增：無論成功或失敗，都標記「App 初始化完成」，這樣載入畫面才會消失，進入主畫面
+          setIsAppReady(true);
         }
-
-        const info = getWeatherInfo(weatherData.current_weather.weathercode);
-
-        setUserWeather({
-          temp: Math.round(weatherData.current_weather.temperature),
-          desc: info.text,
-          weatherCode: weatherData.current_weather.weathercode,
-          //icon: info.icon,
-          locationName: city || "未知地點",
-          lat: latitude,
-          lon: longitude,
-          loading: false,
-          error: null,
-        });
-      } catch (err) {
-        console.error("Weather Fetch Error:", err);
-        setUserWeather((prev) => ({
-          ...prev,
-          loading: false,
-          locationName: "天氣載入失敗",
-          error: "無法連線",
-        }));
-      } finally {
-        // 關鍵新增：無論成功或失敗，都標記「App 初始化完成」，這樣載入畫面才會消失，進入主畫面
-        setIsAppReady(true);
-      }
-    };
-    const fallbackLocation = {
-      lat: 25.033,
-      lng: 121.5654,
-      name: "台北 (預設)",
-    };
-    if (!navigator.geolocation) {
-      setHasLocationPermission(false);
-      fetchLocalWeather(
-        fallbackLocation.lat,
-        fallbackLocation.lng,
-        fallbackLocation.name,
-      );
-      return;
-    }
-    if (!isSilent) {
-      setUserWeather((prev) => ({
-        ...prev,
-        loading: true,
-        locationName: "定位中...",
-      }));
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        // ✅ 成功：設定權限為 true，並更新天氣
-        setHasLocationPermission(true);
-        fetchLocalWeather(position.coords.latitude, position.coords.longitude);
-      },
-      (err) => {
-        console.warn("自動定位未成功:", err.code, err.message);
-
-        // 🛑 關鍵修改：區分錯誤類型
-        if (err.code === 1) {
-          // 情況 A：使用者明確按下「封鎖」或「拒絕」 (PERMISSION_DENIED)
-          // 這時候才把按鈕變紅
-          setHasLocationPermission(false);
-          showToast("您已封鎖定位權限", "error");
-        } else {
-          // 情況 B：逾時 (TIMEOUT) 或 位置不可用 (POSITION_UNAVAILABLE)
-          // 這代表權限可能還在，只是暫時抓不到
-          // 我們將狀態設為 null (中立)，讓按鈕保持藍色/灰色，允許使用者再次點擊
-          setHasLocationPermission(null);
-
-          // 選擇性：如果是手動點擊觸發的(loading狀態下)，才跳提示，避免自動重新整理時一直跳通知煩人
-          // 這裡簡單處理：只在 console 留紀錄，UI 默默切回預設地點，以免打擾體驗
-        }
-
-        // 無論哪種錯誤，都切換回預設地點 (台北)
+      };
+      const fallbackLocation = {
+        lat: 25.033,
+        lng: 121.5654,
+        name: "台北 (預設)",
+      };
+      if (!navigator.geolocation) {
+        setHasLocationPermission(false);
         fetchLocalWeather(
           fallbackLocation.lat,
           fallbackLocation.lng,
           fallbackLocation.name,
         );
-      },
-      {
-        enableHighAccuracy: false, // 關閉高精準度，加速獲取
-        timeout: 10000, // 10秒超時
-        maximumAge: 600000, // 接受 10 分鐘內的快取
-      },
-    );
-  }, []);
+        return;
+      }
+      if (!isSilent) {
+        setUserWeather((prev) => ({
+          ...prev,
+          loading: true,
+          locationName: "定位中...",
+        }));
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // ✅ 成功：設定權限為 true，並更新天氣
+          setHasLocationPermission(true);
+          fetchLocalWeather(
+            position.coords.latitude,
+            position.coords.longitude,
+          );
+        },
+        (err) => {
+          console.warn("自動定位未成功:", err.code, err.message);
+
+          // 🛑 關鍵修改：區分錯誤類型
+          if (err.code === 1) {
+            // 情況 A：使用者明確按下「封鎖」或「拒絕」 (PERMISSION_DENIED)
+            // 這時候才把按鈕變紅
+            setHasLocationPermission(false);
+            showToast("您已封鎖定位權限", "error");
+          } else {
+            // 情況 B：逾時 (TIMEOUT) 或 位置不可用 (POSITION_UNAVAILABLE)
+            // 這代表權限可能還在，只是暫時抓不到
+            // 我們將狀態設為 null (中立)，讓按鈕保持藍色/灰色，允許使用者再次點擊
+            setHasLocationPermission(null);
+
+            // 選擇性：如果是手動點擊觸發的(loading狀態下)，才跳提示，避免自動重新整理時一直跳通知煩人
+            // 這裡簡單處理：只在 console 留紀錄，UI 默默切回預設地點，以免打擾體驗
+          }
+
+          // 無論哪種錯誤，都切換回預設地點 (台北)
+          fetchLocalWeather(
+            fallbackLocation.lat,
+            fallbackLocation.lng,
+            fallbackLocation.name,
+          );
+        },
+        {
+          enableHighAccuracy: false, // 關閉高精準度，加速獲取
+          timeout: 10000, // 10秒超時
+          maximumAge: 600000, // 接受 10 分鐘內的快取
+        },
+      );
+    },
+    [tripConfig, showToast, getWeatherInfo],
+  );
 
   // --- 定時更新位置與天氣邏輯 ---
   useEffect(() => {
