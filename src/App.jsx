@@ -175,6 +175,23 @@ const ItineraryApp = () => {
   const [authError, setAuthError] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showEncryptTool, setShowEncryptTool] = useState(false); // 控制加密工具顯示
+  const [fullPreviewImage, setFullPreviewImage] = useState(null); // 儲存目前放大的圖片 URL 或 Base64
+
+  // 防止圖片放大時背景捲動
+useEffect(() => {
+  if (fullPreviewImage) {
+    // 當圖片放大時，鎖定背景滾動
+    document.body.style.overflow = 'hidden';
+  } else {
+    // 當關閉放大時，恢復背景滾動
+    document.body.style.overflow = '';
+  }
+
+  // 元件卸載時的清理邏輯，確保不會永久鎖定
+  return () => {
+    document.body.style.overflow = '';
+  };
+}, [fullPreviewImage]);
 
   // 新增：用來判斷「初始化定位」是否完成，預設為 false，等到定位有結果 (成功或失敗) 後才變成 true
   const [isAppReady, setIsAppReady] = useState(false);
@@ -288,23 +305,46 @@ const ItineraryApp = () => {
     });
   };
 
-  // 🆕 輔助函式：處理圖片選擇
+  // 輔助函式：處理圖片選擇
   const handleImageSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
 
-    // 限制圖片大小 (例如 5MB) 避免 API 報錯
-    if (file.size > 5 * 1024 * 1024) {
-      showToast("圖片過大，請選擇小於 5MB 的照片", "error");
-      return;
-    }
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setSelectedImage(reader.result); // 讀取完成，存入 State 顯示預覽
+      // 限制最長邊為 1600px，這在 Gemini 辨識與流量間取得了極佳平衡
+      const MAX_SIDE = 1600; 
+      if (width > height) {
+        if (width > MAX_SIDE) {
+          height *= MAX_SIDE / width;
+          width = MAX_SIDE;
+        }
+      } else {
+        if (height > MAX_SIDE) {
+          width *= MAX_SIDE / height;
+          height = MAX_SIDE;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // 使用 jpeg 格式並設定 0.8 的品質，能顯著壓縮檔案體積但保留細節
+      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      setSelectedImage(compressedBase64);
     };
-    reader.readAsDataURL(file);
   };
+  reader.readAsDataURL(file);
+};
 
   // 輔助函式：移除圖片
   const clearImage = () => {
@@ -1990,6 +2030,52 @@ const ItineraryApp = () => {
                         >
                           更新位置 <Share2 className="w-3 h-3" />
                         </button>
+
+                        {userWeather.temp !== null && (
+                          (() => {
+                            // 1. 決定要比對哪一天的預報：旅程中比對「明天」，還沒出發比對 Day 1
+                            const targetDayIndex = tripStatus === "during" ? currentTripDayIndex + 1 : 0;
+                            
+                            // 安全檢查：確保索引在行程範圍內
+                            if (targetDayIndex < 0 || targetDayIndex >= itineraryData.length) return null;
+
+                            const targetLoc = getDailyLocation(targetDayIndex);
+                            const forecast = weatherForecast[targetLoc];
+
+                            // 2. 取得目標日期的平均溫 (需確認 forecast 資料已載入)
+                            if (!forecast || !forecast.temperature_2m_max) return null;
+
+                            const destMax = forecast.temperature_2m_max[targetDayIndex];
+                            const destMin = forecast.temperature_2m_min[targetDayIndex];
+                            const destAvg = (destMax + destMin) / 2;
+                            
+                            const tempDiff = Math.abs(destAvg - userWeather.temp);
+                            
+                            // 3. 溫差門檻 10 度則顯示
+                            if (tempDiff >= 10) {
+                              const isColder = destAvg < userWeather.temp;
+                              return (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  className={`mb-2 px-3 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-2 shadow-sm ${
+                                    isDarkMode 
+                                      ? "bg-orange-500/20 border-orange-500/40 text-orange-200" 
+                                      : "bg-orange-50 border-orange-200 text-orange-700"
+                                  }`}
+                                >
+                                  <div className="bg-orange-500 rounded-full p-1">
+                                    <AlertCircle className="w-3 h-3 text-white animate-pulse" />
+                                  </div>
+                                  <span>
+                                    {tripStatus === "during" ? "明天" : "目的地"}將變{isColder ? '冷' : '熱'} {tempDiff.toFixed(0)}°C
+                                  </span>
+                                </motion.div>
+                              );
+                            }
+                            return null;
+                          })()
+                        )}
                         <p
                           className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
                         >
@@ -3278,7 +3364,8 @@ const ItineraryApp = () => {
                           <img
                             src={msg.image}
                             alt="Sent Image"
-                            className="mb-2 max-w-full h-auto rounded-lg border border-white/20 shadow-sm object-cover"
+                            onClick={() => setFullPreviewImage(msg.image)}
+                            className="mb-2 max-w-full h-auto rounded-lg border border-white/20 shadow-sm object-cover cursor-zoom-in active:scale-95 transition-transform"
                           />
                         )}
 
@@ -3645,6 +3732,40 @@ const ItineraryApp = () => {
             </span>
           </div>
         )}
+        {/* 圖片放大預覽遮罩 */}
+        <AnimatePresence>
+          {fullPreviewImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setFullPreviewImage(null)}
+              className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative max-w-full max-h-full flex items-center justify-center"
+              >
+                <img
+                  src={fullPreviewImage}
+                  alt="Full Preview"
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFullPreviewImage(null);
+                  }}
+                  className="absolute -top-12 right-0 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                >
+                  <X className="w-8 h-8" />
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
