@@ -304,7 +304,7 @@ const ItineraryApp = () => {
     reader.readAsDataURL(file);
   };
 
-  // 🆕 輔助函式：移除圖片
+  // 輔助函式：移除圖片
   const clearImage = () => {
     setSelectedImage(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -470,7 +470,7 @@ const ItineraryApp = () => {
     e.preventDefault();
     attemptUnlock(password);
 
-    // 🆕 新增：如果是手機，解鎖時順便嘗試進入全螢幕
+    // 新增：如果是手機，解鎖時順便嘗試進入全螢幕
     if (isMobile) {
       toggleFullScreen();
     }
@@ -521,7 +521,8 @@ const ItineraryApp = () => {
   const [touchEnd, setTouchEnd] = useState(null);
   // 新增：紀錄滑動方向狀態 (1 代表去下一頁/向左滑，-1 代表回上一頁/向右滑)
   // 初始值設為 0，避免第一次載入時有動畫
-  const [[page, direction], setPage] = useState([activeDay, 0]);
+  // 注意：目前不直接使用 `page` 變數，因此用空位忽略以避免 lint 警告
+  const [[, direction], setPage] = useState([activeDay, 0]);
   const minSwipeDistance = 50;
   // 新增：定義 Framer Motion 動畫變數
   // 這裡決定了畫面要怎麼進場 (enter) 和退場 (exit)
@@ -617,7 +618,7 @@ const ItineraryApp = () => {
       ),
     );
   };
-  // 🆕 新增項目
+  // 新增項目
   const handleAddItem = () => {
     if (!newItemText.trim()) return; // 防止空字串
     const newItem = {
@@ -860,19 +861,8 @@ const ItineraryApp = () => {
         { name: "桃園機場", lat: 25.0796, lon: 121.2342 },
       ];
 
-      const getDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // km
-        const dLat = ((lat2 - lat1) * Math.PI) / 180;
-        const dLon = ((lon2 - lon1) * Math.PI) / 180;
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos((lat1 * Math.PI) / 180) *
-            Math.cos((lat2 * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-      };
+      // `getDistance` 原先為計算兩點距離的 helper，但目前未在此 scope 中使用，
+      // 因此移除以避免 ESLint 的 unused var 警告。
 
       const fetchLocalWeather = async (
         latitude,
