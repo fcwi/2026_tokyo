@@ -918,7 +918,7 @@ const ItineraryApp = () => {
                   if (addr.road) {
                     landmark = addr.road;
                     if (addr.house_number) {
-                      landmark += `${addr.house_number}號`;
+                      landmark += `${addr.house_number}`;
                     }
                   } else {
                     // 如果連路名都沒有，才勉強用 display_name 的第一段，但通常路名都會有
