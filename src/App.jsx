@@ -1,3 +1,8 @@
+// 檔案說明：
+// 主應用 UI 與互動邏輯（Itinerary 主元件）
+// - 預設匯出：`ItineraryApp` React 元件
+// - 包含：狀態管理、定位/天氣、語音/朗讀、行程展示與 UI 控制
+// 注意：此檔案包含大量 UI 與 helper 函式，僅調整註解與格式以提升可讀性，未變更核心邏輯。
 import React, { useState, useRef, useEffect } from "react";
 import {
   Sun,
@@ -245,7 +250,7 @@ const ItineraryApp = () => {
     // 1. 先處理 URL (將網址切分出來)
     // Regex 說明: 抓取 http 或 https 開頭，直到遇到空白或結尾
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    
+
     return text.split(urlRegex).map((part, index) => {
       // 如果這一段是 URL
       if (part.match(urlRegex)) {
@@ -268,7 +273,10 @@ const ItineraryApp = () => {
       return boldParts.map((subPart, subIndex) => {
         if (subPart.startsWith("**") && subPart.endsWith("**")) {
           return (
-            <strong key={`${index}-${subIndex}`} className="font-bold text-inherit">
+            <strong
+              key={`${index}-${subIndex}`}
+              className="font-bold text-inherit"
+            >
               {subPart.slice(2, -2)}
             </strong>
           );
@@ -497,13 +505,13 @@ const ItineraryApp = () => {
   useEffect(() => {
     // 取得當前 activeDay 對應的按鈕 DOM 元素
     const currentTab = navItemsRef.current[activeDay];
-    
+
     if (currentTab) {
       // 使用原生 API 讓它平滑捲動到視野中央
       currentTab.scrollIntoView({
         behavior: "smooth", // 平滑動畫
-        block: "nearest",   // 垂直方向不動
-        inline: "center",   // 水平方向置中 (關鍵！)
+        block: "nearest", // 垂直方向不動
+        inline: "center", // 水平方向置中 (關鍵！)
       });
     }
   }, [activeDay]);
@@ -521,7 +529,7 @@ const ItineraryApp = () => {
     enter: (direction) => ({
       // 如果是去下一頁 (direction > 0)，新頁面從右邊 (100%) 進來
       // 如果是回上一頁 (direction < 0)，新頁面從左邊 (-100%) 進來
-      x: direction > 0 ? "100%" : "-100%", 
+      x: direction > 0 ? "100%" : "-100%",
       opacity: 0,
       position: "absolute", // 關鍵：讓進場和退場的元素重疊在同一個位置
       width: "100%", // 確保寬度正確
@@ -529,17 +537,17 @@ const ItineraryApp = () => {
     center: {
       x: 0,
       opacity: 1,
-      position: "relative", 
+      position: "relative",
       // 修改點：縮短時間至 0.2，並使用 easeOut 讓進場有煞車感
-      transition: { duration: 0.2, ease: "easeOut" }, 
+      transition: { duration: 0.2, ease: "easeOut" },
     },
     exit: (direction) => ({
       x: direction < 0 ? "100%" : "-100%",
       opacity: 0,
-      position: "absolute", 
+      position: "absolute",
       width: "100%",
       // 修改點：縮短時間至 0.2，並使用 easeIn 讓退場加速離開
-      transition: { duration: 0.2, ease: "easeIn" }, 
+      transition: { duration: 0.2, ease: "easeIn" },
     }),
   };
   // (原本的 onTouchStart 和 onTouchMove 不用變)
@@ -574,7 +582,7 @@ const ItineraryApp = () => {
     // 如果新頁碼 < 舊頁碼，代表回上一頁 (方向 -1，內容往右移)
     const newDirection = newDay > activeDay ? 1 : -1;
     setPage([newDay, newDirection]); // 設定 Framer Motion 的 [頁碼, 方向]
-    setActiveDay(newDay);            // 設定實際的 activeDay
+    setActiveDay(newDay); // 設定實際的 activeDay
   };
 
   // --- Checklist Logic ---
@@ -878,7 +886,7 @@ const ItineraryApp = () => {
           const weatherData = await weatherRes.json();
 
           let city = customName;
-          let landmark = ""; 
+          let landmark = "";
 
           // 2. 取得地點資訊 (高精確度優化版)
           if (!city) {
@@ -902,13 +910,13 @@ const ItineraryApp = () => {
 
                 // 2-2. ✅ 優化：只抓取「10m~100m 範圍內」的小型地標
                 // 我們刻意移除了 industrial (工業區), suburb, quarter 等大範圍標籤
-                const specificPOI = 
-                  addr.amenity ||     // 設施 (最準：7-Eleven, 廁所, 銀行)
-                  addr.shop ||        // 商店 (最準：全聯, 屈臣氏)
-                  addr.office ||      // 辦公室 (準確：台積電F12, 特定公司名)
-                  addr.tourism ||     // 景點 (準確：博物館)
-                  addr.building ||    // 建築 (準確：XX大樓)
-                  addr.historic;      // 古蹟
+                const specificPOI =
+                  addr.amenity || // 設施 (最準：7-Eleven, 廁所, 銀行)
+                  addr.shop || // 商店 (最準：全聯, 屈臣氏)
+                  addr.office || // 辦公室 (準確：台積電F12, 特定公司名)
+                  addr.tourism || // 景點 (準確：博物館)
+                  addr.building || // 建築 (準確：XX大樓)
+                  addr.historic; // 古蹟
 
                 if (specificPOI) {
                   landmark = specificPOI;
@@ -916,14 +924,14 @@ const ItineraryApp = () => {
                   // 2-3. ✅ 關鍵修改：如果沒有具體店家，直接使用「路名 + 門牌」
                   // 這樣就避免了回退到 "新竹科學園區" 這種大範圍名稱
                   if (addr.road) {
-                     landmark = addr.road;
-                     if (addr.house_number) {
-                         landmark += `${addr.house_number}號`;
-                     }
+                    landmark = addr.road;
+                    if (addr.house_number) {
+                      landmark += `${addr.house_number}號`;
+                    }
                   } else {
                     // 如果連路名都沒有，才勉強用 display_name 的第一段，但通常路名都會有
                     // 這裡我們不再 fallback 到 industrial
-                    landmark = ""; 
+                    landmark = "";
                   }
                 }
               }
@@ -948,13 +956,15 @@ const ItineraryApp = () => {
             error: null,
           };
 
-          localStorage.setItem("cached_user_weather", JSON.stringify({
-            ...newWeatherData,
-            timestamp: Date.now()
-          }));
+          localStorage.setItem(
+            "cached_user_weather",
+            JSON.stringify({
+              ...newWeatherData,
+              timestamp: Date.now(),
+            }),
+          );
 
           setUserWeather(newWeatherData);
-
         } catch (err) {
           console.error("Weather Fetch Error:", err);
           setUserWeather((prev) => ({
@@ -1034,7 +1044,7 @@ const ItineraryApp = () => {
     [showToast, getWeatherInfo],
   );
 
-// --- 定時更新位置與天氣邏輯 (優化版：快取優先) ---
+  // --- 定時更新位置與天氣邏輯 (優化版：快取優先) ---
   useEffect(() => {
     if (isVerified) {
       // 1. 先嘗試讀取快取，讓 App 秒開
@@ -1042,7 +1052,7 @@ const ItineraryApp = () => {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          setUserWeather(parsed); 
+          setUserWeather(parsed);
           setIsAppReady(true); // ✅ 關鍵：直接標記 App 準備好了，不用等轉圈圈
           console.log("🚀 使用快取資料加速啟動");
         } catch (e) {
@@ -1062,14 +1072,14 @@ const ItineraryApp = () => {
     }
   }, [isVerified, getUserLocationWeather]);
 
-    const handleShareLocation = () => {
+  const handleShareLocation = () => {
     // 1. 檢查是否有已儲存的位置資料
     if (!userWeather.lat || !userWeather.lon) {
       showToast("尚未取得定位資訊，正在更新中...", "error");
       getUserLocationWeather();
       return;
     }
-    
+
     const lat = userWeather.lat;
     const lng = userWeather.lon;
     const landmark = userWeather.landmark; // 取出地標
@@ -1091,7 +1101,7 @@ const ItineraryApp = () => {
         .share({
           title: "我的位置",
           text: baseMessage, // 這裡只放文字，不要放網址
-          url: mapUrl,       // 網址放這裡，系統會自動接在後面
+          url: mapUrl, // 網址放這裡，系統會自動接在後面
         })
         .then(() => showToast("分享成功"))
         .catch((error) => {
@@ -1101,7 +1111,7 @@ const ItineraryApp = () => {
       // 情境 B：電腦版或不支援分享 API (Fallback)
       // 這時候我們需要手動把網址接在文字後面，不然複製出來會沒有連結
       const fullText = `${baseMessage}\n點擊查看位置：${mapUrl}`;
-      
+
       const textArea = document.createElement("textarea");
       textArea.value = fullText;
       document.body.appendChild(textArea);
@@ -1394,10 +1404,10 @@ const ItineraryApp = () => {
 
     // 2. 建構使用者訊息 (存入 React State 顯示用)
     // 這裡我們把圖片 (Base64) 也存進去，讓聊天室能顯示圖片
-    const userMsg = { 
-      role: "user", 
-      text: inputMessage, 
-      image: selectedImage 
+    const userMsg = {
+      role: "user",
+      text: inputMessage,
+      image: selectedImage,
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -1410,13 +1420,13 @@ const ItineraryApp = () => {
       // 這是解決「聊天紀錄失效」的關鍵：我們對每一則歷史訊息都重新檢查有沒有圖片
       const formatToGeminiPart = (msg) => {
         const parts = [];
-        
+
         // (A) 處理文字
         if (msg.text && msg.text.trim()) {
           parts.push({ text: msg.text });
         } else if (!msg.image) {
           // 如果沒圖也沒字 (極端狀況)，補一個空字串避免 API 報錯
-          parts.push({ text: "" }); 
+          parts.push({ text: "" });
         }
 
         // (B) 處理圖片
@@ -1427,11 +1437,11 @@ const ItineraryApp = () => {
           parts.push({
             inlineData: {
               mimeType: mimeType,
-              data: data
-            }
+              data: data,
+            },
           });
         }
-        
+
         return { role: msg.role, parts: parts };
       };
 
@@ -1456,32 +1466,49 @@ const ItineraryApp = () => {
         payload = {
           systemInstruction: { parts: [{ text: translateSystemPrompt }] },
           contents: [
-            ...messages.slice(-1).filter(m => m.role !== 'system').map(m => ({ role: m.role, parts: [{ text: m.text || "" }] })), 
-            formatToGeminiPart(userMsg)
+            ...messages
+              .slice(-1)
+              .filter((m) => m.role !== "system")
+              .map((m) => ({ role: m.role, parts: [{ text: m.text || "" }] })),
+            formatToGeminiPart(userMsg),
           ],
           generationConfig: {
             temperature: 0.3,
             maxOutputTokens: 2000,
           },
         };
-
       } else {
         // === 導遊模式 (完整支援圖片與歷史) ===
-        
+
         // ... (這裡保留原本的 flattenItinerary 等資料處理函式，為節省篇幅省略，請勿刪除) ...
-        const flattenItinerary = (data) => data.map(day => {
-             const events = day.events.map(e => `  - ${e.time} ${e.title}: ${e.desc}`).join("\n");
-             return `📅 ${day.day} (${day.locationKey}):\n${events}`;
-        }).join("\n\n");
-        const flattenGuides = (data) => data.map(g => `📘 ${g.title}: ${g.summary}`).join("\n");
-        const flattenShops = (data) => data.map(area => {
-             const shops = area.mainShops.map(s => `  * ${s.name}: ${s.note}`).join("\n");
-             return `🛍️ ${area.area}:\n${shops}`;
-        }).join("\n\n");
-        
+        const flattenItinerary = (data) =>
+          data
+            .map((day) => {
+              const events = day.events
+                .map((e) => `  - ${e.time} ${e.title}: ${e.desc}`)
+                .join("\n");
+              return `📅 ${day.day} (${day.locationKey}):\n${events}`;
+            })
+            .join("\n\n");
+        const flattenGuides = (data) =>
+          data.map((g) => `📘 ${g.title}: ${g.summary}`).join("\n");
+        const flattenShops = (data) =>
+          data
+            .map((area) => {
+              const shops = area.mainShops
+                .map((s) => `  * ${s.name}: ${s.note}`)
+                .join("\n");
+              return `🛍️ ${area.area}:\n${shops}`;
+            })
+            .join("\n\n");
+
         // 位置判斷 (維持原樣)
         let locationInstruction = "";
-        const isGpsAvailable = hasLocationPermission && userWeather.locationName && !userWeather.loading && userWeather.locationName !== "定位中...";
+        const isGpsAvailable =
+          hasLocationPermission &&
+          userWeather.locationName &&
+          !userWeather.loading &&
+          userWeather.locationName !== "定位中...";
         if (isGpsAvailable) {
           locationInstruction = `【使用者目前 GPS 位置】：${userWeather.locationName}。\n回答時請優先依據此位置 (例如：附近的超商)。`;
         } else {
@@ -1527,16 +1554,19 @@ const ItineraryApp = () => {
       }
 
       const data = await callGeminiSafe(payload);
-      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "抱歉，我沒看清楚，請再試一次。";
+      const aiText =
+        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "抱歉，我沒看清楚，請再試一次。";
       setMessages((prev) => [...prev, { role: "model", text: aiText }]);
-
     } catch (error) {
       console.error("AI Error:", error);
       let errMsg = "連線發生錯誤或是系統忙碌中，請稍後再試。";
-      if (error.message.includes("Key")) errMsg = "API Key 錯誤，請檢查加密設定。";
+      if (error.message.includes("Key"))
+        errMsg = "API Key 錯誤，請檢查加密設定。";
       // 如果是因為圖片太大導致 413 錯誤
-      if (error.message.includes("413")) errMsg = "圖片檔案過大，請試著縮小圖片後再傳送。";
-      
+      if (error.message.includes("413"))
+        errMsg = "圖片檔案過大，請試著縮小圖片後再傳送。";
+
       setMessages((prev) => [...prev, { role: "model", text: errMsg }]);
     } finally {
       setIsLoading(false);
@@ -1852,7 +1882,7 @@ const ItineraryApp = () => {
             onTouchEnd={onTouchEnd}
           >
             {/* Navigation Buttons */}
-            <div 
+            <div
               // ✅ 1. 綁定容器 Ref
               ref={navContainerRef}
               className="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide py-1 px-1 relative z-10"
@@ -1892,8 +1922,11 @@ const ItineraryApp = () => {
 
             {/* Animation Wrapper */}
             <div className="relative w-full h-full">
-              <AnimatePresence initial={false} custom={direction} mode="popLayout">
-                
+              <AnimatePresence
+                initial={false}
+                custom={direction}
+                mode="popLayout"
+              >
                 {/* === 分支 1: 總覽頁面 (activeDay === -1) === */}
                 {activeDay === -1 ? (
                   <motion.div
@@ -1935,14 +1968,20 @@ const ItineraryApp = () => {
                           </div>
                           <div>
                             {userWeather.temp !== null ? (
-                              <div className={`text-3xl font-bold ${theme.text}`}>
+                              <div
+                                className={`text-3xl font-bold ${theme.text}`}
+                              >
                                 {userWeather.temp}
-                                <span className={`text-sm ml-1 ${theme.textSec}`}>
+                                <span
+                                  className={`text-sm ml-1 ${theme.textSec}`}
+                                >
                                   °C
                                 </span>
                               </div>
                             ) : (
-                              <div className={`text-xs ${theme.textSec}`}>--</div>
+                              <div className={`text-xs ${theme.textSec}`}>
+                                --
+                              </div>
                             )}
                             <div className={`text-xs mt-0.5 ${theme.textSec}`}>
                               {userWeather.desc || "載入中"}
@@ -1992,7 +2031,9 @@ const ItineraryApp = () => {
                           {isFlightInfoExpanded ? (
                             <ChevronUp className={`w-4 h-4 ${theme.textSec}`} />
                           ) : (
-                            <ChevronDown className={`w-4 h-4 ${theme.textSec}`} />
+                            <ChevronDown
+                              className={`w-4 h-4 ${theme.textSec}`}
+                            />
                           )}
                         </div>
                       </div>
@@ -2005,7 +2046,9 @@ const ItineraryApp = () => {
                             <div
                               className={`rounded-xl p-3 border flex flex-col gap-2 transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
                             >
-                              <div className={`text-xs font-bold ${theme.textSec}`}>
+                              <div
+                                className={`text-xs font-bold ${theme.textSec}`}
+                              >
                                 去程 ({tripConfig.flights.outbound.code})
                               </div>
                               <div
@@ -2016,7 +2059,9 @@ const ItineraryApp = () => {
                               <div
                                 className={`w-full h-px my-0.5 ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
                               ></div>
-                              <div className={`text-xs font-bold ${theme.textSec}`}>
+                              <div
+                                className={`text-xs font-bold ${theme.textSec}`}
+                              >
                                 回程 ({tripConfig.flights.inbound.code})
                               </div>
                               <div
@@ -2107,7 +2152,9 @@ const ItineraryApp = () => {
                             className={`text-5xl font-black tracking-tight drop-shadow-sm flex justify-center items-baseline gap-2 ${theme.accent}`}
                           >
                             {daysUntilTrip}{" "}
-                            <span className={`text-lg font-bold ${theme.textSec}`}>
+                            <span
+                              className={`text-lg font-bold ${theme.textSec}`}
+                            >
                               天
                             </span>
                           </div>
@@ -2260,7 +2307,9 @@ const ItineraryApp = () => {
                             <h4
                               className={`text-xs font-bold mb-3 flex items-center gap-1.5 ${theme.textSec}`}
                             >
-                              <Star className={`w-3.5 h-3.5 ${colors.orange}`} />{" "}
+                              <Star
+                                className={`w-3.5 h-3.5 ${colors.orange}`}
+                              />{" "}
                               今日亮點快速導覽
                             </h4>
                             <div className="space-y-3">
@@ -2268,7 +2317,10 @@ const ItineraryApp = () => {
                                 .filter((e) => e.highlights)
                                 .slice(0, 3)
                                 .map((e, i) => (
-                                  <div key={i} className="flex gap-3 items-start">
+                                  <div
+                                    key={i}
+                                    className="flex gap-3 items-start"
+                                  >
                                     <div
                                       className={`text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${isDarkMode ? "bg-neutral-700 text-neutral-300" : "bg-stone-200 text-stone-600"}`}
                                     >
@@ -2325,18 +2377,21 @@ const ItineraryApp = () => {
                           <h3
                             className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.textSec}`}
                           >
-                            <MapPin className={`w-4 h-4 ${colors.pink}`} /> 足跡回顧
+                            <MapPin className={`w-4 h-4 ${colors.pink}`} />{" "}
+                            足跡回顧
                           </h3>
                           <div className="space-y-2">
                             <div className="flex flex-wrap gap-2">
-                              {(tripConfig.tripHighlights || []).map((spot, i) => (
-                                <span
-                                  key={i}
-                                  className={`px-3 py-1.5 text-xs font-medium rounded-lg border shadow-sm ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-neutral-300" : "bg-white border-stone-200 text-stone-600"}`}
-                                >
-                                  {spot}
-                                </span>
-                              ))}
+                              {(tripConfig.tripHighlights || []).map(
+                                (spot, i) => (
+                                  <span
+                                    key={i}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg border shadow-sm ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-neutral-300" : "bg-white border-stone-200 text-stone-600"}`}
+                                  >
+                                    {spot}
+                                  </span>
+                                ),
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2344,7 +2399,6 @@ const ItineraryApp = () => {
                     )}
                   </motion.div>
                 ) : (
-                  
                   // === 分支 2: 每日行程頁面 (activeDay >= 0) ===
                   <motion.div
                     key={`day-${activeDay}`}
@@ -2521,7 +2575,9 @@ const ItineraryApp = () => {
                                               )}
                                               // target="_blank"
                                               // rel="noopener noreferrer"
-                                              onClick={(e) => e.stopPropagation()}
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
                                               className={`p-1.5 rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300 hover:bg-neutral-600" : "bg-white border-stone-200 text-[#3B5998] hover:bg-blue-50"}`}
                                               title="在 Google Maps 查看"
                                             >
@@ -2602,7 +2658,9 @@ const ItineraryApp = () => {
                                               >
                                                 路線
                                               </span>{" "}
-                                              <span>{event.transport.route}</span>
+                                              <span>
+                                                {event.transport.route}
+                                              </span>
                                             </div>
                                             {event.transport.note && (
                                               <p
@@ -3206,7 +3264,7 @@ const ItineraryApp = () => {
                         </button>
                       )}
                     </div>
-                    
+
                     {/* Message Bubble */}
                     <div
                       className={`max-w-[75%] group relative transition-all duration-300`}
@@ -3225,9 +3283,9 @@ const ItineraryApp = () => {
                       >
                         {/* 🆕 新增：如果有圖片，先顯示圖片 */}
                         {msg.image && (
-                          <img 
-                            src={msg.image} 
-                            alt="Sent Image" 
+                          <img
+                            src={msg.image}
+                            alt="Sent Image"
                             className="mb-2 max-w-full h-auto rounded-lg border border-white/20 shadow-sm object-cover"
                           />
                         )}
@@ -3238,7 +3296,7 @@ const ItineraryApp = () => {
                     </div>
                   </div>
                 ))}
-                
+
                 {/* Loading Indicator (維持原樣) */}
                 {isLoading && (
                   <div className="flex gap-3">
@@ -3324,7 +3382,6 @@ const ItineraryApp = () => {
 
                 {/* 2. 主要輸入區 (Flexbox 佈局) */}
                 <div className="flex items-end gap-2">
-                  
                   {/* 左側功能按鈕群 (語音 + 圖片) */}
                   <div className="flex gap-1 pb-0.5">
                     {/* 中文語音按鈕 */}
@@ -3352,7 +3409,9 @@ const ItineraryApp = () => {
                     {/* 外語語音按鈕 */}
                     {aiMode === "translate" && (
                       <button
-                        onClick={() => toggleListening(tripConfig.language.code)}
+                        onClick={() =>
+                          toggleListening(tripConfig.language.code)
+                        }
                         className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
                           ${
                             listeningLang === tripConfig.language.code
@@ -3377,9 +3436,11 @@ const ItineraryApp = () => {
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
-                        ${isDarkMode 
-                          ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-600" 
-                          : "bg-white text-stone-500 hover:bg-stone-50 border-stone-200"}`}
+                        ${
+                          isDarkMode
+                            ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-600"
+                            : "bg-white text-stone-500 hover:bg-stone-50 border-stone-200"
+                        }`}
                       title="上傳圖片"
                     >
                       <Camera className="w-5 h-5" />
@@ -3410,25 +3471,33 @@ const ItineraryApp = () => {
                           : "輸入問題或上傳照片..."
                     }
                     className={`flex-1 min-w-0 border rounded-2xl px-3 py-3 text-xs focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-50 resize-none max-h-[120px] leading-relaxed tracking-wide
-                      ${isDarkMode 
-                        ? "bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500" 
-                        : "bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400"}`}
+                      ${
+                        isDarkMode
+                          ? "bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500"
+                          : "bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400"
+                      }`}
                   />
 
                   {/* 4. 發送按鈕 */}
                   <button
                     onClick={() => {
                       handleSendMessage();
-                      const textarea = document.querySelector('textarea');
-                      if(textarea) textarea.style.height = 'auto';
+                      const textarea = document.querySelector("textarea");
+                      if (textarea) textarea.style.height = "auto";
                     }}
-                    disabled={isLoading || (!inputMessage.trim() && !selectedImage)}
+                    disabled={
+                      isLoading || (!inputMessage.trim() && !selectedImage)
+                    }
                     className={`p-3 rounded-xl transition-all shadow-md flex-shrink-0 mb-0.5 font-bold active:scale-95
-                      ${isLoading || (!inputMessage.trim() && !selectedImage) 
-                        ? (isDarkMode ? "bg-neutral-700 text-neutral-500 shadow-none cursor-not-allowed" : "bg-stone-200 text-stone-400 shadow-none cursor-not-allowed") 
-                        : isDarkMode 
-                          ? "bg-gradient-to-r from-sky-600 to-blue-700 text-white hover:shadow-lg" 
-                          : "bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white hover:shadow-lg"}`}
+                      ${
+                        isLoading || (!inputMessage.trim() && !selectedImage)
+                          ? isDarkMode
+                            ? "bg-neutral-700 text-neutral-500 shadow-none cursor-not-allowed"
+                            : "bg-stone-200 text-stone-400 shadow-none cursor-not-allowed"
+                          : isDarkMode
+                            ? "bg-gradient-to-r from-sky-600 to-blue-700 text-white hover:shadow-lg"
+                            : "bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white hover:shadow-lg"
+                      }`}
                   >
                     <Send className="w-5 h-5" />
                   </button>
