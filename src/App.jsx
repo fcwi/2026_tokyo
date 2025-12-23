@@ -73,6 +73,7 @@ import {
   tripConfig,
   checklistData,
 } from "./tripdata_2026_karuizawa.jsx";
+import { motion, AnimatePresence } from "framer-motion";
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
 const CryptoUtils = {
@@ -489,6 +490,93 @@ const ItineraryApp = () => {
   const [expandedShops, setExpandedShops] = useState({});
   const [availableVoices, setAvailableVoices] = useState([]);
 
+  // 新增：導覽列自動捲動用的 Ref
+  const navContainerRef = useRef(null);
+  const navItemsRef = useRef({}); // 用物件來存每一顆按鈕的 ref
+
+  useEffect(() => {
+    // 取得當前 activeDay 對應的按鈕 DOM 元素
+    const currentTab = navItemsRef.current[activeDay];
+    
+    if (currentTab) {
+      // 使用原生 API 讓它平滑捲動到視野中央
+      currentTab.scrollIntoView({
+        behavior: "smooth", // 平滑動畫
+        block: "nearest",   // 垂直方向不動
+        inline: "center",   // 水平方向置中 (關鍵！)
+      });
+    }
+  }, [activeDay]);
+
+  // 新增：滑動手勢偵測 State 與函式
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  // 新增：紀錄滑動方向狀態 (1 代表去下一頁/向左滑，-1 代表回上一頁/向右滑)
+  // 初始值設為 0，避免第一次載入時有動畫
+  const [[page, direction], setPage] = useState([activeDay, 0]);
+  const minSwipeDistance = 50;
+  // 新增：定義 Framer Motion 動畫變數
+  // 這裡決定了畫面要怎麼進場 (enter) 和退場 (exit)
+  const slideVariants = {
+    enter: (direction) => ({
+      // 如果是去下一頁 (direction > 0)，新頁面從右邊 (100%) 進來
+      // 如果是回上一頁 (direction < 0)，新頁面從左邊 (-100%) 進來
+      x: direction > 0 ? "100%" : "-100%", 
+      opacity: 0,
+      position: "absolute", // 關鍵：讓進場和退場的元素重疊在同一個位置
+      width: "100%", // 確保寬度正確
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      position: "relative", 
+      // 修改點：縮短時間至 0.2，並使用 easeOut 讓進場有煞車感
+      transition: { duration: 0.2, ease: "easeOut" }, 
+    },
+    exit: (direction) => ({
+      x: direction < 0 ? "100%" : "-100%",
+      opacity: 0,
+      position: "absolute", 
+      width: "100%",
+      // 修改點：縮短時間至 0.2，並使用 easeIn 讓退場加速離開
+      transition: { duration: 0.2, ease: "easeIn" }, 
+    }),
+  };
+  // (原本的 onTouchStart 和 onTouchMove 不用變)
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+  // 修改：onTouchEnd 需要同時更新 activeDay 和方向
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      if (activeDay < itineraryData.length - 1) {
+        changeDay(activeDay + 1); // 往左滑 (去下一頁)
+      }
+    }
+    if (isRightSwipe) {
+      if (activeDay > -1) {
+        changeDay(activeDay - 1); // 往右滑 (回上一頁)
+      }
+    }
+  };
+
+  const changeDay = (newDay) => {
+    // 如果新頁碼 > 舊頁碼，代表去下一頁 (方向 1，內容往左移)
+    // 如果新頁碼 < 舊頁碼，代表回上一頁 (方向 -1，內容往右移)
+    const newDirection = newDay > activeDay ? 1 : -1;
+    setPage([newDay, newDirection]); // 設定 Framer Motion 的 [頁碼, 方向]
+    setActiveDay(newDay);            // 設定實際的 activeDay
+  };
+
   // --- Checklist Logic ---
   const [newItemText, setNewItemText] = useState(""); // 🆕 新增：輸入框狀態
 
@@ -566,7 +654,8 @@ const ItineraryApp = () => {
     temp: null,
     desc: "",
     locationName: "定位中...",
-    weatherCode: null, // <--- 新增這行，用來存天氣代碼
+    landmark: "", // 新增：用來存地標名稱
+    weatherCode: null, // 新增，用來存天氣代碼
     //icon: <Loader className={`w-5 h-5 animate-spin ${theme.textSec}`} />,
     loading: false,
     error: null,
@@ -783,31 +872,60 @@ const ItineraryApp = () => {
         customName = null,
       ) => {
         try {
+          // 1. 取得天氣 (維持原樣)
           const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true`;
           const weatherRes = await fetch(weatherUrl);
           const weatherData = await weatherRes.json();
 
           let city = customName;
-          if (!city) {
-            const matchedLocation = KNOWN_LOCATIONS.find(
-              (loc) => getDistance(latitude, longitude, loc.lat, loc.lon) < 20,
-            );
-            if (matchedLocation) city = matchedLocation.name;
-          }
+          let landmark = ""; 
 
+          // 2. 取得地點資訊 (高精確度優化版)
           if (!city) {
             try {
-              const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW`;
+              // zoom=18：鎖定在建築物等級
+              const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW&zoom=18`;
               const geoRes = await fetch(geoUrl);
               const geoData = await geoRes.json();
+
               if (geoData && geoData.address) {
+                const addr = geoData.address;
+
+                // 2-1. 抓取城市/區域 (這裡可以保留大範圍名稱，因為是顯示在天氣卡片的大標題)
                 city =
-                  geoData.address.city ||
-                  geoData.address.town ||
-                  geoData.address.village ||
-                  geoData.address.county ||
-                  geoData.address.state ||
+                  addr.city ||
+                  addr.town ||
+                  addr.village ||
+                  addr.county ||
+                  addr.state ||
                   "您的位置";
+
+                // 2-2. ✅ 優化：只抓取「10m~100m 範圍內」的小型地標
+                // 我們刻意移除了 industrial (工業區), suburb, quarter 等大範圍標籤
+                const specificPOI = 
+                  addr.amenity ||     // 設施 (最準：7-Eleven, 廁所, 銀行)
+                  addr.shop ||        // 商店 (最準：全聯, 屈臣氏)
+                  addr.office ||      // 辦公室 (準確：台積電F12, 特定公司名)
+                  addr.tourism ||     // 景點 (準確：博物館)
+                  addr.building ||    // 建築 (準確：XX大樓)
+                  addr.historic;      // 古蹟
+
+                if (specificPOI) {
+                  landmark = specificPOI;
+                } else {
+                  // 2-3. ✅ 關鍵修改：如果沒有具體店家，直接使用「路名 + 門牌」
+                  // 這樣就避免了回退到 "新竹科學園區" 這種大範圍名稱
+                  if (addr.road) {
+                     landmark = addr.road;
+                     if (addr.house_number) {
+                         landmark += `${addr.house_number}號`;
+                     }
+                  } else {
+                    // 如果連路名都沒有，才勉強用 display_name 的第一段，但通常路名都會有
+                    // 這裡我們不再 fallback 到 industrial
+                    landmark = ""; 
+                  }
+                }
               }
             } catch {
               console.warn("Geo lookup failed, using default name");
@@ -815,24 +933,28 @@ const ItineraryApp = () => {
             }
           }
 
-        const info = getWeatherInfo(weatherData.current_weather.weathercode);
-        // 1. 建立天氣資料物件
-        const newWeatherData = {
+          const info = getWeatherInfo(weatherData.current_weather.weathercode);
+
+          // 3. 建立資料與存檔 (維持原樣)
+          const newWeatherData = {
             temp: Math.round(weatherData.current_weather.temperature),
             desc: info.text,
             weatherCode: weatherData.current_weather.weathercode,
             locationName: city || "未知地點",
+            landmark: landmark, // 這裡現在只會存「精確地標」或「路名」，不會有大區域名稱
             lat: latitude,
             lon: longitude,
             loading: false,
             error: null,
           };
-          // 2. ✅ 新增：將成功的資料存入 localStorage (作為下次秒開的快取)
+
           localStorage.setItem("cached_user_weather", JSON.stringify({
             ...newWeatherData,
-            timestamp: Date.now() // 紀錄存檔時間
+            timestamp: Date.now()
           }));
+
           setUserWeather(newWeatherData);
+
         } catch (err) {
           console.error("Weather Fetch Error:", err);
           setUserWeather((prev) => ({
@@ -842,10 +964,10 @@ const ItineraryApp = () => {
             error: "無法連線",
           }));
         } finally {
-          // 關鍵新增：無論成功或失敗，都標記「App 初始化完成」，這樣載入畫面才會消失，進入主畫面
           setIsAppReady(true);
         }
       };
+
       const fallbackLocation = {
         lat: 25.033,
         lng: 121.5654,
@@ -912,7 +1034,6 @@ const ItineraryApp = () => {
     [showToast, getWeatherInfo],
   );
 
-  // --- 定時更新位置與天氣邏輯 ---
 // --- 定時更新位置與天氣邏輯 (優化版：快取優先) ---
   useEffect(() => {
     if (isVerified) {
@@ -941,45 +1062,53 @@ const ItineraryApp = () => {
     }
   }, [isVerified, getUserLocationWeather]);
 
-  const handleShareLocation = () => {
+    const handleShareLocation = () => {
     // 1. 檢查是否有已儲存的位置資料
     if (!userWeather.lat || !userWeather.lon) {
-      // 如果還沒定位完成，提示使用者，並嘗試觸發一次定位更新
       showToast("尚未取得定位資訊，正在更新中...", "error");
-      getUserLocationWeather(); // 呼叫更新函式
+      getUserLocationWeather();
       return;
     }
-    // 2. 直接使用 State 裡的資料 (同步執行，瀏覽器不會擋)
+    
     const lat = userWeather.lat;
     const lng = userWeather.lon;
-    const mapUrl = `https://www.google.com/maps?q=$${lat},${lng}`; // 修正：您原本的網址結構可能有誤，這裡微調為標準格式
-    // 或者維持您原本的格式: `https://www.google.com/maps?q=${lat},${lng}` 如果這是您想要的特殊格式
-    // 建議使用標準 Google Maps 連結格式，相容性較好：
-    // const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+    const landmark = userWeather.landmark; // 取出地標
 
-    const shareText = `我在這裡！點擊查看我的位置：${mapUrl}`;
+    // ✅ 修改：使用標準 Google Maps 搜尋連結 (確保能喚醒 Google Maps App)
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+    // ✅ 修改：建立「純文字」訊息 (不包含網址)
+    let baseMessage = `我在這裡`;
+    if (landmark) {
+      baseMessage += ` (靠近 ${landmark})`;
+    }
+    baseMessage += `！`;
 
     if (navigator.share) {
+      // 情境 A：手機原生分享
+      // 我們只傳入 text (純文字) 和 url (連結)，系統會自動幫我們組合成「文字 + 連結」
       navigator
         .share({
           title: "我的位置",
-          text: "我在這裡！",
-          url: mapUrl,
+          text: baseMessage, // 這裡只放文字，不要放網址
+          url: mapUrl,       // 網址放這裡，系統會自動接在後面
         })
         .then(() => showToast("分享成功"))
         .catch((error) => {
-          // 使用者取消分享不算是錯誤，可以忽略
           if (error.name !== "AbortError") console.error("分享失敗:", error);
         });
     } else {
-      // 電腦版或不支援 Share API 的 fallback
+      // 情境 B：電腦版或不支援分享 API (Fallback)
+      // 這時候我們需要手動把網址接在文字後面，不然複製出來會沒有連結
+      const fullText = `${baseMessage}\n點擊查看位置：${mapUrl}`;
+      
       const textArea = document.createElement("textarea");
-      textArea.value = shareText;
+      textArea.value = fullText;
       document.body.appendChild(textArea);
       textArea.select();
       try {
         document.execCommand("copy");
-        showToast("位置連結已複製！");
+        showToast("位置與地標資訊已複製！");
       } catch {
         showToast("複製失敗", "error");
       }
@@ -1714,14 +1843,25 @@ const ItineraryApp = () => {
 
         {/* --- Tab Content --- */}
 
-        {/* 1. 行程分頁 (Itinerary Tab) */}
+        {/* 1. 行程分頁 (Itinerary Tab) - 完整動畫版 */}
         {activeTab === "itinerary" && (
-          <div className="flex-1 space-y-4 px-4 pb-4 animate-fadeIn">
+          <div
+            className="flex-1 space-y-4 px-4 pb-4 overflow-x-hidden relative"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             {/* Navigation Buttons */}
-            <div className="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide py-1 px-1">
-              {/* Overview Button */}
+            <div 
+              // ✅ 1. 綁定容器 Ref
+              ref={navContainerRef}
+              className="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide py-1 px-1 relative z-10"
+            >
+              {/* Overview Button (Index = -1) */}
               <button
-                onClick={() => setActiveDay(-1)}
+                // ✅ 2. 綁定按鈕 Ref (Key 為 -1)
+                ref={(el) => (navItemsRef.current[-1] = el)}
+                onClick={() => changeDay(-1)}
                 className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm flex items-center gap-1.5 shadow-sm
                   ${
                     activeDay === -1
@@ -1735,7 +1875,9 @@ const ItineraryApp = () => {
               {itineraryData.map((data, index) => (
                 <button
                   key={index}
-                  onClick={() => setActiveDay(index)}
+                  // ✅ 3. 綁定按鈕 Ref (Key 為 index 0, 1, 2...)
+                  ref={(el) => (navItemsRef.current[index] = el)}
+                  onClick={() => changeDay(index)}
                   className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm shadow-sm
                     ${
                       activeDay === index
@@ -1748,822 +1890,860 @@ const ItineraryApp = () => {
               ))}
             </div>
 
-            {/* OVERVIEW CONTENT (ActiveDay === -1) */}
-            {activeDay === -1 && (
-              <div className="space-y-4">
-                {/* 1. User Location Weather Card (Compact Layout) */}
-                <div
-                  className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                >
-                  {/* Left: Location & Temp */}
-                  <div className="relative z-10 flex flex-col justify-center">
-                    <div
-                      className={`flex items-center gap-1.5 text-xs font-bold mb-1 uppercase tracking-wide ${theme.textSec}`}
-                    >
-                      <LocateFixed className={`w-4 h-4 ${theme.accent}`} />{" "}
-                      {userWeather.locationName}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`p-2.5 rounded-2xl shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/60"}`}
-                      >
-                        {userWeather.loading ? (
-                          <Loader
-                            className={`w-7 h-7 animate-spin ${theme.textSec}`}
-                          />
-                        ) : // 這裡改為：如果有代碼，就現場產生圖示；否則顯示載入中或預設圖示
-                        userWeather.weatherCode !== null ? (
-                          getWeatherInfo(userWeather.weatherCode).icon
-                        ) : (
-                          <Loader
-                            className={`w-7 h-7 animate-spin ${theme.textSec}`}
-                          />
-                        )}
-                      </div>
-                      <div>
-                        {userWeather.temp !== null ? (
-                          <div className={`text-3xl font-bold ${theme.text}`}>
-                            {userWeather.temp}
-                            <span className={`text-sm ml-1 ${theme.textSec}`}>
-                              °C
-                            </span>
-                          </div>
-                        ) : (
-                          <div className={`text-xs ${theme.textSec}`}>--</div>
-                        )}
-                        <div className={`text-xs mt-0.5 ${theme.textSec}`}>
-                          {userWeather.desc || "載入中"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Advice & Update Button */}
-                  <div className="relative z-10 text-right max-w-[50%] flex flex-col items-end">
-                    <button
-                      onClick={getUserLocationWeather}
-                      className={`mb-2 text-xs px-3 py-1.5 rounded-full border transition-all shadow-sm flex items-center gap-1.5 active:scale-95 ${theme.accent} ${isDarkMode ? "bg-neutral-800 border-neutral-700 hover:bg-neutral-700" : "bg-white border-stone-200 hover:bg-stone-50"}`}
-                    >
-                      更新位置 <Share2 className="w-3 h-3" />
-                    </button>
-                    <p
-                      className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
-                    >
-                      {userWeather.error
-                        ? "無法獲取天氣"
-                        : "比較目前與當地的溫差，方便準備衣物。"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 2. Flight & Emergency Info */}
-                <div
-                  className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                >
-                  {/* Header：點擊可切換收折狀態 */}
-                  <div
-                    onClick={() =>
-                      setIsFlightInfoExpanded(!isFlightInfoExpanded)
-                    }
-                    className={`flex items-center justify-between cursor-pointer group ${isFlightInfoExpanded ? "mb-4 border-b pb-2" : ""} ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
+            {/* Animation Wrapper */}
+            <div className="relative w-full h-full">
+              <AnimatePresence initial={false} custom={direction} mode="popLayout">
+                
+                {/* === 分支 1: 總覽頁面 (activeDay === -1) === */}
+                {activeDay === -1 ? (
+                  <motion.div
+                    key="overview"
+                    custom={direction}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    className="space-y-4"
                   >
-                    <h3
-                      className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}
-                    >
-                      <Plane className={`w-4 h-4 ${theme.accent}`} />{" "}
-                      航班與緊急資訊
-                    </h3>
+                    {/* 1. User Location Weather Card (Compact Layout) */}
                     <div
-                      className={`p-1 rounded-full transition-colors ${isDarkMode ? "group-hover:bg-neutral-700" : "group-hover:bg-stone-100"}`}
+                      className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
                     >
-                      {isFlightInfoExpanded ? (
-                        <ChevronUp className={`w-4 h-4 ${theme.textSec}`} />
-                      ) : (
-                        <ChevronDown className={`w-4 h-4 ${theme.textSec}`} />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Content：只在展開時顯示 */}
-                  {isFlightInfoExpanded && (
-                    <div className="animate-fadeIn">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        {/* Flight Info */}
+                      {/* Left: Location & Temp */}
+                      <div className="relative z-10 flex flex-col justify-center">
                         <div
-                          className={`rounded-xl p-3 border flex flex-col gap-2 transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
+                          className={`flex items-center gap-1.5 text-xs font-bold mb-1 uppercase tracking-wide ${theme.textSec}`}
                         >
-                          <div className={`text-xs font-bold ${theme.textSec}`}>
-                            去程 ({tripConfig.flights.outbound.code})
-                          </div>
-                          <div
-                            className={`text-sm font-bold tracking-wide ${theme.text}`}
-                          >
-                            {tripConfig.flights.outbound.time}
-                          </div>
-                          <div
-                            className={`w-full h-px my-0.5 ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
-                          ></div>
-                          <div className={`text-xs font-bold ${theme.textSec}`}>
-                            回程 ({tripConfig.flights.inbound.code})
-                          </div>
-                          <div
-                            className={`text-sm font-bold tracking-wide ${theme.text}`}
-                          >
-                            {tripConfig.flights.inbound.time}
-                          </div>
+                          <LocateFixed className={`w-4 h-4 ${theme.accent}`} />{" "}
+                          {userWeather.locationName}
                         </div>
-
-                        {/* Hotel Info (包含地址複製功能) */}
-                        <div
-                          className={`rounded-xl p-3 border flex flex-col justify-center gap-2 transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
-                        >
-                          {tripConfig.hotels.map((hotel, index) => (
-                            <React.Fragment key={index}>
-                              <div className="flex flex-col gap-1">
-                                <div
-                                  className={`text-xs font-bold ${theme.textSec}`}
-                                >
-                                  {hotel.name}
-                                </div>
-                                <div
-                                  className={`text-xs font-bold flex items-center gap-1.5 ${theme.text}`}
-                                >
-                                  <Phone className="w-3 h-3" />
-                                  <a href={`tel:${hotel.phone}`}>
-                                    {hotel.phone}
-                                  </a>
-                                </div>
-                                <button
-                                  onClick={() => handleCopy(hotel.address)}
-                                  className={`text-[10px] flex items-start gap-1.5`}
-                                  title="點擊複製地址"
-                                >
-                                  <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                                  <span className="underline decoration-dotted underline-offset-2">
-                                    {hotel.address}
-                                  </span>
-                                  <span className="text-[9px] px-1 border rounded ml-1 opacity-60">
-                                    複製
-                                  </span>
-                                </button>
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`p-2.5 rounded-2xl shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/60"}`}
+                          >
+                            {userWeather.loading ? (
+                              <Loader
+                                className={`w-7 h-7 animate-spin ${theme.textSec}`}
+                              />
+                            ) : userWeather.weatherCode !== null ? (
+                              getWeatherInfo(userWeather.weatherCode).icon
+                            ) : (
+                              <Loader
+                                className={`w-7 h-7 animate-spin ${theme.textSec}`}
+                              />
+                            )}
+                          </div>
+                          <div>
+                            {userWeather.temp !== null ? (
+                              <div className={`text-3xl font-bold ${theme.text}`}>
+                                {userWeather.temp}
+                                <span className={`text-sm ml-1 ${theme.textSec}`}>
+                                  °C
+                                </span>
                               </div>
-                              {/* 如果不是最後一個，就加分隔線 */}
-                              {index < tripConfig.hotels.length - 1 && (
-                                <div
-                                  className={`w-full h-px my-0.5 ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
-                                ></div>
-                              )}
-                            </React.Fragment>
-                          ))}
+                            ) : (
+                              <div className={`text-xs ${theme.textSec}`}>--</div>
+                            )}
+                            <div className={`text-xs mt-0.5 ${theme.textSec}`}>
+                              {userWeather.desc || "載入中"}
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div
-                        className={`rounded-xl p-3 border flex items-start gap-2.5 ${isDarkMode ? "bg-red-900/10 border-red-900/20" : "bg-red-50/40 border-red-100"}`}
-                      >
-                        <AlertCircle
-                          className={`w-4 h-4 flex-shrink-0 mt-0.5 ${colors.red}`}
-                        />
-                        <div
-                          className={`text-xs leading-relaxed ${isDarkMode ? "text-red-200/80" : "text-red-800/80"}`}
-                        >
-                          <span className="font-bold block mb-0.5">
-                            緊急聯絡：
-                          </span>
-                          報警 110 | 救護車 119 <br />
-                          旅外國人急難救助：+81-3-3280-7917
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Trip Status & Checklist */}
-                {/* STATUS: BEFORE TRIP */}
-                {tripStatus === "before" && (
-                  <div
-                    className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                  >
-                    <div className="text-center mb-5">
-                      <div
-                        className={`text-xs font-medium mb-1 ${theme.textSec}`}
-                      >
-                        距離{tripConfig.title}還有
-                      </div>
-                      <div
-                        className={`text-5xl font-black tracking-tight drop-shadow-sm flex justify-center items-baseline gap-2 ${theme.accent}`}
-                      >
-                        {daysUntilTrip}{" "}
-                        <span className={`text-lg font-bold ${theme.textSec}`}>
-                          天
-                        </span>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`rounded-2xl p-4 border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
-                    >
-                      <h3
-                        className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.text}`}
-                      >
-                        <ListTodo className={`w-4 h-4 ${colors.pink}`} />{" "}
-                        出發前檢查清單
-                      </h3>
-                      {/* 🆕 重置按鈕 */}
-                      <button
-                        onClick={handleResetChecklist}
-                        className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}
-                        title="還原預設值"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" /> 重置
-                      </button>
-                      {/* 🆕 新增：輸入框區域 */}
-                      <div className="flex gap-2 mb-4">
-                        <input
-                          type="text"
-                          value={newItemText}
-                          onChange={(e) => setNewItemText(e.target.value)}
-                          placeholder="新增檢查項目..."
-                          className={`flex-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:ring-2 transition-all ${isDarkMode ? "bg-neutral-900 border-neutral-600 focus:border-sky-500 focus:ring-sky-500/20" : "bg-white border-stone-200 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
-                          onKeyPress={(e) =>
-                            e.key === "Enter" && handleAddItem()
-                          }
-                        />
+                      {/* Right: Advice & Update Button */}
+                      <div className="relative z-10 text-right max-w-[50%] flex flex-col items-end">
                         <button
-                          onClick={handleAddItem}
-                          disabled={!newItemText.trim()}
-                          className={`p-2 rounded-xl border transition-all ${!newItemText.trim() ? "opacity-50 cursor-not-allowed" : "active:scale-95"} ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300" : "bg-white border-stone-200 text-[#5D737E]"}`}
+                          onClick={getUserLocationWeather}
+                          className={`mb-2 text-xs px-3 py-1.5 rounded-full border transition-all shadow-sm flex items-center gap-1.5 active:scale-95 ${theme.accent} ${isDarkMode ? "bg-neutral-800 border-neutral-700 hover:bg-neutral-700" : "bg-white border-stone-200 hover:bg-stone-50"}`}
                         >
-                          <Plus className="w-5 h-5" />{" "}
-                          {/* 記得在上方 import Plus icon */}
+                          更新位置 <Share2 className="w-3 h-3" />
                         </button>
+                        <p
+                          className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
+                        >
+                          {userWeather.error
+                            ? "無法獲取天氣"
+                            : "比較目前與當地的溫差，方便準備衣物。"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 2. Flight & Emergency Info */}
+                    <div
+                      className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                    >
+                      {/* Header：點擊可切換收折狀態 */}
+                      <div
+                        onClick={() =>
+                          setIsFlightInfoExpanded(!isFlightInfoExpanded)
+                        }
+                        className={`flex items-center justify-between cursor-pointer group ${isFlightInfoExpanded ? "mb-4 border-b pb-2" : ""} ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
+                      >
+                        <h3
+                          className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}
+                        >
+                          <Plane className={`w-4 h-4 ${theme.accent}`} />{" "}
+                          航班與緊急資訊
+                        </h3>
+                        <div
+                          className={`p-1 rounded-full transition-colors ${isDarkMode ? "group-hover:bg-neutral-700" : "group-hover:bg-stone-100"}`}
+                        >
+                          {isFlightInfoExpanded ? (
+                            <ChevronUp className={`w-4 h-4 ${theme.textSec}`} />
+                          ) : (
+                            <ChevronDown className={`w-4 h-4 ${theme.textSec}`} />
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-1">
-                        {checklist.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`flex items-center gap-3 px-2 py-1.5 rounded-xl transition-all group/item
-                              ${
-                                item.checked
-                                  ? isDarkMode
-                                    ? "bg-green-900/10"
-                                    : "bg-green-50/50"
-                                  : isDarkMode
-                                    ? "hover:bg-neutral-700/30"
-                                    : "hover:bg-black/5"
-                              }`}
-                          >
-                            {/* 點擊文字或 Checkbox 觸發切換 */}
+                      {/* Content：只在展開時顯示 */}
+                      {isFlightInfoExpanded && (
+                        <div className="animate-fadeIn">
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            {/* Flight Info */}
                             <div
-                              onClick={() => toggleCheckItem(item.id)}
-                              className="flex items-center gap-3 flex-1 cursor-pointer select-none"
+                              className={`rounded-xl p-3 border flex flex-col gap-2 transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
                             >
-                              <div
-                                className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all duration-300 flex-shrink-0
-                                ${
-                                  item.checked
-                                    ? "bg-emerald-500 border-emerald-500 text-white scale-110"
-                                    : `bg-transparent ${isDarkMode ? "border-neutral-500" : "border-stone-400"} group-hover/item:border-emerald-500`
-                                }`}
-                              >
-                                <Check className="w-3 h-3" />
+                              <div className={`text-xs font-bold ${theme.textSec}`}>
+                                去程 ({tripConfig.flights.outbound.code})
                               </div>
-                              <span
-                                className={`text-sm font-medium transition-colors leading-normal tracking-wide
-                                ${
-                                  item.checked
-                                    ? "text-emerald-600/70 line-through decoration-emerald-600/30"
-                                    : theme.textSec
-                                }`}
+                              <div
+                                className={`text-sm font-bold tracking-wide ${theme.text}`}
                               >
-                                {item.text}
-                              </span>
+                                {tripConfig.flights.outbound.time}
+                              </div>
+                              <div
+                                className={`w-full h-px my-0.5 ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
+                              ></div>
+                              <div className={`text-xs font-bold ${theme.textSec}`}>
+                                回程 ({tripConfig.flights.inbound.code})
+                              </div>
+                              <div
+                                className={`text-sm font-bold tracking-wide ${theme.text}`}
+                              >
+                                {tripConfig.flights.inbound.time}
+                              </div>
                             </div>
 
-                            {/* 🆕 刪除按鈕 (只在該項目未完成或是 hover 時顯示，或是一直顯示但淡化) */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteItem(item.id);
-                              }}
-                              className={`p-1.5 rounded-lg opacity-0 group-hover/item:opacity-100 transition-opacity ${isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"}`}
-                              title="刪除"
+                            {/* Hotel Info (包含地址複製功能) */}
+                            <div
+                              className={`rounded-xl p-3 border flex flex-col justify-center gap-2 transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />{" "}
-                              {/* 記得在上方 import Trash2 icon */}
+                              {tripConfig.hotels.map((hotel, index) => (
+                                <React.Fragment key={index}>
+                                  <div className="flex flex-col gap-1">
+                                    <div
+                                      className={`text-xs font-bold ${theme.textSec}`}
+                                    >
+                                      {hotel.name}
+                                    </div>
+                                    <div
+                                      className={`text-xs font-bold flex items-center gap-1.5 ${theme.text}`}
+                                    >
+                                      <Phone className="w-3 h-3" />
+                                      <a href={`tel:${hotel.phone}`}>
+                                        {hotel.phone}
+                                      </a>
+                                    </div>
+                                    <button
+                                      onClick={() => handleCopy(hotel.address)}
+                                      className={`text-[10px] flex items-start gap-1.5`}
+                                      title="點擊複製地址"
+                                    >
+                                      <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                      <span className="underline decoration-dotted underline-offset-2">
+                                        {hotel.address}
+                                      </span>
+                                      <span className="text-[9px] px-1 border rounded ml-1 opacity-60">
+                                        複製
+                                      </span>
+                                    </button>
+                                  </div>
+                                  {/* 如果不是最後一個，就加分隔線 */}
+                                  {index < tripConfig.hotels.length - 1 && (
+                                    <div
+                                      className={`w-full h-px my-0.5 ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
+                                    ></div>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div
+                            className={`rounded-xl p-3 border flex items-start gap-2.5 ${isDarkMode ? "bg-red-900/10 border-red-900/20" : "bg-red-50/40 border-red-100"}`}
+                          >
+                            <AlertCircle
+                              className={`w-4 h-4 flex-shrink-0 mt-0.5 ${colors.red}`}
+                            />
+                            <div
+                              className={`text-xs leading-relaxed ${isDarkMode ? "text-red-200/80" : "text-red-800/80"}`}
+                            >
+                              <span className="font-bold block mb-0.5">
+                                緊急聯絡：
+                              </span>
+                              報警 110 | 救護車 119 <br />
+                              旅外國人急難救助：+81-3-3280-7917
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. Trip Status & Checklist */}
+                    {/* STATUS: BEFORE TRIP */}
+                    {tripStatus === "before" && (
+                      <div
+                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                      >
+                        <div className="text-center mb-5">
+                          <div
+                            className={`text-xs font-medium mb-1 ${theme.textSec}`}
+                          >
+                            距離{tripConfig.title}還有
+                          </div>
+                          <div
+                            className={`text-5xl font-black tracking-tight drop-shadow-sm flex justify-center items-baseline gap-2 ${theme.accent}`}
+                          >
+                            {daysUntilTrip}{" "}
+                            <span className={`text-lg font-bold ${theme.textSec}`}>
+                              天
+                            </span>
+                          </div>
+                        </div>
+
+                        <div
+                          className={`rounded-2xl p-4 border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
+                        >
+                          <h3
+                            className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.text}`}
+                          >
+                            <ListTodo className={`w-4 h-4 ${colors.pink}`} />{" "}
+                            出發前檢查清單
+                          </h3>
+                          {/* 重置按鈕 */}
+                          <button
+                            onClick={handleResetChecklist}
+                            className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}
+                            title="還原預設值"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" /> 重置
+                          </button>
+                          {/* 輸入框區域 */}
+                          <div className="flex gap-2 mb-4">
+                            <input
+                              type="text"
+                              value={newItemText}
+                              onChange={(e) => setNewItemText(e.target.value)}
+                              placeholder="新增檢查項目..."
+                              className={`flex-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:ring-2 transition-all ${isDarkMode ? "bg-neutral-900 border-neutral-600 focus:border-sky-500 focus:ring-sky-500/20" : "bg-white border-stone-200 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
+                              onKeyPress={(e) =>
+                                e.key === "Enter" && handleAddItem()
+                              }
+                            />
+                            <button
+                              onClick={handleAddItem}
+                              disabled={!newItemText.trim()}
+                              className={`p-2 rounded-xl border transition-all ${!newItemText.trim() ? "opacity-50 cursor-not-allowed" : "active:scale-95"} ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300" : "bg-white border-stone-200 text-[#5D737E]"}`}
+                            >
+                              <Plus className="w-5 h-5" />
                             </button>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* STATUS: DURING TRIP */}
-                {tripStatus === "during" && currentTripDayIndex >= 0 && (
-                  <div
-                    className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                  >
-                    <div
-                      className={`flex items-center justify-between mb-4 border-b pb-3 ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
-                    >
-                      <div>
-                        <div
-                          className={`text-xs font-bold px-2 py-0.5 rounded-full w-fit mb-1 ${theme.accent} ${theme.accentBg}`}
-                        >
-                          旅途中
-                        </div>
-                        <h2 className={`text-2xl font-bold ${theme.text}`}>
-                          今天是 Day {currentTripDayIndex + 1}
-                        </h2>
-                      </div>
-                      <div
-                        className={`p-2.5 rounded-full animate-pulse ${theme.accentBg}`}
-                      >
-                        <Plane className={`w-6 h-6 ${theme.accent}`} />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div
-                        className={`bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white p-4 rounded-2xl shadow-lg relative overflow-hidden`}
-                      >
-                        <div className="relative z-10">
-                          <h3 className="text-lg font-bold mb-1">
-                            {itineraryData[currentTripDayIndex].title}
-                          </h3>
-                          <div className="text-stone-200 text-xs flex items-center gap-1.5">
-                            <Hotel className="w-3.5 h-3.5" />
-                            {itineraryData[currentTripDayIndex].stay}
-                          </div>
-                        </div>
-                        <div className="absolute right-0 bottom-0 opacity-10">
-                          <MapPin className="w-20 h-20 text-white" />
-                        </div>
-                      </div>
-
-                      <div
-                        className={`p-4 rounded-2xl border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
-                      >
-                        <h4
-                          className={`text-xs font-bold mb-3 flex items-center gap-1.5 ${theme.textSec}`}
-                        >
-                          <Star className={`w-3.5 h-3.5 ${colors.orange}`} />{" "}
-                          今日亮點快速導覽
-                        </h4>
-                        <div className="space-y-3">
-                          {itineraryData[currentTripDayIndex].events
-                            .filter((e) => e.highlights)
-                            .slice(0, 3)
-                            .map((e, i) => (
-                              <div key={i} className="flex gap-3 items-start">
-                                <div
-                                  className={`text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${isDarkMode ? "bg-neutral-700 text-neutral-300" : "bg-stone-200 text-stone-600"}`}
-                                >
-                                  {e.time}
-                                </div>
-                                <div>
-                                  <div
-                                    className={`text-sm font-bold ${theme.text}`}
-                                  >
-                                    {e.title}
-                                  </div>
-                                  <div
-                                    className={`text-xs mt-0.5 leading-relaxed ${theme.textSec}`}
-                                  >
-                                    {e.desc}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                        <button
-                          onClick={() => setActiveDay(currentTripDayIndex)}
-                          className={`w-full mt-4 py-2.5 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 ${isDarkMode ? "bg-neutral-700 hover:bg-neutral-600 text-neutral-200" : "bg-stone-200 hover:bg-stone-300 text-stone-600"}`}
-                        >
-                          查看今日完整行程{" "}
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* STATUS: AFTER TRIP */}
-                {tripStatus === "after" && (
-                  <div
-                    className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                  >
-                    <div className="text-center mb-5">
-                      <div className="p-3.5 bg-amber-100/30 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-3 border border-amber-200/50">
-                        <History className="w-7 h-7 text-amber-500" />
-                      </div>
-                      <h2 className={`text-xl font-bold ${theme.text}`}>
-                        旅程圓滿結束！
-                      </h2>
-                      <p className={`text-sm mt-1 ${theme.textSec}`}>
-                        感謝您這{itineraryData.length}
-                        天的陪伴，希望留下美好的回憶。
-                      </p>
-                    </div>
-
-                    <div
-                      className={`rounded-2xl p-4 border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
-                    >
-                      <h3
-                        className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.textSec}`}
-                      >
-                        <MapPin className={`w-4 h-4 ${colors.pink}`} /> 足跡回顧
-                      </h3>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap gap-2">
-                          {/* 讀取 tripConfig.tripHighlights，若沒設定則顯示空陣列以免報錯 */}
-                          {(tripConfig.tripHighlights || []).map((spot, i) => (
-                            <span
-                              key={i}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-lg border shadow-sm ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-neutral-300" : "bg-white border-stone-200 text-stone-600"}`}
-                            >
-                              {spot}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* MAIN ITINERARY CONTENT (ActiveDay >= 0) */}
-            {activeDay >= 0 && current && (
-              <>
-                {/* Weather Card */}
-                <div
-                  className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                >
-                  <div className="relative z-10">
-                    <div
-                      className={`flex items-center gap-1.5 text-xs font-bold mb-1.5 uppercase tracking-wide ${theme.textSec}`}
-                    >
-                      <Calendar className="w-3.5 h-3.5" /> 預報 (
-                      {tripConfig.locations.find(
-                        (l) => l.key === currentLocation,
-                      )?.name || "當地"}
-                      )
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`p-2.5 rounded-full shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/40"}`}
-                      >
-                        {displayWeather.icon}
-                      </div>
-                      <div>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className={`text-2xl font-bold ${theme.text}`}>
-                            {displayWeather.temp.split("/")[0]}
-                          </span>
-                          <span className={`text-sm ${theme.textSec}`}>/</span>
-                          <span className={`text-2xl font-bold ${theme.text}`}>
-                            {displayWeather.temp.split("/")[1]}
-                          </span>
-                        </div>
-                        <div
-                          className={`text-sm font-medium mt-0.5 ${theme.textSec}`}
-                        >
-                          {displayWeather.desc}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="relative z-10 text-right max-w-[50%] flex flex-col items-end">
-                    <div
-                      className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold mb-1.5 border shadow-sm backdrop-blur-md ${isDarkMode ? "bg-sky-900/30 text-sky-200 border-sky-800/50" : "bg-[#E0F7FA]/80 text-[#006064] border-[#B2EBF2]"}`}
-                    >
-                      💡 穿搭建議
-                    </div>
-                    <p
-                      className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
-                    >
-                      {displayWeather.advice}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Main Itinerary Content */}
-                <div
-                  className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] relative transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                >
-                  {/* Day Header (修改後：住宿地點增加導航連結) */}
-                  <div
-                    className={`mb-5 border-b pb-4 ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
-                  >
-                    <div
-                      className={`text-xs font-semibold mb-1.5 flex items-center gap-2 ${theme.textSec}`}
-                    >
-                      <span
-                        className={`px-2.5 py-0.5 rounded-md ${isDarkMode ? "bg-neutral-800" : "bg-white/50"}`}
-                      >
-                        {current.date}
-                      </span>
-                    </div>
-                    <h2
-                      className={`text-2xl font-extrabold mb-3 leading-tight drop-shadow-sm ${theme.text}`}
-                    >
-                      {current.title}
-                    </h2>
-
-                    {/* Hotel Link Block */}
-                    <div
-                      className={`flex items-start gap-2 text-xs p-3 rounded-xl border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700 text-neutral-300" : "bg-blue-50/30 border-blue-100/50 text-stone-600"}`}
-                    >
-                      <Hotel
-                        className={`w-4 h-4 mt-0.5 flex-shrink-0 ${theme.accent}`}
-                      />
-
-                      {current.stay.includes("溫暖的家") ? (
-                        <span className="font-medium leading-relaxed tracking-wide">
-                          {current.stay}
-                        </span>
-                      ) : (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.stay.split("(")[0])}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`font-medium leading-relaxed tracking-wide hover:underline underline-offset-4 decoration-2 flex items-center gap-1 ${isDarkMode ? "decoration-sky-400 hover:text-sky-300" : "decoration-[#5D737E] hover:text-[#3B5998]"}`}
-                          title="在 Google Maps 開啟導航"
-                        >
-                          {current.stay}
-                          <ExternalLink className="w-3 h-3 opacity-60" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Timeline Events */}
-                  <div className="space-y-3.5">
-                    {current.events.map((event, idx) => {
-                      const isOpen = expandedItems[`${activeDay}-${idx}`];
-                      return (
-                        <div
-                          key={idx}
-                          className={`group rounded-2xl border shadow-sm transition-all duration-300 overflow-hidden ${isDarkMode ? "bg-neutral-800/30 border-neutral-700 hover:bg-neutral-800/50" : "bg-white/60 border-white/60 hover:bg-white/80 hover:shadow-md"}`}
-                        >
-                          {/* Header Row */}
-                          <div
-                            className="p-4 flex gap-4 cursor-pointer"
-                            onClick={() => toggleExpand(activeDay, idx)}
-                          >
-                            <div className="flex flex-col items-center pt-1">
+                          <div className="space-y-1">
+                            {checklist.map((item) => (
                               <div
-                                className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm transition-transform group-hover:scale-105
-                              ${
-                                event.title.includes("交通")
-                                  ? isDarkMode
-                                    ? "bg-emerald-900/20 text-emerald-400"
-                                    : "bg-[#F0F5E5] text-[#556B2F]"
-                                  : isDarkMode
-                                    ? "bg-sky-900/20 text-sky-400"
-                                    : "bg-[#E8F0FE] text-[#3B5998]"
-                              }`}
+                                key={item.id}
+                                className={`flex items-center gap-3 px-2 py-1.5 rounded-xl transition-all group/item
+                                  ${
+                                    item.checked
+                                      ? isDarkMode
+                                        ? "bg-green-900/10"
+                                        : "bg-green-50/50"
+                                      : isDarkMode
+                                        ? "hover:bg-neutral-700/30"
+                                        : "hover:bg-black/5"
+                                  }`}
                               >
-                                {React.cloneElement(event.icon, {
-                                  className: "w-5 h-5",
-                                })}
-                              </div>
-                            </div>
-
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div
-                                    className={`text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5 w-fit px-2 py-0.5 rounded-full ${isDarkMode ? "bg-neutral-700 text-neutral-300" : "bg-stone-200/50 text-stone-600"}`}
-                                  >
-                                    <Clock className="w-3 h-3" /> {event.time}
-                                  </div>
-                                  {/* Title and Map Link */}
-                                  <div className="flex items-center gap-2 mb-1.5">
-                                    <h3
-                                      className={`text-base font-bold leading-tight ${theme.text}`}
-                                    >
-                                      {event.title}
-                                    </h3>
-                                    <a
-                                      href={getMapLink(
-                                        event.mapQuery || event.title,
-                                      )}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className={`p-1.5 rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300 hover:bg-neutral-600" : "bg-white border-stone-200 text-[#3B5998] hover:bg-blue-50"}`}
-                                      title="在 Google Maps 查看"
-                                    >
-                                      <MapPin className="w-3.5 h-3.5" />
-                                    </a>
-                                  </div>
-                                </div>
-                                {isOpen ? (
-                                  <ChevronUp
-                                    className={`w-5 h-5 ${theme.textSec}`}
-                                  />
-                                ) : (
-                                  <ChevronDown
-                                    className={`w-5 h-5 ${theme.textSec}`}
-                                  />
-                                )}
-                              </div>
-                              <p
-                                className={`text-sm leading-relaxed ${theme.textSec}`}
-                              >
-                                {event.desc}
-                              </p>
-
-                              {!isOpen && event.transport && (
+                                {/* 點擊文字或 Checkbox 觸發切換 */}
                                 <div
-                                  className={`mt-2.5 flex items-center gap-1.5 text-xs w-fit px-2.5 py-1 rounded-lg border ${isDarkMode ? "bg-emerald-900/10 text-emerald-400 border-emerald-800/30" : "bg-[#F0F5E5] text-[#556B2F] border-[#E2E8D5]"}`}
+                                  onClick={() => toggleCheckItem(item.id)}
+                                  className="flex items-center gap-3 flex-1 cursor-pointer select-none"
                                 >
-                                  <Train className="w-3 h-3" />
-                                  <span className="font-medium">
-                                    {event.transport.mode}
+                                  <div
+                                    className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all duration-300 flex-shrink-0
+                                    ${
+                                      item.checked
+                                        ? "bg-emerald-500 border-emerald-500 text-white scale-110"
+                                        : `bg-transparent ${isDarkMode ? "border-neutral-500" : "border-stone-400"} group-hover/item:border-emerald-500`
+                                    }`}
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </div>
+                                  <span
+                                    className={`text-sm font-medium transition-colors leading-normal tracking-wide
+                                    ${
+                                      item.checked
+                                        ? "text-emerald-600/70 line-through decoration-emerald-600/30"
+                                        : theme.textSec
+                                    }`}
+                                  >
+                                    {item.text}
                                   </span>
                                 </div>
+
+                                {/* 刪除按鈕 */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteItem(item.id);
+                                  }}
+                                  className={`p-1.5 rounded-lg opacity-0 group-hover/item:opacity-100 transition-opacity ${isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"}`}
+                                  title="刪除"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STATUS: DURING TRIP */}
+                    {tripStatus === "during" && currentTripDayIndex >= 0 && (
+                      <div
+                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                      >
+                        <div
+                          className={`flex items-center justify-between mb-4 border-b pb-3 ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
+                        >
+                          <div>
+                            <div
+                              className={`text-xs font-bold px-2 py-0.5 rounded-full w-fit mb-1 ${theme.accent} ${theme.accentBg}`}
+                            >
+                              旅途中
+                            </div>
+                            <h2 className={`text-2xl font-bold ${theme.text}`}>
+                              今天是 Day {currentTripDayIndex + 1}
+                            </h2>
+                          </div>
+                          <div
+                            className={`p-2.5 rounded-full animate-pulse ${theme.accentBg}`}
+                          >
+                            <Plane className={`w-6 h-6 ${theme.accent}`} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div
+                            className={`bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white p-4 rounded-2xl shadow-lg relative overflow-hidden`}
+                          >
+                            <div className="relative z-10">
+                              <h3 className="text-lg font-bold mb-1">
+                                {itineraryData[currentTripDayIndex].title}
+                              </h3>
+                              <div className="text-stone-200 text-xs flex items-center gap-1.5">
+                                <Hotel className="w-3.5 h-3.5" />
+                                {itineraryData[currentTripDayIndex].stay}
+                              </div>
+                            </div>
+                            <div className="absolute right-0 bottom-0 opacity-10">
+                              <MapPin className="w-20 h-20 text-white" />
+                            </div>
+                          </div>
+
+                          <div
+                            className={`p-4 rounded-2xl border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
+                          >
+                            <h4
+                              className={`text-xs font-bold mb-3 flex items-center gap-1.5 ${theme.textSec}`}
+                            >
+                              <Star className={`w-3.5 h-3.5 ${colors.orange}`} />{" "}
+                              今日亮點快速導覽
+                            </h4>
+                            <div className="space-y-3">
+                              {itineraryData[currentTripDayIndex].events
+                                .filter((e) => e.highlights)
+                                .slice(0, 3)
+                                .map((e, i) => (
+                                  <div key={i} className="flex gap-3 items-start">
+                                    <div
+                                      className={`text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${isDarkMode ? "bg-neutral-700 text-neutral-300" : "bg-stone-200 text-stone-600"}`}
+                                    >
+                                      {e.time}
+                                    </div>
+                                    <div>
+                                      <div
+                                        className={`text-sm font-bold ${theme.text}`}
+                                      >
+                                        {e.title}
+                                      </div>
+                                      <div
+                                        className={`text-xs mt-0.5 leading-relaxed ${theme.textSec}`}
+                                      >
+                                        {e.desc}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                            <button
+                              onClick={() => changeDay(currentTripDayIndex)}
+                              className={`w-full mt-4 py-2.5 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 ${isDarkMode ? "bg-neutral-700 hover:bg-neutral-600 text-neutral-200" : "bg-stone-200 hover:bg-stone-300 text-stone-600"}`}
+                            >
+                              查看今日完整行程{" "}
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STATUS: AFTER TRIP */}
+                    {tripStatus === "after" && (
+                      <div
+                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                      >
+                        <div className="text-center mb-5">
+                          <div className="p-3.5 bg-amber-100/30 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-3 border border-amber-200/50">
+                            <History className="w-7 h-7 text-amber-500" />
+                          </div>
+                          <h2 className={`text-xl font-bold ${theme.text}`}>
+                            旅程圓滿結束！
+                          </h2>
+                          <p className={`text-sm mt-1 ${theme.textSec}`}>
+                            感謝您這{itineraryData.length}
+                            天的陪伴，希望留下美好的回憶。
+                          </p>
+                        </div>
+
+                        <div
+                          className={`rounded-2xl p-4 border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
+                        >
+                          <h3
+                            className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.textSec}`}
+                          >
+                            <MapPin className={`w-4 h-4 ${colors.pink}`} /> 足跡回顧
+                          </h3>
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap gap-2">
+                              {(tripConfig.tripHighlights || []).map((spot, i) => (
+                                <span
+                                  key={i}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded-lg border shadow-sm ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-neutral-300" : "bg-white border-stone-200 text-stone-600"}`}
+                                >
+                                  {spot}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                ) : (
+                  
+                  // === 分支 2: 每日行程頁面 (activeDay >= 0) ===
+                  <motion.div
+                    key={`day-${activeDay}`}
+                    custom={direction}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    className="space-y-4"
+                  >
+                    {current && (
+                      <>
+                        {/* Weather Card */}
+                        <div
+                          className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                        >
+                          <div className="relative z-10">
+                            <div
+                              className={`flex items-center gap-1.5 text-xs font-bold mb-1.5 uppercase tracking-wide ${theme.textSec}`}
+                            >
+                              <Calendar className="w-3.5 h-3.5" /> 預報 (
+                              {tripConfig.locations.find(
+                                (l) => l.key === currentLocation,
+                              )?.name || "當地"}
+                              )
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div
+                                className={`p-2.5 rounded-full shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/40"}`}
+                              >
+                                {displayWeather.icon}
+                              </div>
+                              <div>
+                                <div className="flex items-baseline gap-1.5">
+                                  <span
+                                    className={`text-2xl font-bold ${theme.text}`}
+                                  >
+                                    {displayWeather.temp.split("/")[0]}
+                                  </span>
+                                  <span className={`text-sm ${theme.textSec}`}>
+                                    /
+                                  </span>
+                                  <span
+                                    className={`text-2xl font-bold ${theme.text}`}
+                                  >
+                                    {displayWeather.temp.split("/")[1]}
+                                  </span>
+                                </div>
+                                <div
+                                  className={`text-sm font-medium mt-0.5 ${theme.textSec}`}
+                                >
+                                  {displayWeather.desc}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="relative z-10 text-right max-w-[50%] flex flex-col items-end">
+                            <div
+                              className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold mb-1.5 border shadow-sm backdrop-blur-md ${isDarkMode ? "bg-sky-900/30 text-sky-200 border-sky-800/50" : "bg-[#E0F7FA]/80 text-[#006064] border-[#B2EBF2]"}`}
+                            >
+                              💡 穿搭建議
+                            </div>
+                            <p
+                              className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
+                            >
+                              {displayWeather.advice}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Main Itinerary Content */}
+                        <div
+                          className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] relative transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                        >
+                          {/* Day Header */}
+                          <div
+                            className={`mb-5 border-b pb-4 ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
+                          >
+                            <div
+                              className={`text-xs font-semibold mb-1.5 flex items-center gap-2 ${theme.textSec}`}
+                            >
+                              <span
+                                className={`px-2.5 py-0.5 rounded-md ${isDarkMode ? "bg-neutral-800" : "bg-white/50"}`}
+                              >
+                                {current.date}
+                              </span>
+                            </div>
+                            <h2
+                              className={`text-2xl font-extrabold mb-3 leading-tight drop-shadow-sm ${theme.text}`}
+                            >
+                              {current.title}
+                            </h2>
+
+                            {/* Hotel Link Block */}
+                            <div
+                              className={`flex items-start gap-2 text-xs p-3 rounded-xl border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700 text-neutral-300" : "bg-blue-50/30 border-blue-100/50 text-stone-600"}`}
+                            >
+                              <Hotel
+                                className={`w-4 h-4 mt-0.5 flex-shrink-0 ${theme.accent}`}
+                              />
+
+                              {current.stay.includes("溫暖的家") ? (
+                                <span className="font-medium leading-relaxed tracking-wide">
+                                  {current.stay}
+                                </span>
+                              ) : (
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.stay.split("(")[0])}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`font-medium leading-relaxed tracking-wide hover:underline underline-offset-4 decoration-2 flex items-center gap-1 ${isDarkMode ? "decoration-sky-400 hover:text-sky-300" : "decoration-[#5D737E] hover:text-[#3B5998]"}`}
+                                  title="在 Google Maps 開啟導航"
+                                >
+                                  {current.stay}
+                                  <ExternalLink className="w-3 h-3 opacity-60" />
+                                </a>
                               )}
                             </div>
                           </div>
 
-                          {/* Expanded Details */}
-                          {isOpen && (
-                            <div
-                              className={`px-5 pb-5 pt-1 space-y-3 border-t ${isDarkMode ? "bg-black/20 border-neutral-700" : "bg-white/40 border-stone-200/50"}`}
-                            >
-                              {event.transport && (
+                          {/* Timeline Events */}
+                          <div className="space-y-3.5">
+                            {current.events.map((event, idx) => {
+                              const isOpen =
+                                expandedItems[`${activeDay}-${idx}`];
+                              return (
                                 <div
-                                  className={`mt-2 p-3 rounded-xl border ${isDarkMode ? "bg-emerald-900/10 border-emerald-800/30" : "bg-[#F0F5E5] border-[#E2E8D5]"}`}
+                                  key={idx}
+                                  className={`group rounded-2xl border shadow-sm transition-all duration-300 overflow-hidden ${isDarkMode ? "bg-neutral-800/30 border-neutral-700 hover:bg-neutral-800/50" : "bg-white/60 border-white/60 hover:bg-white/80 hover:shadow-md"}`}
                                 >
-                                  <h4
-                                    className={`text-xs font-bold flex items-center gap-1.5 mb-2 ${isDarkMode ? "text-emerald-400" : "text-[#556B2F]"}`}
-                                  >
-                                    <Train className="w-3.5 h-3.5" /> 交通詳情
-                                  </h4>
+                                  {/* Header Row */}
                                   <div
-                                    className={`space-y-1.5 text-xs leading-relaxed ${isDarkMode ? "text-neutral-300" : "text-stone-600"}`}
+                                    className="p-4 flex gap-4 cursor-pointer"
+                                    onClick={() => toggleExpand(activeDay, idx)}
                                   >
-                                    <div className="flex gap-2">
-                                      <span
-                                        className={`${theme.textSec} min-w-[30px]`}
+                                    <div className="flex flex-col items-center pt-1">
+                                      <div
+                                        className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm transition-transform group-hover:scale-105
+                                        ${
+                                          event.title.includes("交通")
+                                            ? isDarkMode
+                                              ? "bg-emerald-900/20 text-emerald-400"
+                                              : "bg-[#F0F5E5] text-[#556B2F]"
+                                            : isDarkMode
+                                              ? "bg-sky-900/20 text-sky-400"
+                                              : "bg-[#E8F0FE] text-[#3B5998]"
+                                        }`}
                                       >
-                                        方式
-                                      </span>{" "}
-                                      <span className="font-medium">
-                                        {event.transport.mode}
-                                      </span>
+                                        {React.cloneElement(event.icon, {
+                                          className: "w-5 h-5",
+                                        })}
+                                      </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                      <span
-                                        className={`${theme.textSec} min-w-[30px]`}
-                                      >
-                                        時間
-                                      </span>{" "}
-                                      <span>{event.transport.duration}</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <span
-                                        className={`${theme.textSec} min-w-[30px]`}
-                                      >
-                                        路線
-                                      </span>{" "}
-                                      <span>{event.transport.route}</span>
-                                    </div>
-                                    {event.transport.note && (
+
+                                    <div className="flex-1">
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <div
+                                            className={`text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5 w-fit px-2 py-0.5 rounded-full ${isDarkMode ? "bg-neutral-700 text-neutral-300" : "bg-stone-200/50 text-stone-600"}`}
+                                          >
+                                            <Clock className="w-3 h-3" />{" "}
+                                            {event.time}
+                                          </div>
+                                          {/* Title and Map Link */}
+                                          <div className="flex items-center gap-2 mb-1.5">
+                                            <h3
+                                              className={`text-base font-bold leading-tight ${theme.text}`}
+                                            >
+                                              {event.title}
+                                            </h3>
+                                            <a
+                                              href={getMapLink(
+                                                event.mapQuery || event.title,
+                                              )}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              onClick={(e) => e.stopPropagation()}
+                                              className={`p-1.5 rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300 hover:bg-neutral-600" : "bg-white border-stone-200 text-[#3B5998] hover:bg-blue-50"}`}
+                                              title="在 Google Maps 查看"
+                                            >
+                                              <MapPin className="w-3.5 h-3.5" />
+                                            </a>
+                                          </div>
+                                        </div>
+                                        {isOpen ? (
+                                          <ChevronUp
+                                            className={`w-5 h-5 ${theme.textSec}`}
+                                          />
+                                        ) : (
+                                          <ChevronDown
+                                            className={`w-5 h-5 ${theme.textSec}`}
+                                          />
+                                        )}
+                                      </div>
                                       <p
-                                        className={`font-medium mt-1.5 flex gap-1.5 items-start ${isDarkMode ? "text-amber-400" : "text-[#CD853F]"}`}
+                                        className={`text-sm leading-relaxed ${theme.textSec}`}
                                       >
-                                        <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{" "}
-                                        {event.transport.note}
+                                        {event.desc}
                                       </p>
-                                    )}
+
+                                      {!isOpen && event.transport && (
+                                        <div
+                                          className={`mt-2.5 flex items-center gap-1.5 text-xs w-fit px-2.5 py-1 rounded-lg border ${isDarkMode ? "bg-emerald-900/10 text-emerald-400 border-emerald-800/30" : "bg-[#F0F5E5] text-[#556B2F] border-[#E2E8D5]"}`}
+                                        >
+                                          <Train className="w-3 h-3" />
+                                          <span className="font-medium">
+                                            {event.transport.mode}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
 
-                              {event.highlights && (
-                                <div>
-                                  <h4
-                                    className={`text-xs font-bold flex items-center gap-1.5 mb-2 mt-2 ${isDarkMode ? "text-rose-300" : "text-[#BC8F8F]"}`}
-                                  >
-                                    <Star className="w-3.5 h-3.5" /> 必玩 / 必吃
-                                  </h4>
-                                  <ul className="space-y-1.5 pl-1">
-                                    {event.highlights.map((item, i) => (
-                                      <li
-                                        key={i}
-                                        className={`text-sm flex gap-2 items-start leading-relaxed ${theme.textSec}`}
-                                      >
-                                        <span
-                                          className={`${isDarkMode ? "text-rose-300" : "text-[#BC8F8F]"} mt-1`}
+                                  {/* Expanded Details */}
+                                  {isOpen && (
+                                    <div
+                                      className={`px-5 pb-5 pt-1 space-y-3 border-t ${isDarkMode ? "bg-black/20 border-neutral-700" : "bg-white/40 border-stone-200/50"}`}
+                                    >
+                                      {event.transport && (
+                                        <div
+                                          className={`mt-2 p-3 rounded-xl border ${isDarkMode ? "bg-emerald-900/10 border-emerald-800/30" : "bg-[#F0F5E5] border-[#E2E8D5]"}`}
                                         >
-                                          •
-                                        </span>
-                                        <span>{item}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
+                                          <h4
+                                            className={`text-xs font-bold flex items-center gap-1.5 mb-2 ${isDarkMode ? "text-emerald-400" : "text-[#556B2F]"}`}
+                                          >
+                                            <Train className="w-3.5 h-3.5" />{" "}
+                                            交通詳情
+                                          </h4>
+                                          <div
+                                            className={`space-y-1.5 text-xs leading-relaxed ${isDarkMode ? "text-neutral-300" : "text-stone-600"}`}
+                                          >
+                                            <div className="flex gap-2">
+                                              <span
+                                                className={`${theme.textSec} min-w-[30px]`}
+                                              >
+                                                方式
+                                              </span>{" "}
+                                              <span className="font-medium">
+                                                {event.transport.mode}
+                                              </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <span
+                                                className={`${theme.textSec} min-w-[30px]`}
+                                              >
+                                                時間
+                                              </span>{" "}
+                                              <span>
+                                                {event.transport.duration}
+                                              </span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <span
+                                                className={`${theme.textSec} min-w-[30px]`}
+                                              >
+                                                路線
+                                              </span>{" "}
+                                              <span>{event.transport.route}</span>
+                                            </div>
+                                            {event.transport.note && (
+                                              <p
+                                                className={`font-medium mt-1.5 flex gap-1.5 items-start ${isDarkMode ? "text-amber-400" : "text-[#CD853F]"}`}
+                                              >
+                                                <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />{" "}
+                                                {event.transport.note}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
 
-                              {event.tips && (
-                                <div>
-                                  <h4
-                                    className={`text-xs font-bold flex items-center gap-1.5 mb-2 mt-2 ${isDarkMode ? "text-amber-300" : "text-[#CD853F]"}`}
-                                  >
-                                    <Info className="w-3.5 h-3.5" /> 溫馨提醒
-                                  </h4>
-                                  <ul className="space-y-1.5 pl-1">
-                                    {event.tips.map((item, i) => (
-                                      <li
-                                        key={i}
-                                        className={`text-sm flex gap-2 items-start leading-relaxed ${theme.textSec}`}
-                                      >
-                                        <span
-                                          className={`${isDarkMode ? "text-amber-300" : "text-[#CD853F]"} mt-1`}
-                                        >
-                                          •
-                                        </span>
-                                        <span>{item}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                      {event.highlights && (
+                                        <div>
+                                          <h4
+                                            className={`text-xs font-bold flex items-center gap-1.5 mb-2 mt-2 ${isDarkMode ? "text-rose-300" : "text-[#BC8F8F]"}`}
+                                          >
+                                            <Star className="w-3.5 h-3.5" />{" "}
+                                            必玩 / 必吃
+                                          </h4>
+                                          <ul className="space-y-1.5 pl-1">
+                                            {event.highlights.map((item, i) => (
+                                              <li
+                                                key={i}
+                                                className={`text-sm flex gap-2 items-start leading-relaxed ${theme.textSec}`}
+                                              >
+                                                <span
+                                                  className={`${isDarkMode ? "text-rose-300" : "text-[#BC8F8F]"} mt-1`}
+                                                >
+                                                  •
+                                                </span>
+                                                <span>{item}</span>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+
+                                      {event.tips && (
+                                        <div>
+                                          <h4
+                                            className={`text-xs font-bold flex items-center gap-1.5 mb-2 mt-2 ${isDarkMode ? "text-amber-300" : "text-[#CD853F]"}`}
+                                          >
+                                            <Info className="w-3.5 h-3.5" />{" "}
+                                            溫馨提醒
+                                          </h4>
+                                          <ul className="space-y-1.5 pl-1">
+                                            {event.tips.map((item, i) => (
+                                              <li
+                                                key={i}
+                                                className={`text-sm flex gap-2 items-start leading-relaxed ${theme.textSec}`}
+                                              >
+                                                <span
+                                                  className={`${isDarkMode ? "text-amber-300" : "text-[#CD853F]"} mt-1`}
+                                                >
+                                                  •
+                                                </span>
+                                                <span>{item}</span>
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              );
+                            })}
+                          </div>
+
+                          {/* Route Map Section */}
+                          {current.routeInfo && (
+                            <div
+                              className={`mt-6 backdrop-blur-md rounded-2xl border p-4 shadow-sm transition-colors ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/40 border-stone-200"}`}
+                            >
+                              <div className="flex items-center gap-2 mb-2.5">
+                                <div
+                                  className={`p-1.5 rounded-lg ${theme.accentBg}`}
+                                >
+                                  <Map className={`w-4 h-4 ${theme.accent}`} />
+                                </div>
+                                <h3
+                                  className={`text-sm font-bold ${theme.text}`}
+                                >
+                                  當日路線導航
+                                </h3>
+                              </div>
+                              <div className="flex flex-col gap-3">
+                                <div
+                                  className={`text-xs p-3 rounded-xl border leading-relaxed ${isDarkMode ? "bg-black/20 border-neutral-700 text-neutral-300" : "bg-white/50 border-stone-200 text-stone-600"}`}
+                                >
+                                  <span
+                                    className={`font-bold mr-1.5 block mb-1 ${theme.accent}`}
+                                  >
+                                    路線摘要
+                                  </span>
+                                  {current.routeInfo.summary}
+                                </div>
+                                <a
+                                  href={current.routeInfo.mapUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`flex items-center justify-center gap-2 w-full py-3 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 ${isDarkMode ? "bg-gradient-to-r from-sky-800 to-blue-900" : "bg-gradient-to-r from-[#5D737E] to-[#3F5561]"}`}
+                                >
+                                  <Navigation className="w-4 h-4" />
+                                  開啟 Google Maps 查看路線
+                                </a>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Notice */}
+                          {current.notice && (
+                            <div
+                              className={`mt-5 rounded-xl p-3.5 text-xs flex gap-2.5 items-start shadow-sm border 
+                            ${
+                              current.notice.type === "alert"
+                                ? isDarkMode
+                                  ? "bg-rose-900/10 border-rose-800/30 text-rose-200"
+                                  : "bg-[#FFF0F5] border-rose-100 text-[#BC8F8F]"
+                                : isDarkMode
+                                  ? "bg-blue-900/10 border-blue-800/30 text-blue-200"
+                                  : "bg-blue-50 border-blue-100 text-slate-600"
+                            }`}
+                            >
+                              <AlertCircle
+                                className={`w-4 h-4 flex-shrink-0 mt-0.5 ${current.notice.type === "alert" ? colors.pink : colors.blue}`}
+                              />
+                              <span className="leading-relaxed font-medium tracking-wide">
+                                {current.notice.text}
+                              </span>
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Route Map Section */}
-                  {current.routeInfo && (
-                    <div
-                      className={`mt-6 backdrop-blur-md rounded-2xl border p-4 shadow-sm transition-colors ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/40 border-stone-200"}`}
-                    >
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <div className={`p-1.5 rounded-lg ${theme.accentBg}`}>
-                          <Map className={`w-4 h-4 ${theme.accent}`} />
-                        </div>
-                        <h3 className={`text-sm font-bold ${theme.text}`}>
-                          當日路線導航
-                        </h3>
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <div
-                          className={`text-xs p-3 rounded-xl border leading-relaxed ${isDarkMode ? "bg-black/20 border-neutral-700 text-neutral-300" : "bg-white/50 border-stone-200 text-stone-600"}`}
-                        >
-                          <span
-                            className={`font-bold mr-1.5 block mb-1 ${theme.accent}`}
-                          >
-                            路線摘要
-                          </span>
-                          {current.routeInfo.summary}
-                        </div>
-                        <a
-                          href={current.routeInfo.mapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`flex items-center justify-center gap-2 w-full py-3 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 ${isDarkMode ? "bg-gradient-to-r from-sky-800 to-blue-900" : "bg-gradient-to-r from-[#5D737E] to-[#3F5561]"}`}
-                        >
-                          <Navigation className="w-4 h-4" />
-                          開啟 Google Maps 查看路線
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 修改後：通用的當日提醒卡片 */}
-                  {current.notice && (
-                    <div
-                      className={`mt-5 rounded-xl p-3.5 text-xs flex gap-2.5 items-start shadow-sm border 
-                    ${
-                      current.notice.type === "alert"
-                        ? isDarkMode
-                          ? "bg-rose-900/10 border-rose-800/30 text-rose-200"
-                          : "bg-[#FFF0F5] border-rose-100 text-[#BC8F8F]"
-                        : isDarkMode
-                          ? "bg-blue-900/10 border-blue-800/30 text-blue-200"
-                          : "bg-blue-50 border-blue-100 text-slate-600"
-                    }`}
-                    >
-                      <AlertCircle
-                        className={`w-4 h-4 flex-shrink-0 mt-0.5 ${current.notice.type === "alert" ? colors.pink : colors.blue}`}
-                      />
-                      <span className="leading-relaxed font-medium tracking-wide">
-                        {current.notice.text}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         )}
 
