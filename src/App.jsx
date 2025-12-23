@@ -78,6 +78,8 @@ import {
   tripConfig,
   checklistData,
 } from "./tripdata_2026_karuizawa.jsx";
+// 有時 ESLint 會誤判 JSX 中的 `motion` 為未使用，為避免噪音先在此行暫時抑制該檢查
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
