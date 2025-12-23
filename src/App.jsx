@@ -2453,8 +2453,8 @@ const ItineraryApp = () => {
                               ) : (
                                 <a
                                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.stay.split("(")[0])}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                  // target="_blank"
+                                  // rel="noopener noreferrer"
                                   className={`font-medium leading-relaxed tracking-wide hover:underline underline-offset-4 decoration-2 flex items-center gap-1 ${isDarkMode ? "decoration-sky-400 hover:text-sky-300" : "decoration-[#5D737E] hover:text-[#3B5998]"}`}
                                   title="在 Google Maps 開啟導航"
                                 >
@@ -2519,8 +2519,8 @@ const ItineraryApp = () => {
                                               href={getMapLink(
                                                 event.mapQuery || event.title,
                                               )}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
+                                              // target="_blank"
+                                              // rel="noopener noreferrer"
                                               onClick={(e) => e.stopPropagation()}
                                               className={`p-1.5 rounded-full border shadow-sm transition-all hover:scale-110 active:scale-95 ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300 hover:bg-neutral-600" : "bg-white border-stone-200 text-[#3B5998] hover:bg-blue-50"}`}
                                               title="在 Google Maps 查看"
@@ -2704,8 +2704,8 @@ const ItineraryApp = () => {
                                 </div>
                                 <a
                                   href={current.routeInfo.mapUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                  // target="_blank"
+                                  // rel="noopener noreferrer"
                                   className={`flex items-center justify-center gap-2 w-full py-3 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 ${isDarkMode ? "bg-gradient-to-r from-sky-800 to-blue-900" : "bg-gradient-to-r from-[#5D737E] to-[#3F5561]"}`}
                                 >
                                   <Navigation className="w-4 h-4" />
@@ -2970,8 +2970,8 @@ const ItineraryApp = () => {
                                     href={getMapLink(
                                       `${shop.name} ${areaData.mapQuerySuffix}`,
                                     )}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    // target="_blank"
+                                    // rel="noopener noreferrer"
                                     className="flex items-center gap-3 group flex-1"
                                   >
                                     <MapPin
@@ -3023,8 +3023,8 @@ const ItineraryApp = () => {
                                       href={getMapLink(
                                         `${shop.name} ${areaData.mapQuerySuffix}`,
                                       )}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                                      // target="_blank"
+                                      // rel="noopener noreferrer"
                                       className="flex items-center gap-3 group flex-1"
                                     >
                                       <MapPin
@@ -3071,8 +3071,8 @@ const ItineraryApp = () => {
                                   href={getMapLink(
                                     `${chain.name} ${areaData.mapQuerySuffix}`,
                                   )}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                  // target="_blank"
+                                  // rel="noopener noreferrer"
                                   className={`text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 shadow-sm transition-all ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-sky-300 hover:border-sky-800" : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50 hover:text-[#5D737E] hover:border-[#5D737E]/30"}`}
                                 >
                                   <span className="font-bold">
