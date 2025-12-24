@@ -958,7 +958,6 @@ const ItineraryApp = () => {
     tripStatus = "after";
   }
 
-  // --- User Location Weather Logic ---
 // --- User Location Weather Logic (終極整合版：三階段加速 + 詳細地標 + 細膩錯誤處理) ---
 const getUserLocationWeather = React.useCallback(async (isSilent = false) => {
   
@@ -3806,11 +3805,12 @@ const handleSendMessage = async () => {
           <LocateFixed className="w-6 h-6" />
         </button>
 
-        {/* 🆕 全螢幕按鈕 (移動到右下角，並統一樣式) */}
+      {/* 🆕 全螢幕按鈕 (修正位置：剛好在分享按鈕上方 1rem 處) */}
         {isMobile && (
           <button
             onClick={toggleFullScreen}
-            className={`fixed bottom-76 right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100
+            // 🔴 修改這裡：將 bottom-xx 改為 bottom-[19rem]
+            className={`fixed bottom-[19rem] right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100
               ${
                 isDarkMode
                   ? "bg-neutral-800/40 border-neutral-600 text-neutral-300 hover:bg-neutral-800/90"
