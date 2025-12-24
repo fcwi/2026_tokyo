@@ -36,6 +36,7 @@ import {
   Maximize,
   Minimize,
   Sparkles,
+  Languages,
   Send,
   MessageSquare,
   Loader,
@@ -355,7 +356,7 @@ const ItineraryApp = () => {
 
       // 使用 jpeg 格式並設定 0.8 的品質，能顯著壓縮檔案體積但保留細節
       const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-      setSelectedImage(compressedBase64);
+      setTempImage(compressedBase64);
     };
   };
   reader.readAsDataURL(file);
@@ -778,7 +779,27 @@ const ItineraryApp = () => {
 
   // State 初始化
   const [aiMode, setAiMode] = useState("translate"); // 預設為 'translate' (口譯模式)
-  const [messages, setMessages] = useState([getWelcomeMessage("translate")]);
+  const getStorageKey = (mode) => `trip_chat_history_${mode}`;
+  const [messages, setMessages] = useState(() => {
+      try {
+        // 預設讀取 translate (因為 aiMode 初始值是 translate)
+        const saved = localStorage.getItem(getStorageKey("translate"));
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error("讀取聊天紀錄失敗", e);
+      }
+      return [getWelcomeMessage("translate")];
+    });
+
+    // 3. 修改：當 messages 變動時，存入「當下模式」的 Key
+    useEffect(() => {
+      const historyToSave = messages.map((msg) => ({
+        ...msg,
+        image: null, // 依然不存圖片
+      }));
+      localStorage.setItem(getStorageKey(aiMode), JSON.stringify(historyToSave));
+    }, [messages, aiMode]); // 加入 aiMode 作為依賴
+
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -786,7 +807,17 @@ const ItineraryApp = () => {
   const chatEndRef = useRef(null);
   const recognitionRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null); // 存 Base64
+  const [tempImage, setTempImage] = useState(null); // 暫存圖片
   const fileInputRef = useRef(null); // 用來觸發隱藏的 input
+
+  const handleConfirmImage = () => {
+  setSelectedImage(tempImage); // 將暫存圖轉正
+  setTempImage(null);          // 清空暫存
+  };
+  const handleCancelImage = () => {
+    setTempImage(null);          // 清空暫存
+    if (fileInputRef.current) fileInputRef.current.value = ""; // 清空 input 讓使用者可以重選同一張
+  };
 
   // ... existing helper functions (toggleExpand, etc.) ...
   const toggleExpand = (dayIndex, eventIndex) => {
@@ -1427,37 +1458,64 @@ useEffect(() => {
     throw new Error("API Max retries reached");
   };
 
-  // ... handleSendMessage logic updated to use systemInstruction ...
   const handleSwitchMode = (newMode) => {
-    if (aiMode === newMode) return; // 如果模式沒變就不動作
-    setAiMode(newMode); // 設定新模式
-    setMessages([getWelcomeMessage(newMode)]); // 關鍵：重置聊天紀錄並換上新問候語
+    if (aiMode === newMode) return;   
+    setAiMode(newMode); // 切換模式狀態
+    // 嘗試讀取新模式的存檔
+    const saved = localStorage.getItem(getStorageKey(newMode));
+    if (saved) {
+      setMessages(JSON.parse(saved));
+    } else {
+      // 如果該模式沒有存檔，就給一個新的歡迎詞
+      setMessages([getWelcomeMessage(newMode)]);
+    }
   };
-  const handleSendMessage = async () => {
+
+  const handleClearChat = () => {
+    if (window.confirm(`確定要清除「${aiMode === "translate" ? "口譯" : "導遊"}」的所有紀錄嗎？`)) {
+      const resetMsg = getWelcomeMessage(aiMode);
+      setMessages([resetMsg]); 
+      localStorage.removeItem(getStorageKey(aiMode)); // 只刪除當下的 Key
+    }
+  };
+
+// ... handleSendMessage logic updated to use systemInstruction ...
+const handleSendMessage = async () => {
     // 1. 檢查：防止空訊息 (但允許「只有圖片沒有文字」的情況)
     if (!inputMessage.trim() && !selectedImage) return;
+
+    // 2. 準備時間資訊 (AI 回答時需要)
     const tz = autoTimeZone || tripConfig.timeZone || "Asia/Taipei";
     const localTimeStr = new Date().toLocaleString("zh-TW", { 
         timeZone: tz,
         hour12: false 
     });
 
-    const loadingTexts = [
-        "正在翻閱您的行程表...",
-        "正在查詢當地的購物資訊...",
-        "正在比對地圖位置...",
-        "正在組織建議內容..."
-    ];
-    const randomLoadingText = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
-
-    // 2. 建構使用者訊息 (存入 React State 顯示用)
-    // 這裡我們把圖片 (Base64) 也存進去，讓聊天室能顯示圖片
+    // 3. 建構使用者訊息 (存入 React State 顯示用)
+    // ⚠️ 之前可能不小心刪掉這段，導致發送失敗
     const userMsg = {
       role: "user",
       text: inputMessage,
       image: selectedImage,
     };
 
+    // 4. 設定載入中的隨機文字 (根據模式)
+    let nextLoadingText = "";
+    if (aiMode === "translate") {
+      nextLoadingText = "正在進行雙向翻譯..."; 
+    } else {
+      const guideLoadingTexts = [
+        "正在翻閱您的行程表...",
+        "正在查詢當地的購物資訊...",
+        "正在比對地圖位置...",
+        "正在組織建議內容...",
+        "正在思考最佳建議..."
+      ];
+      nextLoadingText = guideLoadingTexts[Math.floor(Math.random() * guideLoadingTexts.length)];
+    }
+    setLoadingText(nextLoadingText); // 更新 Loading 文字
+
+    // 5. 更新 UI 狀態
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage("");
     setSelectedImage(null); // 送出後清空預覽區
@@ -1465,7 +1523,6 @@ useEffect(() => {
 
     try {
       // --- 定義一個轉換函式：將 React State 訊息轉為 Gemini API 格式 ---
-      // 這是解決「聊天紀錄失效」的關鍵：我們對每一則歷史訊息都重新檢查有沒有圖片
       const formatToGeminiPart = (msg) => {
         const parts = [];
 
@@ -1473,13 +1530,11 @@ useEffect(() => {
         if (msg.text && msg.text.trim()) {
           parts.push({ text: msg.text });
         } else if (!msg.image) {
-          // 如果沒圖也沒字 (極端狀況)，補一個空字串避免 API 報錯
           parts.push({ text: "" });
         }
 
         // (B) 處理圖片
         if (msg.image) {
-          // msg.image 格式為 "data:image/jpeg;base64,....."
           const [meta, data] = msg.image.split(",");
           const mimeType = meta.match(/:(.*?);/)?.[1] || "image/jpeg";
           parts.push({
@@ -1493,11 +1548,11 @@ useEffect(() => {
         return { role: msg.role, parts: parts };
       };
 
-      // 3. 準備 Payload
+      // 6. 準備 Payload
       let payload;
 
       if (aiMode === "translate") {
-        // === 口譯模式 (維持原樣，暫不處理圖片以簡化邏輯，或視需求加入) ===
+        // === 口譯模式 ===
         const targetLang = tripConfig.language.name;
         const translateSystemPrompt = `
         你是一個專業的即時口譯員，負責「繁體中文」與「${targetLang}」之間的雙向翻譯。
@@ -1510,7 +1565,6 @@ useEffect(() => {
         4. 如果使用者輸入的內容明顯是想聊天或問行程，請禮貌回覆：「目前為口譯模式，請切換至導遊模式以詢問行程。」
         `;
 
-        // 翻譯模式通常不需要看太久以前的歷史，取最後 1 則即可
         payload = {
           systemInstruction: { parts: [{ text: translateSystemPrompt }] },
           contents: [
@@ -1526,9 +1580,12 @@ useEffect(() => {
           },
         };
       } else {
-        // === 導遊模式 (完整支援圖片與歷史) ===
-
-        // ... (這裡保留原本的 flattenItinerary 等資料處理函式，為節省篇幅省略，請勿刪除) ...
+        // === 導遊模式 ===
+        
+        // (這裡省略 flatten 函式定義，因為它們通常定義在 component 外部或內部上方，
+        // 但為了保險，如果您原本是定義在 handleSendMessage 裡面，請確保這裡也有。
+        // 依照您原本提供的檔案，這些 helper 好像是定義在 handleSendMessage 裡面，所以我補回來)
+        
         const flattenItinerary = (data) =>
           data
             .map((day) => {
@@ -1550,7 +1607,7 @@ useEffect(() => {
             })
             .join("\n\n");
 
-        // 位置判斷 (維持原樣)
+        // 位置判斷
         let locationInstruction = "";
         const isGpsAvailable =
           hasLocationPermission &&
@@ -1564,7 +1621,7 @@ useEffect(() => {
         }
 
         const startDate = new Date(tripConfig.startDate);
-        const today = new Date(new Date().toLocaleString("en-US", {timeZone: tz})); // 確保日期計算也符合目標時區
+        const today = new Date(new Date().toLocaleString("en-US", {timeZone: tz})); 
         const diffTime = today - startDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
         let dayStatus = "";
@@ -1595,19 +1652,17 @@ useEffect(() => {
         2. 若使用者上傳圖片，請辨識圖片內容並結合行程資訊給予建議 (例如：這是什麼菜？這是在哪裡？)。
         `;
 
-        // 🔥 關鍵修正：處理歷史訊息 (包含圖片)
-        // 我們取最後 4 則歷史訊息，並使用 formatToGeminiPart 完整保留圖片
         const history = messages
           .filter((m) => m.role !== "system")
-          .slice(1) // 去掉歡迎詞
-          .slice(-4) // 取最後 4 則 (圖片多了會佔 Token，4則差不多)
-          .map(formatToGeminiPart); // ✅ 使用轉換函式，保留歷史圖片
+          .slice(1) 
+          .slice(-4) 
+          .map(formatToGeminiPart); 
 
         payload = {
           systemInstruction: { parts: [{ text: guideSystemContext }] },
           contents: [
             ...history,
-            formatToGeminiPart(userMsg), // ✅ 當下訊息也用同樣格式
+            formatToGeminiPart(userMsg), 
           ],
           generationConfig: {
             temperature: 0.7,
@@ -1626,7 +1681,6 @@ useEffect(() => {
       let errMsg = "連線發生錯誤或是系統忙碌中，請稍後再試。";
       if (error.message.includes("Key"))
         errMsg = "API Key 錯誤，請檢查加密設定。";
-      // 如果是因為圖片太大導致 413 錯誤
       if (error.message.includes("413"))
         errMsg = "圖片檔案過大，請試著縮小圖片後再傳送。";
 
@@ -1866,29 +1920,6 @@ useEffect(() => {
       </div>
 
       <div className="max-w-md mx-auto relative min-h-screen flex flex-col z-10">
-        {/* 🆕 全螢幕按鈕 (透明度優化版) */}
-        {isMobile && (
-          <button
-            onClick={toggleFullScreen}
-            // 修改重點：
-            // 1. opacity-50: 平時半透明
-            // 2. hover:opacity-100: 碰到時變清楚
-            // 3. bg-xxx/30: 背景色改為 30% 濃度，大幅降低遮蔽感
-            className={`fixed top-5 left-4 z-50 p-2 rounded-full shadow-sm border backdrop-blur-md transition-all active:scale-90 opacity-50 hover:opacity-100
-              ${
-                isDarkMode
-                  ? "bg-neutral-800/30 border-neutral-700/50 text-neutral-300"
-                  : "bg-white/30 border-stone-200/50 text-stone-500"
-              }`}
-            style={{ marginTop: "0px" }}
-          >
-            {isFullscreen ? (
-              <Minimize className="w-5 h-5" />
-            ) : (
-              <Maximize className="w-5 h-5" />
-            )}
-          </button>
-        )}
 
         {/* Header Title with Material Glass */}
         <div className="flex justify-between items-center px-4 pt-5 pb-2 relative z-20">
@@ -2099,7 +2130,7 @@ useEffect(() => {
                                     <AlertCircle className="w-3 h-3 text-white animate-pulse" />
                                   </div>
                                   <span>
-                                    {tripStatus === "during" ? "明天" : "目的地"}將變{isColder ? '冷' : '熱'} {tempDiff.toFixed(0)}°C
+                                    {tripStatus === "during" ? "明天" : "目的地"}比當前{isColder ? '冷' : '熱'} {tempDiff.toFixed(0)}°C
                                   </span>
                                 </motion.div>
                               );
@@ -3278,32 +3309,61 @@ useEffect(() => {
             >
               {/* Chat Header (修改：加入導遊/翻譯模式切換) */}
               <div
-                className={`p-4 border-b backdrop-blur-sm flex flex-col gap-3 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/60 border-stone-200/50"}`}
+                className={`p-4 border-b backdrop-blur-sm flex flex-col gap-3 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/60 border-stone-200/50"}
+                ${/* 🆕 新增：根據模式改變底部邊框顏色，加強提示 */ ""}
+                ${aiMode === "translate" 
+                  ? (isDarkMode ? "border-b-sky-900/50" : "border-b-sky-100") 
+                  : (isDarkMode ? "border-b-amber-900/50" : "border-b-amber-100")}
+                `}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-200 to-orange-300 flex items-center justify-center shadow-md">
-                      <Sparkles className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className={`text-base font-bold ${theme.text}`}>
-                        AI 專屬導遊
-                      </h2>
-                      <p
-                        className={`text-xs flex items-center gap-1.5 ${theme.textSec}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full animate-pulse ${aiMode === "translate" ? "bg-blue-500" : "bg-emerald-500"}`}
-                        ></span>
-                        {aiMode === "translate" ? "口譯模式" : "導遊模式"}
-                        {isSpeaking && (
-                          <span className="ml-2 text-amber-600 font-bold flex items-center bg-amber-50 px-2 py-0.5 rounded-full">
-                            <Volume2 className="w-3 h-3 mr-1" /> 朗讀中...
-                          </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">					
+                      {/* 🆕 修改：頭像與背景色隨模式改變 */}
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-500
+                        ${aiMode === "translate" 
+                          ? "bg-gradient-to-br from-sky-400 to-blue-500" // 口譯：藍色系
+                          : "bg-gradient-to-br from-amber-200 to-orange-300"} // 導遊：橘黃系
+                      `}>
+                        {aiMode === "translate" ? (
+                          <Languages className="w-5 h-5 text-white" /> // 口譯 Icon
+                        ) : (
+                          <Sparkles className="w-5 h-5 text-white" />  // 導遊 Icon
                         )}
-                      </p>
-                    </div>
-                  </div>
+                      </div>
+                      
+                      <div>
+                        <h2 className={`text-base font-bold transition-colors duration-300 ${theme.text}`}>
+                          {aiMode === "translate" ? "AI 隨身口譯" : "AI 專屬導遊"}
+                        </h2>
+                        <p className={`text-xs flex items-center gap-1.5 ${theme.textSec}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full animate-pulse 
+                            ${aiMode === "translate" ? "bg-blue-500" : "bg-orange-500"}`}
+                          ></span>
+                          {aiMode === "translate" ? "雙向翻譯中" : "行程助手待命"}
+                          
+                          {isSpeaking && (
+                            <span className="ml-2 text-amber-600 font-bold flex items-center bg-amber-50 px-2 py-0.5 rounded-full">
+                              <Volume2 className="w-3 h-3 mr-1" /> 朗讀中...
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>              
+
+                  {/* 新增：清除紀錄按鈕 (垃圾桶 icon) */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleClearChat}
+                      className={`p-2 rounded-lg border transition-all active:scale-95 ${
+                        isDarkMode 
+                          ? "bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-red-400 hover:bg-neutral-800" 
+                          : "bg-stone-100 border-stone-200 text-stone-400 hover:text-red-500 hover:bg-red-50"
+                      }`}
+                      title="清除聊天紀錄"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>  
 
                   {/* 🆕 模式切換開關 (使用 handleSwitchMode) */}
                   <div
@@ -3746,6 +3806,26 @@ useEffect(() => {
           <LocateFixed className="w-6 h-6" />
         </button>
 
+        {/* 🆕 全螢幕按鈕 (移動到右下角，並統一樣式) */}
+        {isMobile && (
+          <button
+            onClick={toggleFullScreen}
+            className={`fixed bottom-76 right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100
+              ${
+                isDarkMode
+                  ? "bg-neutral-800/40 border-neutral-600 text-neutral-300 hover:bg-neutral-800/90"
+                  : "bg-white/40 border-stone-200 text-[#5D737E] hover:bg-white/90"
+              }`}
+            aria-label="切換全螢幕"
+          >
+            {isFullscreen ? (
+              <Minimize className="w-6 h-6" />
+            ) : (
+              <Maximize className="w-6 h-6" />
+            )}
+          </button>
+        )}
+
         {/* Toast Notification */}
         {toast.show && (
           <div
@@ -3801,6 +3881,51 @@ useEffect(() => {
                   <X className="w-8 h-8" />
                 </button>
               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* 🆕 新增：圖片上傳確認視窗 (Modal) */}
+        <AnimatePresence>
+          {tempImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4"
+            >
+              {/* 圖片預覽區 */}
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="relative max-w-full max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl border border-white/10"
+              >
+                <img
+                  src={tempImage}
+                  alt="Check Preview"
+                  className="max-w-full max-h-[70vh] object-contain"
+                />
+              </motion.div>
+
+              {/* 提示文字 */}
+              <p className="text-white/70 text-sm mt-6 mb-8 font-medium tracking-wide">
+                照片清楚嗎？請確認是否使用此圖片
+              </p>
+
+              {/* 操作按鈕 */}
+              <div className="flex gap-6 w-full max-w-xs">
+                <button
+                  onClick={handleCancelImage}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <X className="w-5 h-5" /> 取消
+                </button>
+                <button
+                  onClick={handleConfirmImage}
+                  className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-sky-600 text-white shadow-lg shadow-sky-900/20 hover:bg-sky-500 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Check className="w-5 h-5" /> 確認使用
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
