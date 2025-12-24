@@ -176,22 +176,25 @@ const ItineraryApp = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showEncryptTool, setShowEncryptTool] = useState(false); // 控制加密工具顯示
   const [fullPreviewImage, setFullPreviewImage] = useState(null); // 儲存目前放大的圖片 URL 或 Base64
+  const scrollContainerRef = useRef(null);
+  const [loadingText, setLoadingText] = useState(""); // 用來顯示隨機載入文字
+  const [autoTimeZone, setAutoTimeZone] = useState("Asia/Taipei"); // 預設時區為台北
 
   // 防止圖片放大時背景捲動
-useEffect(() => {
-  if (fullPreviewImage) {
-    // 當圖片放大時，鎖定背景滾動
-    document.body.style.overflow = 'hidden';
-  } else {
-    // 當關閉放大時，恢復背景滾動
-    document.body.style.overflow = '';
-  }
+  useEffect(() => {
+    if (fullPreviewImage) {
+      // 當圖片放大時，鎖定背景滾動
+      document.body.style.overflow = 'hidden';
+    } else {
+      // 當關閉放大時，恢復背景滾動
+      document.body.style.overflow = '';
+    }
 
-  // 元件卸載時的清理邏輯，確保不會永久鎖定
-  return () => {
-    document.body.style.overflow = '';
-  };
-}, [fullPreviewImage]);
+    // 元件卸載時的清理邏輯，確保不會永久鎖定
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [fullPreviewImage]);
 
   // 新增：用來判斷「初始化定位」是否完成，預設為 false，等到定位有結果 (成功或失敗) 後才變成 true
   const [isAppReady, setIsAppReady] = useState(false);
@@ -264,45 +267,52 @@ useEffect(() => {
 
   // --- 輔助函式：解析 Markdown 粗體與 URL連結 ---
   const renderMessage = (text) => {
-    if (!text) return null;
+      if (!text) return null;
 
-    // 1. 先處理 URL (將網址切分出來)
-    // Regex 說明: 抓取 http 或 https 開頭，直到遇到空白或結尾
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+      // 💡 蒐集行程中所有的地點名稱作為關鍵字
+      const allKeywords = [
+          ...itineraryData.flatMap(day => day.events.map(e => e.title)),
+          ...shopGuideData.flatMap(area => area.mainShops.map(s => s.name))
+      ];
 
-    return text.split(urlRegex).map((part, index) => {
-      // 如果這一段是 URL
-      if (part.match(urlRegex)) {
-        return (
-          <a
-            key={index}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sky-500 underline underline-offset-2 break-all hover:text-sky-400"
-            onClick={(e) => e.stopPropagation()} // 避免觸發其他點擊事件
-          >
-            {part}
-          </a>
-        );
-      }
+      // 建立 Regex (排除過短的字)
+      const keywordPattern = allKeywords
+          .filter(k => k.length >= 2)
+          .join('|');
+      const combinedRegex = new RegExp(`(https?://[^\\s]+)|(${keywordPattern})|(\\*\\*.*?\\*\\*)`, 'g');
 
-      // 如果不是 URL，則繼續處理 **粗體**
-      const boldParts = part.split(/(\*\*.*?\*\*)/g);
-      return boldParts.map((subPart, subIndex) => {
-        if (subPart.startsWith("**") && subPart.endsWith("**")) {
-          return (
-            <strong
-              key={`${index}-${subIndex}`}
-              className="font-bold text-inherit"
-            >
-              {subPart.slice(2, -2)}
-            </strong>
-          );
-        }
-        return subPart;
+      return text.split(combinedRegex).map((part, index) => {
+          if (!part) return null;
+
+          // 1. 處理 URL
+          if (part.match(/^https?:\/\//)) {
+              return (
+                  <a key={index} href={part} target="_blank" rel="noopener noreferrer" className="text-sky-500 underline">
+                      {part}
+                  </a>
+              );
+          }
+          
+          // 💡 2. 處理行程關鍵字：點擊直接開地圖
+          if (allKeywords.includes(part)) {
+              return (
+                  <a
+                      key={index}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(part)}`}
+                      className="text-orange-500 font-bold border-b border-dashed border-orange-400 hover:text-orange-400"
+                  >
+                      {part}
+                  </a>
+              );
+          }
+
+          // 3. 處理粗體
+          if (part.startsWith("**") && part.endsWith("**")) {
+              return <strong key={index} className="font-bold">{part.slice(2, -2)}</strong>;
+          }
+
+          return part;
       });
-    });
   };
 
   // 輔助函式：處理圖片選擇
@@ -558,6 +568,15 @@ useEffect(() => {
     }
   }, [activeDay]);
 
+  useEffect(() => {
+  if (scrollContainerRef.current) {
+    scrollContainerRef.current.scrollTo({
+      top: 0,
+      behavior: 'smooth' // 使用平滑捲動
+    });
+  }
+}, [activeDay]); // 💡 偵測 activeDay 的變化
+
   // 新增：滑動手勢偵測 State 與函式
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
@@ -569,42 +588,44 @@ useEffect(() => {
   // 新增：定義 Framer Motion 動畫變數
   // 這裡決定了畫面要怎麼進場 (enter) 和退場 (exit)
   const slideVariants = {
-    enter: (direction) => ({
-      // 如果是去下一頁 (direction > 0)，新頁面從右邊 (100%) 進來
-      // 如果是回上一頁 (direction < 0)，新頁面從左邊 (-100%) 進來
-      x: direction > 0 ? "100%" : "-100%",
-      opacity: 0,
-      position: "absolute", // 關鍵：讓進場和退場的元素重疊在同一個位置
-      width: "100%", // 確保寬度正確
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      position: "relative",
-      // 修改點：縮短時間至 0.2，並使用 easeOut 讓進場有煞車感
-      transition: { duration: 0.2, ease: "easeOut" },
+  enter: (direction) => ({
+    x: direction > 0 ? "100%" : "-100%",
+    opacity: 0,
+    position: "absolute",
+    width: "100%",
+    // 💡 新增：強制開啟硬體加速，減少閃爍與延遲
+    z: 0, 
+    willChange: "transform, opacity", 
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    position: "relative",
+    transition: { 
+      duration: 0.25, // 稍微增加一點點時間，讓動畫更滑順
+      ease: [0.23, 1, 0.32, 1], // 使用自訂 bezier 曲線（更具回彈感的減速）
     },
-    exit: (direction) => ({
-      x: direction < 0 ? "100%" : "-100%",
-      opacity: 0,
-      position: "absolute",
-      width: "100%",
-      // 修改點：縮短時間至 0.2，並使用 easeIn 讓退場加速離開
-      transition: { duration: 0.2, ease: "easeIn" },
-    }),
-  };
+  },
+  exit: (direction) => ({
+    x: direction < 0 ? "100%" : "-100%",
+    opacity: 0,
+    position: "absolute",
+    width: "100%",
+    transition: { duration: 0.2, ease: "easeIn" },
+  }),
+};
   // (原本的 onTouchStart 和 onTouchMove 不用變)
   const onTouchStart = (e) => {
-    setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
   };
   const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-  // 修改：onTouchEnd 需要同時更新 activeDay 和方向
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
+  // 如果想要防止滑動時頁面跟著上下晃動，可以取消註解下一行
+  e.preventDefault(); 
+};
+  const onTouchEnd = (e) => {
+  if (!touchStart) return;
+    const endX = e.changedTouches[0].clientX; 
+    const distance = touchStart - endX;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
@@ -618,6 +639,7 @@ useEffect(() => {
         changeDay(activeDay - 1); // 往右滑 (回上一頁)
       }
     }
+    setTouchStart(null);
   };
 
   const changeDay = (newDay) => {
@@ -1165,14 +1187,16 @@ useEffect(() => {
 
     const fetchWeather = async () => {
       try {
-        const params =
-          "daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=14"; // 抓長一點比較保險
+        const params = `daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=14`;
 
         // 自動為 config 裡的每一個地點產生 fetch 請求
         const weatherPromises = tripConfig.locations.map(async (loc) => {
           const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&${params}`;
           const res = await fetch(url);
           const data = await res.json();
+          if (data.timezone) {
+            setAutoTimeZone(data.timezone);
+          }
           return { key: loc.key, data: data.daily };
         });
 
@@ -1433,6 +1457,19 @@ useEffect(() => {
   const handleSendMessage = async () => {
     // 1. 檢查：防止空訊息 (但允許「只有圖片沒有文字」的情況)
     if (!inputMessage.trim() && !selectedImage) return;
+    const tz = autoTimeZone || tripConfig.timeZone || "Asia/Taipei";
+    const localTimeStr = new Date().toLocaleString("zh-TW", { 
+        timeZone: tz,
+        hour12: false 
+    });
+
+    const loadingTexts = [
+        "正在翻閱您的行程表...",
+        "正在查詢當地的購物資訊...",
+        "正在比對地圖位置...",
+        "正在組織建議內容..."
+    ];
+    const randomLoadingText = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
 
     // 2. 建構使用者訊息 (存入 React State 顯示用)
     // 這裡我們把圖片 (Base64) 也存進去，讓聊天室能顯示圖片
@@ -1547,7 +1584,22 @@ useEffect(() => {
           locationInstruction = `目前無 GPS，請假設使用者位於行程表中的地點。`;
         }
 
+        const startDate = new Date(tripConfig.startDate);
+        const today = new Date(new Date().toLocaleString("en-US", {timeZone: tz})); // 確保日期計算也符合目標時區
+        const diffTime = today - startDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        let dayStatus = "";
+        if (diffDays >= 1 && diffDays <= itineraryData.length) {
+            dayStatus = `今天是行程的第 ${diffDays} 天 (Day ${diffDays})。`;
+        } else if (diffDays < 1) {
+            dayStatus = `旅程尚未開始 (預計 ${tripConfig.startDate} 出發)。`;
+        } else {
+            dayStatus = `旅程已經結束。`;
+        }
+
         const guideSystemContext = `你是這趟「${tripConfig.title}」的專屬 AI 導遊。
+        【目前目的地當地時間】：${localTimeStr} (時區: ${tz})。
+        【行程進度】：${dayStatus}
         ${locationInstruction}
         
         【行程資訊】：
@@ -1612,36 +1664,35 @@ useEffect(() => {
   const currentLocation = getDailyLocation(activeDay);
   const weatherData = weatherForecast[currentLocation];
 
-  let displayWeather = {
-    icon: <Sun className="w-7 h-7 text-amber-500" />,
-    temp: "N/A",
-    desc: "載入中...",
-    advice: "請稍候",
-  };
+  // 使用 useMemo 鎖定天氣資料，優化滑動效能
+  const displayWeather = React.useMemo(() => {
+    const currentLocation = getDailyLocation(activeDay);
+    const weatherData = weatherForecast[currentLocation];
 
-  if (!weatherForecast.loading && weatherData) {
-    const dayIndex = activeDay === -1 ? 0 : activeDay;
-    const forecastIndex = dayIndex < weatherData.time.length ? dayIndex : 0;
-    const maxTemp = Math.round(weatherData.temperature_2m_max[forecastIndex]);
-    const minTemp = Math.round(weatherData.temperature_2m_min[forecastIndex]);
-    const weatherCode = weatherData.weathercode[forecastIndex];
-    const info = getWeatherInfo(weatherCode);
+    if (!weatherForecast.loading && weatherData) {
+      const dayIndex = activeDay === -1 ? 0 : activeDay;
+      const forecastIndex = dayIndex < weatherData.time.length ? dayIndex : 0;
+      const maxTemp = Math.round(weatherData.temperature_2m_max[forecastIndex]);
+      const minTemp = Math.round(weatherData.temperature_2m_min[forecastIndex]);
+      const weatherCode = weatherData.weathercode[forecastIndex];
+      const info = getWeatherInfo(weatherCode);
 
-    displayWeather = {
-      icon: info.icon,
-      temp: `${minTemp}°C / ${maxTemp}°C`,
-      desc: info.text,
-      advice: info.advice,
-    };
-  } else if (!weatherForecast.loading && !weatherData) {
-    // 抓不到資料時的通用顯示
-    displayWeather = {
+      return {
+        icon: info.icon,
+        temp: `${minTemp}°C / ${maxTemp}°C`,
+        desc: info.text,
+        advice: info.advice,
+      };
+    }
+
+    // 預設或抓不到資料的狀態
+    return {
       icon: <Cloud className="w-7 h-7 text-stone-300" />,
       temp: "--",
-      desc: "無資料",
-      advice: "無法取得預報，請稍後再試",
+      desc: weatherForecast.loading ? "載入中..." : "無資料",
+      advice: weatherForecast.loading ? "請稍候" : "無法取得預報，請稍後再試",
     };
-  }
+  }, [activeDay, weatherForecast, getWeatherInfo]);
 
   // --- Lock Screen Render ---
   if (!isVerified) {
@@ -1912,6 +1963,7 @@ useEffect(() => {
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
+            ref={scrollContainerRef}
           >
             {/* Navigation Buttons */}
             <div
@@ -1957,7 +2009,7 @@ useEffect(() => {
               <AnimatePresence
                 initial={false}
                 custom={direction}
-                mode="popLayout"
+                mode="wait"
               >
                 {/* === 分支 1: 總覽頁面 (activeDay === -1) === */}
                 {activeDay === -1 ? (
@@ -2507,6 +2559,12 @@ useEffect(() => {
                               <div
                                 className={`p-2.5 rounded-full shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/40"}`}
                               >
+                              <motion.div
+                                key={`${activeDay}-${displayWeather.desc}`} // 當天數改變，觸發小動畫
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                              ></motion.div>
                                 {displayWeather.icon}
                               </div>
                               <div>
@@ -3393,7 +3451,8 @@ useEffect(() => {
                         className={`w-4 h-4 animate-spin ${isDarkMode ? "text-sky-300" : "text-[#5D737E]"}`}
                       />
                       <span className={`text-xs ${theme.textSec}`}>
-                        正在思考中...
+                        {/* 💡 使用剛才在 handleSendMessage 定義的隨機文字 */}
+                        {loadingText || "正在翻閱您的行程表..."} 
                       </span>
                     </div>
                   </div>

@@ -887,6 +887,7 @@ export const itineraryData = [
 export const tripConfig = {
   // 基本資訊
   title: "東京輕井澤親子之旅",
+  timeZone: "Asia/Tokyo",
   subTitle: "2026/1/24 - 1/29",
   startDate: "2026-01-24T00:00:00",
   endDate: "2026-01-29T23:59:59",
