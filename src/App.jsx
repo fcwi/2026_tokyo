@@ -179,6 +179,8 @@ const ItineraryApp = () => {
   const scrollContainerRef = useRef(null);
   const [loadingText, setLoadingText] = useState(""); // 用來顯示隨機載入文字
   const [autoTimeZone, setAutoTimeZone] = useState("Asia/Taipei"); // 預設時區為台北
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [hasLocationPermission, setHasLocationPermission] = useState(null);
 
   // 防止圖片放大時背景捲動
   useEffect(() => {
@@ -197,7 +199,10 @@ const ItineraryApp = () => {
   }, [fullPreviewImage]);
 
   // 新增：用來判斷「初始化定位」是否完成，預設為 false，等到定位有結果 (成功或失敗) 後才變成 true
-  const [isAppReady, setIsAppReady] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(() => {
+     const cached = localStorage.getItem("cached_user_weather");
+     return !!cached; // 有快取就 True，沒快取就 False (顯示 Splash Screen)
+  });
 
   // --- Full Screen Logic ---
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -723,25 +728,32 @@ const ItineraryApp = () => {
   });
 
   // User Location Weather State
-  const [userWeather, setUserWeather] = useState({
-    temp: null,
-    desc: "",
-    locationName: "定位中...",
-    landmark: "", // 新增：用來存地標名稱
-    weatherCode: null, // 新增，用來存天氣代碼
-    //icon: <Loader className={`w-5 h-5 animate-spin ${theme.textSec}`} />,
-    loading: false,
-    error: null,
-  });
+  const [userWeather, setUserWeather] = useState(() => {
+    try {
+      // 1. 在元件初始化的瞬間，直接去讀快取
+      const cached = localStorage.getItem("cached_user_weather");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // 簡單驗證資料完整性，確保有地點名稱
+        if (parsed && parsed.locationName) {
+            console.log("🚀 State 初始化：直接載入快取資料", parsed.locationName);
+            return parsed; // 直接回傳快取物件作為初始狀態
+        }
+      }
+    } catch (e) {
+      console.error("快取初始化解析失敗", e);
+    }
 
-  // Permission State
-  const [hasLocationPermission, setHasLocationPermission] = useState(null);
-
-  // Toast Notification State
-  const [toast, setToast] = useState({
-    show: false,
-    message: "",
-    type: "success",
+    // 2. 如果沒快取，才使用這個預設值
+    return {
+      temp: null,
+      desc: "",
+      locationName: "定位中...",
+      landmark: "",
+      weatherCode: null,
+      loading: false, 
+      error: null,
+    };
   });
 
   // Chat State
@@ -915,216 +927,183 @@ const ItineraryApp = () => {
     tripStatus = "after";
   }
 
-  // ... existing location fetch logic ...
   // --- User Location Weather Logic ---
-  const getUserLocationWeather = React.useCallback(
-    (isSilent = false) => {
-      const KNOWN_LOCATIONS = [
-        ...tripConfig.locations, // 直接展開我們的設定
-        { name: "台北", lat: 25.033, lon: 121.5654 }, // 保留台北當作預設
-        { name: "桃園機場", lat: 25.0796, lon: 121.2342 },
-      ];
+// --- User Location Weather Logic (終極整合版：三階段加速 + 詳細地標 + 細膩錯誤處理) ---
+const getUserLocationWeather = React.useCallback(async (isSilent = false) => {
+  
+  // 定義內部 Helper: 抓取天氣與反向地理編碼 (包含您原本的詳細解析邏輯)
+  const fetchLocalWeather = async (latitude, longitude, customName = null) => {
+    try {
+      // 1. 取得天氣資料 (自動偵測時區)
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true&timezone=auto`;
+      const weatherRes = await fetch(weatherUrl);
+      const weatherData = await weatherRes.json();
 
-      // `getDistance` 原先為計算兩點距離的 helper，但目前未在此 scope 中使用，
-      // 因此移除以避免 ESLint 的 unused var 警告。
+      let city = customName;
+      let landmark = "";
 
-      const fetchLocalWeather = async (
-        latitude,
-        longitude,
-        customName = null,
-      ) => {
+      // 2. 取得地點資訊 (反向地理編碼)
+      if (!city) {
         try {
-          // 1. 取得天氣 (維持原樣)
-          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true`;
-          const weatherRes = await fetch(weatherUrl);
-          const weatherData = await weatherRes.json();
+          // zoom=18：鎖定在建築物等級
+          const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW&zoom=18`;
+          const geoRes = await fetch(geoUrl);
+          const geoData = await geoRes.json();
 
-          let city = customName;
-          let landmark = "";
+          if (geoData && geoData.address) {
+            const addr = geoData.address;
 
-          // 2. 取得地點資訊 (高精確度優化版)
-          if (!city) {
-            try {
-              // zoom=18：鎖定在建築物等級
-              const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW&zoom=18`;
-              const geoRes = await fetch(geoUrl);
-              const geoData = await geoRes.json();
+            // 2-1. 抓取城市/區域 (保留大範圍名稱顯示在標題)
+            city = addr.city || addr.town || addr.village || addr.county || addr.state || "您的位置";
 
-              if (geoData && geoData.address) {
-                const addr = geoData.address;
+            // 2-2. 💡 恢復您原本的邏輯：抓取具體地標 (設施、商店、建築)
+            // 根據截圖 image_389589.png 邏輯
+            const specificPOI = 
+              addr.amenity || // 設施 (最準：7-Eleven, 廁所, 銀行)
+              addr.shop ||    // 商店 (最準：全聯, 屈臣氏)
+              addr.office ||  // 辦公室
+              addr.tourism || // 景點
+              addr.building ||// 建築
+              addr.historic;  // 古蹟
 
-                // 2-1. 抓取城市/區域 (這裡可以保留大範圍名稱，因為是顯示在天氣卡片的大標題)
-                city =
-                  addr.city ||
-                  addr.town ||
-                  addr.village ||
-                  addr.county ||
-                  addr.state ||
-                  "您的位置";
-
-                // 2-2. ✅ 優化：只抓取「10m~100m 範圍內」的小型地標
-                // 我們刻意移除了 industrial (工業區), suburb, quarter 等大範圍標籤
-                const specificPOI =
-                  addr.amenity || // 設施 (最準：7-Eleven, 廁所, 銀行)
-                  addr.shop || // 商店 (最準：全聯, 屈臣氏)
-                  addr.office || // 辦公室 (準確：台積電F12, 特定公司名)
-                  addr.tourism || // 景點 (準確：博物館)
-                  addr.building || // 建築 (準確：XX大樓)
-                  addr.historic; // 古蹟
-
-                if (specificPOI) {
-                  landmark = specificPOI;
-                } else {
-                  // 2-3. ✅ 關鍵修改：如果沒有具體店家，直接使用「路名 + 門牌」
-                  // 這樣就避免了回退到 "新竹科學園區" 這種大範圍名稱
-                  if (addr.road) {
-                    landmark = addr.road;
-                    if (addr.house_number) {
-                      landmark += `${addr.house_number}`;
-                    }
-                  } else {
-                    // 如果連路名都沒有，才勉強用 display_name 的第一段，但通常路名都會有
-                    // 這裡我們不再 fallback 到 industrial
-                    landmark = "";
-                  }
+            if (specificPOI) {
+              landmark = specificPOI;
+            } else {
+              // 2-3. 若無具體地標，使用「路名 + 門牌」
+              if (addr.road) {
+                landmark = addr.road;
+                if (addr.house_number) {
+                  landmark += ` ${addr.house_number}`;
                 }
+              } else {
+                landmark = ""; // 避免回退到工業區等大範圍名稱
               }
-            } catch {
-              console.warn("Geo lookup failed, using default name");
-              city = "目前位置";
             }
           }
-
-          const info = getWeatherInfo(weatherData.current_weather.weathercode);
-
-          // 3. 建立資料與存檔 (維持原樣)
-          const newWeatherData = {
-            temp: Math.round(weatherData.current_weather.temperature),
-            desc: info.text,
-            weatherCode: weatherData.current_weather.weathercode,
-            locationName: city || "未知地點",
-            landmark: landmark, // 這裡現在只會存「精確地標」或「路名」，不會有大區域名稱
-            lat: latitude,
-            lon: longitude,
-            loading: false,
-            error: null,
-          };
-
-          localStorage.setItem(
-            "cached_user_weather",
-            JSON.stringify({
-              ...newWeatherData,
-              timestamp: Date.now(),
-            }),
-          );
-
-          setUserWeather(newWeatherData);
-        } catch (err) {
-          console.error("Weather Fetch Error:", err);
-          setUserWeather((prev) => ({
-            ...prev,
-            loading: false,
-            locationName: "天氣載入失敗",
-            error: "無法連線",
-          }));
-        } finally {
-          setIsAppReady(true);
+        } catch (e) {
+          console.warn("Geo lookup failed:", e);
+          city = "目前位置";
         }
+      }
+
+      // 3. 整合資料與更新 State
+      const info = getWeatherInfo(weatherData.current_weather.weathercode);
+      const newWeatherData = {
+        temp: Math.round(weatherData.current_weather.temperature),
+        desc: info.text,
+        weatherCode: weatherData.current_weather.weathercode,
+        locationName: city || "未知地點",
+        landmark: landmark,
+        lat: latitude,
+        lon: longitude,
+        loading: false,
+        error: null,
       };
 
-      const fallbackLocation = {
-        lat: 25.033,
-        lng: 121.5654,
-        name: "台北 (預設)",
-      };
-      if (!navigator.geolocation) {
-        setHasLocationPermission(false);
-        fetchLocalWeather(
-          fallbackLocation.lat,
-          fallbackLocation.lng,
-          fallbackLocation.name,
-        );
-        return;
+      // 存入快取
+      localStorage.setItem("cached_user_weather", JSON.stringify({ ...newWeatherData, timestamp: Date.now() }));
+      setUserWeather(newWeatherData);
+      
+      // 同步更新時區
+      if (weatherData.timezone) {
+          setAutoTimeZone(weatherData.timezone);
       }
-      if (!isSilent) {
-        setUserWeather((prev) => ({
-          ...prev,
-          loading: true,
-          locationName: "定位中...",
-        }));
+
+    } catch (err) {
+      console.error("定位天氣抓取失敗:", err);
+      // 錯誤時不強制覆蓋 State，避免畫面閃爍，僅在首次載入失敗時處理
+      if (!isAppReady) {
+         setUserWeather(prev => ({ ...prev, loading: false, error: "連線失敗" }));
       }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // ✅ 成功：設定權限為 true，並更新天氣
-          setHasLocationPermission(true);
-          fetchLocalWeather(
-            position.coords.latitude,
-            position.coords.longitude,
-          );
-        },
-        (err) => {
-          console.warn("自動定位未成功:", err.code, err.message);
+    } finally {
+      setIsAppReady(true);
+    }
+  };
 
-          // 🛑 關鍵修改：區分錯誤類型
-          if (err.code === 1) {
-            // 情況 A：使用者明確按下「封鎖」或「拒絕」 (PERMISSION_DENIED)
-            // 這時候才把按鈕變紅
-            setHasLocationPermission(false);
-            showToast("您已封鎖定位權限", "error");
-          } else {
-            // 情況 B：逾時 (TIMEOUT) 或 位置不可用 (POSITION_UNAVAILABLE)
-            // 這代表權限可能還在，只是暫時抓不到
-            // 我們將狀態設為 null (中立)，讓按鈕保持藍色/灰色，允許使用者再次點擊
-            setHasLocationPermission(null);
+  // --- 階段 1：嘗試讀取快取 (LocalStorage) ---
+  const cached = localStorage.getItem("cached_user_weather");
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      setUserWeather(parsed);
+      setIsAppReady(true); // 🚀 有快取直接過關
+      console.log("🚀 快取載入成功");
+    } catch (e) { console.error("快取解析失敗", e); }
+  }
 
-            // 選擇性：如果是手動點擊觸發的(loading狀態下)，才跳提示，避免自動重新整理時一直跳通知煩人
-            // 這裡簡單處理：只在 console 留紀錄，UI 默默切回預設地點，以免打擾體驗
-          }
+  // --- 階段 2：低精確度 IP 定位 (若無快取且非靜默更新，則補位) ---
+  if (!cached && !isSilent) {
+    try {
+      const ipRes = await fetch('https://ipapi.co/json/');
+      const ipData = await ipRes.json();
+      if (ipData.latitude) {
+        console.log("📡 IP 定位補位成功");
+        await fetchLocalWeather(ipData.latitude, ipData.longitude, ipData.city);
+      }
+    } catch (e) {
+      console.warn("IP 定位失敗");
+      // 最終防線：若連 IP 定位都失敗且無快取，使用台北
+      if (!cached) await fetchLocalWeather(25.033, 121.5654, "台北");
+    }
+  }
 
-          // 無論哪種錯誤，都切換回預設地點 (台北)
-          fetchLocalWeather(
-            fallbackLocation.lat,
-            fallbackLocation.lng,
-            fallbackLocation.name,
-          );
-        },
-        {
-          enableHighAccuracy: false, // 關閉高精準度，加速獲取
-          timeout: 10000, // 10秒超時
-          maximumAge: 600000, // 接受 10 分鐘內的快取
-        },
-      );
-    },
-    [showToast, getWeatherInfo],
-  );
+  // --- 階段 3：背景啟動瀏覽器精準定位 ---
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setHasLocationPermission(true);
+        // 背景更新為最精準座標
+        fetchLocalWeather(position.coords.latitude, position.coords.longitude); 
+      },
+      (err) => {
+        console.warn("GPS 定位未成功", err.code, err.message);
+        
+        // 🛑 根據截圖 image_38f389.png 恢復的錯誤處理邏輯
+        if (err.code === 1) {
+          // 情況 A：使用者明確拒絕 (PERMISSION_DENIED) -> 鎖定按鈕並提示
+          setHasLocationPermission(false);
+          if (!isSilent) showToast("您已封鎖定位權限", "error");
+        } else {
+          // 情況 B：逾時或位置不可用 -> 設為 null (中立狀態)，允許重試
+          setHasLocationPermission(null);
+        }
+
+        // 最終防線：如果連 IP 定位都沒抓到 (沒畫面)，才回退到台北
+        // 避免 GPS 只是慢了一點就把已經顯示的 IP 定位畫面蓋掉
+        if (!cached && !isAppReady) {
+          fetchLocalWeather(25.033, 121.5654, "台北");
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000 }
+    );
+  } else {
+      // 瀏覽器不支援定位的 fallback
+      setHasLocationPermission(false);
+      if (!cached && !isAppReady) {
+          fetchLocalWeather(25.033, 121.5654, "台北");
+      }
+  }
+}, [getWeatherInfo, isAppReady, showToast]); // 確保依賴完整
 
   // --- 定時更新位置與天氣邏輯 (優化版：快取優先) ---
-  useEffect(() => {
+useEffect(() => {
     if (isVerified) {
-      // 1. 先嘗試讀取快取，讓 App 秒開
-      const cached = localStorage.getItem("cached_user_weather");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          setUserWeather(parsed);
-          setIsAppReady(true); // ✅ 關鍵：直接標記 App 準備好了，不用等轉圈圈
-          console.log("🚀 使用快取資料加速啟動");
-        } catch (e) {
-          console.error("快取讀取失敗", e);
-        }
-      }
-      // 2. 背景執行：不管有沒有快取，都去抓最新的位置與天氣 (靜默更新)
-      // 如果剛剛沒有快取 (第一次用)，這裡的 loading 狀態會讓 Splash Screen 顯示
-      // 如果已有快取，這裡的更新會在使用者的眼皮底下悄悄發生 (溫度變更)
-      getUserLocationWeather(!cached); // 如果有快取，就用靜默模式(true)；沒快取才顯示 loading(false)
-      // 3. 設定定時器：每 10 分鐘更新一次
+      // 判斷目前 State 裡是否已經有有效資料 (根據溫度或地點判斷)
+      const hasData = userWeather.temp !== null && userWeather.locationName !== "定位中...";
+      
+      // 關鍵邏輯：
+      // 如果 hasData 為 true -> 傳入 true (isSilent)，背景偷偷更新，使用者看到的畫面不會變。
+      // 如果 hasData 為 false -> 傳入 false，這時才會顯示 Loading 轉圈圈。
+      getUserLocationWeather(hasData); 
+
+      // 定時器維持原樣
       const intervalId = setInterval(() => {
         console.log("⏰ 自動更新位置與天氣...");
         getUserLocationWeather(true);
       }, 600000);
       return () => clearInterval(intervalId);
     }
-  }, [isVerified, getUserLocationWeather]);
+  }, [isVerified, getUserLocationWeather]); // 移除 userWeather 以免造成迴圈
 
   const handleShareLocation = () => {
     // 1. 檢查是否有已儲存的位置資料
