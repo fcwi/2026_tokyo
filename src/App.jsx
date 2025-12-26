@@ -2001,8 +2001,8 @@ const ItineraryApp = () => {
         `🗺️ [Google Maps] 開始查詢周邊 POI... (Lat: ${latitude}, Lng: ${longitude})`,
       );
       // 2. 直接呼叫 Maps API (使用上方修正後的函式)
-      // 設定半徑 10m，只抓最靠近的點
-      const places = await fetchGooglePlaces(latitude, longitude, 50);
+      // 設定半徑 25m，只抓最靠近的點
+      const places = await fetchGooglePlaces(latitude, longitude, 25);
       console.log("🗺️ [Google Maps] API 回傳原始結果:", places);
 
       if (places && places.length > 0) {
