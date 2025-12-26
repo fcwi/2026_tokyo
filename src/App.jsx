@@ -1855,7 +1855,7 @@ const ItineraryApp = () => {
   };
 
   // --- Google Maps Places API Call Helper（使用正確的 Place Types） ---
-  const fetchGooglePlaces = async (lat, lng, radius = 10) => {
+  const fetchGooglePlaces = async (lat, lng, radius = 25) => {
     if (!mapsApiKey) return [];
 
     const centerLat = Number(lat);
