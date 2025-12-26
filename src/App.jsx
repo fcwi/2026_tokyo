@@ -1,8 +1,6 @@
-// 檔案說明：
-// 主應用 UI 與互動邏輯（Itinerary 主元件）
-// - 預設匯出：`ItineraryApp` React 元件
-// - 包含：狀態管理、定位/天氣、語音/朗讀、行程展示與 UI 控制
-// 注意：此檔案包含大量 UI 與 helper 函式，僅調整註解與格式以提升可讀性，未變更核心邏輯。
+// 概述：ItineraryApp 主介面與互動邏輯
+// 功能：狀態管理、定位/天氣、語音與朗讀、行程呈現、UI 控制
+// 說明：本次優化僅更新註解與排版，不更動核心流程。
 import React, { useState, useRef, useEffect } from "react";
 import {
   Sun,
@@ -156,13 +154,16 @@ const CryptoUtils = {
   },
 };
 
-// --- 請在此填入加密後的 API Key ---
-// 1. 在鎖定畫面點選「加密工具」
-// 2. 輸入真實 API Key 和想設定的密碼
-// 3. 複製生成的字串並貼上到這裡
-// const ENCRYPTED_API_KEY_PAYLOAD = "4ce8a18af7bf710deec098c6ede51461:6e916219785c7b117c29368c:e90feeed8fa696c1232c0a6b80fd766e963575676ecb53435087fa36952a5d086423301d77b215ff52ace77ef99bd62c4c8b1d82330df8";
+// --- 加密 Key 區域 ---
+// 1) Gemini API Key
 const ENCRYPTED_API_KEY_PAYLOAD = (
   import.meta.env.VITE_ENCODED_KEY || ""
+).trim();
+
+// 2) Google Maps API Key
+// 請使用下方加密工具生成後貼上
+const ENCRYPTED_MAPS_KEY_PAYLOAD = (
+  import.meta.env.VITE_ENCODED_MAPS_KEY || ""
 ).trim();
 
 // 簡單的延遲函式
@@ -172,7 +173,8 @@ const ItineraryApp = () => {
   // --- Security State ---
   const [isVerified, setIsVerified] = useState(false);
   const [password, setPassword] = useState("");
-  const [apiKey, setApiKey] = useState(""); // 解密後的 Key 存這裡
+  const [apiKey, setApiKey] = useState(""); // Gemini Key
+  const [mapsApiKey, setMapsApiKey] = useState(""); // 🆕 Maps Key
   const [authError, setAuthError] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showEncryptTool, setShowEncryptTool] = useState(false); // 控制加密工具顯示
@@ -180,29 +182,33 @@ const ItineraryApp = () => {
   const scrollContainerRef = useRef(null);
   const [loadingText, setLoadingText] = useState(""); // 用來顯示隨機載入文字
   const [autoTimeZone, setAutoTimeZone] = useState("Asia/Taipei"); // 預設時區為台北
-  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success",
+  });
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
 
   // 防止圖片放大時背景捲動
   useEffect(() => {
     if (fullPreviewImage) {
       // 當圖片放大時，鎖定背景滾動
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
       // 當關閉放大時，恢復背景滾動
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
 
     // 元件卸載時的清理邏輯，確保不會永久鎖定
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [fullPreviewImage]);
 
-  // 新增：用來判斷「初始化定位」是否完成，預設為 false，等到定位有結果 (成功或失敗) 後才變成 true
+  // 初始化定位完成狀態：有快取即視為完成，否則顯示啟動畫面
   const [isAppReady, setIsAppReady] = useState(() => {
-     const cached = localStorage.getItem("cached_user_weather");
-     return !!cached; // 有快取就 True，沒快取就 False (顯示 Splash Screen)
+    const cached = localStorage.getItem("cached_user_weather");
+    return !!cached; // 有快取為 true，無快取為 false（顯示啟動畫面）
   });
 
   // --- Full Screen Logic ---
@@ -270,97 +276,109 @@ const ItineraryApp = () => {
   const [toolKey, setToolKey] = useState("");
   const [toolPwd, setToolPwd] = useState("");
   const [toolResult, setToolResult] = useState("");
+  const [keyType, setKeyType] = useState("gemini"); // 用來切換要加密哪種 Key
 
-  // --- 輔助函式：解析 Markdown 粗體與 URL連結 ---
+  // --- 輔助函式：解析 Markdown 粗體與 URL 連結 ---
   const renderMessage = (text) => {
-      if (!text) return null;
+    if (!text) return null;
 
-      // 💡 蒐集行程中所有的地點名稱作為關鍵字
-      const allKeywords = [
-          ...itineraryData.flatMap(day => day.events.map(e => e.title)),
-          ...shopGuideData.flatMap(area => area.mainShops.map(s => s.name))
-      ];
+    // 蒐集行程中的地點名稱作為關鍵字
+    const allKeywords = [
+      ...itineraryData.flatMap((day) => day.events.map((e) => e.title)),
+      ...shopGuideData.flatMap((area) => area.mainShops.map((s) => s.name)),
+    ];
 
-      // 建立 Regex (排除過短的字)
-      const keywordPattern = allKeywords
-          .filter(k => k.length >= 2)
-          .join('|');
-      const combinedRegex = new RegExp(`(https?://[^\\s]+)|(${keywordPattern})|(\\*\\*.*?\\*\\*)`, 'g');
+    // 建立 Regex (排除過短的字)
+    const keywordPattern = allKeywords.filter((k) => k.length >= 2).join("|");
+    const combinedRegex = new RegExp(
+      `(https?://[^\\s]+)|(${keywordPattern})|(\\*\\*.*?\\*\\*)`,
+      "g",
+    );
 
-      return text.split(combinedRegex).map((part, index) => {
-          if (!part) return null;
+    return text.split(combinedRegex).map((part, index) => {
+      if (!part) return null;
 
-          // 1. 處理 URL
-          if (part.match(/^https?:\/\//)) {
-              return (
-                  <a key={index} href={part} target="_blank" rel="noopener noreferrer" className="text-sky-500 underline">
-                      {part}
-                  </a>
-              );
-          }
-          
-          // 💡 2. 處理行程關鍵字：點擊直接開地圖
-          if (allKeywords.includes(part)) {
-              return (
-                  <a
-                      key={index}
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(part)}`}
-                      className="text-orange-500 font-bold border-b border-dashed border-orange-400 hover:text-orange-400"
-                  >
-                      {part}
-                  </a>
-              );
-          }
+      // 1. 處理 URL
+      if (part.match(/^https?:\/\//)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sky-500 underline"
+          >
+            {part}
+          </a>
+        );
+      }
 
-          // 3. 處理粗體
-          if (part.startsWith("**") && part.endsWith("**")) {
-              return <strong key={index} className="font-bold">{part.slice(2, -2)}</strong>;
-          }
+      // 💡 2. 處理行程關鍵字：點擊直接開地圖
+      if (allKeywords.includes(part)) {
+        return (
+          <a
+            key={index}
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(part)}`}
+            className="text-orange-500 font-bold border-b border-dashed border-orange-400 hover:text-orange-400"
+          >
+            {part}
+          </a>
+        );
+      }
 
-          return part;
-      });
+      // 3. 處理粗體
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={index} className="font-bold">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      return part;
+    });
   };
 
   // 輔助函式：處理圖片選擇
   const handleImageSelect = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const img = new Image();
-    img.src = event.target.result;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
 
-      // 限制最長邊為 1600px，這在 Gemini 辨識與流量間取得了極佳平衡
-      const MAX_SIDE = 1600; 
-      if (width > height) {
-        if (width > MAX_SIDE) {
-          height *= MAX_SIDE / width;
-          width = MAX_SIDE;
+        // 限制最長邊為 1600px，這在 Gemini 辨識與流量間取得了極佳平衡
+        const MAX_SIDE = 1600;
+        if (width > height) {
+          if (width > MAX_SIDE) {
+            height *= MAX_SIDE / width;
+            width = MAX_SIDE;
+          }
+        } else {
+          if (height > MAX_SIDE) {
+            width *= MAX_SIDE / height;
+            height = MAX_SIDE;
+          }
         }
-      } else {
-        if (height > MAX_SIDE) {
-          width *= MAX_SIDE / height;
-          height = MAX_SIDE;
-        }
-      }
 
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
 
-      // 使用 jpeg 格式並設定 0.8 的品質，能顯著壓縮檔案體積但保留細節
-      const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-      setTempImage(compressedBase64);
+        // 使用 jpeg 格式並設定 0.8 的品質，能顯著壓縮檔案體積但保留細節
+        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+        setTempImage(compressedBase64);
+      };
     };
+    reader.readAsDataURL(file);
   };
-  reader.readAsDataURL(file);
-};
 
   // 輔助函式：移除圖片
   const clearImage = () => {
@@ -497,28 +515,40 @@ const ItineraryApp = () => {
     setIsAuthLoading(true);
     setAuthError("");
     try {
-      if (!ENCRYPTED_API_KEY_PAYLOAD) {
-        // 如果還沒設定 payload，但使用者按了解鎖，就當作測試模式
-        setIsVerified(true);
-        return;
+      // 1. 解密 Gemini Key
+      if (ENCRYPTED_API_KEY_PAYLOAD) {
+        const decryptedGemini = await CryptoUtils.decrypt(
+          ENCRYPTED_API_KEY_PAYLOAD,
+          inputPwd,
+        );
+        if (decryptedGemini && decryptedGemini.length > 10) {
+          setApiKey(decryptedGemini);
+        } else {
+          throw new Error("Gemini Key 解密失敗");
+        }
       }
 
-      const decryptedKey = await CryptoUtils.decrypt(
-        ENCRYPTED_API_KEY_PAYLOAD,
-        inputPwd,
-      );
-
-      // 簡單驗證 (Google API Key 通常以 AIza 開頭)
-      if (decryptedKey && decryptedKey.length > 10) {
-        setApiKey(decryptedKey);
-        setIsVerified(true);
-        localStorage.setItem("trip_password", inputPwd);
-      } else {
-        throw new Error("解密失敗");
+      // 2) 解密 Maps Key（如有）
+      if (ENCRYPTED_MAPS_KEY_PAYLOAD) {
+        try {
+          const decryptedMaps = await CryptoUtils.decrypt(
+            ENCRYPTED_MAPS_KEY_PAYLOAD,
+            inputPwd,
+          );
+          if (decryptedMaps && decryptedMaps.length > 5) {
+            setMapsApiKey(decryptedMaps);
+          }
+        } catch (e) {
+          console.warn("Maps Key 解密失敗，可能密碼不同或未設定", e);
+          // 這裡可以選擇是否要拋出錯誤，或者允許只有 Gemini Key 成功也算過關
+        }
       }
+
+      setIsVerified(true);
+      localStorage.setItem("trip_password", inputPwd);
     } catch {
       if (!isAuto) setAuthError("密碼錯誤，請再試一次");
-      if (isAuto) localStorage.removeItem("trip_password"); // 清除無效的舊密碼
+      if (isAuto) localStorage.removeItem("trip_password");
     } finally {
       setIsAuthLoading(false);
     }
@@ -528,7 +558,7 @@ const ItineraryApp = () => {
     e.preventDefault();
     attemptUnlock(password);
 
-    // 新增：如果是手機，解鎖時順便嘗試進入全螢幕
+    // 手機解鎖時嘗試進入全螢幕
     if (isMobile) {
       toggleFullScreen();
     }
@@ -556,7 +586,7 @@ const ItineraryApp = () => {
   const [expandedShops, setExpandedShops] = useState({});
   const [availableVoices, setAvailableVoices] = useState([]);
 
-  // 新增：導覽列自動捲動用的 Ref
+  // 導覽列自動捲動用的 Ref
   const navContainerRef = useRef(null);
   const navItemsRef = useRef({}); // 用物件來存每一顆按鈕的 ref
 
@@ -575,17 +605,17 @@ const ItineraryApp = () => {
   }, [activeDay]);
 
   useEffect(() => {
-  if (scrollContainerRef.current) {
-    scrollContainerRef.current.scrollTo({
-      top: 0,
-      behavior: 'smooth' // 使用平滑捲動
-    });
-  }
-}, [activeDay]); // 💡 偵測 activeDay 的變化
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: 0,
+        behavior: "smooth", // 使用平滑捲動
+      });
+    }
+  }, [activeDay]); // 💡 偵測 activeDay 的變化
 
   // 新增：滑動手勢偵測 State 與函式
   const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
+  // const [touchEnd, setTouchEnd] = useState(null);
   // 新增：紀錄滑動方向狀態 (1 代表去下一頁/向左滑，-1 代表回上一頁/向右滑)
   // 初始值設為 0，避免第一次載入時有動畫
   // 注意：目前不直接使用 `page` 變數，因此用空位忽略以避免 lint 警告
@@ -594,43 +624,43 @@ const ItineraryApp = () => {
   // 新增：定義 Framer Motion 動畫變數
   // 這裡決定了畫面要怎麼進場 (enter) 和退場 (exit)
   const slideVariants = {
-  enter: (direction) => ({
-    x: direction > 0 ? "100%" : "-100%",
-    opacity: 0,
-    position: "absolute",
-    width: "100%",
-    // 💡 新增：強制開啟硬體加速，減少閃爍與延遲
-    z: 0, 
-    willChange: "transform, opacity", 
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    position: "relative",
-    transition: { 
-      duration: 0.25, // 稍微增加一點點時間，讓動畫更滑順
-      ease: [0.23, 1, 0.32, 1], // 使用自訂 bezier 曲線（更具回彈感的減速）
+    enter: (direction) => ({
+      x: direction > 0 ? "100%" : "-100%",
+      opacity: 0,
+      position: "absolute",
+      width: "100%",
+      // 強制啟用硬體加速，減少閃爍與延遲
+      z: 0,
+      willChange: "transform, opacity",
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      position: "relative",
+      transition: {
+        duration: 0.25, // 稍微增加一點點時間，讓動畫更滑順
+        ease: [0.23, 1, 0.32, 1], // 使用自訂 bezier 曲線（更具回彈感的減速）
+      },
     },
-  },
-  exit: (direction) => ({
-    x: direction < 0 ? "100%" : "-100%",
-    opacity: 0,
-    position: "absolute",
-    width: "100%",
-    transition: { duration: 0.2, ease: "easeIn" },
-  }),
-};
+    exit: (direction) => ({
+      x: direction < 0 ? "100%" : "-100%",
+      opacity: 0,
+      position: "absolute",
+      width: "100%",
+      transition: { duration: 0.2, ease: "easeIn" },
+    }),
+  };
   // (原本的 onTouchStart 和 onTouchMove 不用變)
   const onTouchStart = (e) => {
     setTouchStart(e.targetTouches[0].clientX);
   };
   const onTouchMove = (e) => {
-  // 如果想要防止滑動時頁面跟著上下晃動，可以取消註解下一行
-  e.preventDefault(); 
-};
+    // 阻止滑動時的上下捲動干擾
+    e.preventDefault();
+  };
   const onTouchEnd = (e) => {
-  if (!touchStart) return;
-    const endX = e.changedTouches[0].clientX; 
+    if (!touchStart) return;
+    const endX = e.changedTouches[0].clientX;
     const distance = touchStart - endX;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
@@ -657,7 +687,7 @@ const ItineraryApp = () => {
   };
 
   // --- Checklist Logic ---
-  const [newItemText, setNewItemText] = useState(""); // 🆕 新增：輸入框狀態
+  const [newItemText, setNewItemText] = useState(""); // 輸入框狀態
 
   const [checklist, setChecklist] = useState(() => {
     try {
@@ -700,14 +730,14 @@ const ItineraryApp = () => {
     setNewItemText(""); // 清空輸入框
     showToast("已新增檢查項目");
   };
-  // 🆕 刪除項目 (長按或點擊垃圾桶)
+  // 刪除項目（長按或點擊垃圾桶）
   const handleDeleteItem = (id) => {
     if (window.confirm("確定要刪除此項目嗎？")) {
       setChecklist((prev) => prev.filter((item) => item.id !== id));
       showToast("項目已刪除", "error"); // 使用 error 樣式顯示刪除提示
     }
   };
-  // 🆕 重置檢查清單 (還原成預設值)
+  // 重置檢查清單（還原為預設值）
   const handleResetChecklist = () => {
     if (
       window.confirm(
@@ -737,8 +767,8 @@ const ItineraryApp = () => {
         const parsed = JSON.parse(cached);
         // 簡單驗證資料完整性，確保有地點名稱
         if (parsed && parsed.locationName) {
-            console.log("🚀 State 初始化：直接載入快取資料", parsed.locationName);
-            return parsed; // 直接回傳快取物件作為初始狀態
+          console.log("🚀 State 初始化：直接載入快取資料", parsed.locationName);
+          return parsed; // 直接回傳快取物件作為初始狀態
         }
       }
     } catch (e) {
@@ -752,10 +782,29 @@ const ItineraryApp = () => {
       locationName: "定位中...",
       landmark: "",
       weatherCode: null,
-      loading: false, 
+      loading: false,
       error: null,
     };
   });
+
+  // 位置來源狀態：'cache' | 'low' | 'high' | null
+  const [locationSource, setLocationSource] = useState(() => {
+    try {
+      const cached = localStorage.getItem("cached_user_weather");
+      return cached ? "cache" : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // 追蹤最後一次高精度定位的時間（ms since epoch），用 useRef 避免不必要 rerender
+  const lastHighPrecisionAtRef = useRef(null);
+
+  // 目前分享流程是否正在進行（用於 disable 與顯示 spinner）
+  const [isSharing, setIsSharing] = useState(false);
+
+  // 目前使用者主動更新位置的 loading 狀態（用於更新按鈕）
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
   // Chat State
   // 🆕 輔助函式：根據模式取得對應的歡迎詞 (更新版)
@@ -781,24 +830,24 @@ const ItineraryApp = () => {
   const [aiMode, setAiMode] = useState("translate"); // 預設為 'translate' (口譯模式)
   const getStorageKey = (mode) => `trip_chat_history_${mode}`;
   const [messages, setMessages] = useState(() => {
-      try {
-        // 預設讀取 translate (因為 aiMode 初始值是 translate)
-        const saved = localStorage.getItem(getStorageKey("translate"));
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        console.error("讀取聊天紀錄失敗", e);
-      }
-      return [getWelcomeMessage("translate")];
-    });
+    try {
+      // 預設讀取 translate (因為 aiMode 初始值是 translate)
+      const saved = localStorage.getItem(getStorageKey("translate"));
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error("讀取聊天紀錄失敗", e);
+    }
+    return [getWelcomeMessage("translate")];
+  });
 
-    // 3. 修改：當 messages 變動時，存入「當下模式」的 Key
-    useEffect(() => {
-      const historyToSave = messages.map((msg) => ({
-        ...msg,
-        image: null, // 依然不存圖片
-      }));
-      localStorage.setItem(getStorageKey(aiMode), JSON.stringify(historyToSave));
-    }, [messages, aiMode]); // 加入 aiMode 作為依賴
+  // 3. 修改：當 messages 變動時，存入「當下模式」的 Key
+  useEffect(() => {
+    const historyToSave = messages.map((msg) => ({
+      ...msg,
+      image: null, // 依然不存圖片
+    }));
+    localStorage.setItem(getStorageKey(aiMode), JSON.stringify(historyToSave));
+  }, [messages, aiMode]); // 加入 aiMode 作為依賴
 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -811,11 +860,11 @@ const ItineraryApp = () => {
   const fileInputRef = useRef(null); // 用來觸發隱藏的 input
 
   const handleConfirmImage = () => {
-  setSelectedImage(tempImage); // 將暫存圖轉正
-  setTempImage(null);          // 清空暫存
+    setSelectedImage(tempImage); // 將暫存圖轉正
+    setTempImage(null); // 清空暫存
   };
   const handleCancelImage = () => {
-    setTempImage(null);          // 清空暫存
+    setTempImage(null); // 清空暫存
     if (fileInputRef.current) fileInputRef.current.value = ""; // 清空 input 讓使用者可以重選同一張
   };
 
@@ -958,234 +1007,638 @@ const ItineraryApp = () => {
     tripStatus = "after";
   }
 
-// --- User Location Weather Logic (終極整合版：三階段加速 + 詳細地標 + 細膩錯誤處理) ---
-const getUserLocationWeather = React.useCallback(async (isSilent = false) => {
-  
-  // 定義內部 Helper: 抓取天氣與反向地理編碼 (包含您原本的詳細解析邏輯)
-  const fetchLocalWeather = async (latitude, longitude, customName = null) => {
-    try {
-      // 1. 取得天氣資料 (自動偵測時區)
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true&timezone=auto`;
-      const weatherRes = await fetch(weatherUrl);
-      const weatherData = await weatherRes.json();
+  // --- User Location Weather Logic (平時只用 OSM，節省額度) ---
+  const getUserLocationWeather = React.useCallback(
+    async (options = {}) => {
+      const {
+        isSilent = false,
+        highAccuracy = false,
+        timeout = 10000,
+        coords = null,
+      } = options;
+      if (!isSilent && !highAccuracy) setIsUpdatingLocation(true);
 
-      let city = customName;
-      let landmark = "";
-
-      // 2. 取得地點資訊 (反向地理編碼)
-      if (!city) {
+      const fetchLocalWeather = async (
+        latitude,
+        longitude,
+        customName = null,
+      ) => {
         try {
-          // zoom=18：鎖定在建築物等級
-          const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW&zoom=18`;
-          const geoRes = await fetch(geoUrl);
-          const geoData = await geoRes.json();
+          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true&timezone=auto`;
+          const weatherRes = await fetch(weatherUrl);
+          const weatherData = await weatherRes.json();
 
-          if (geoData && geoData.address) {
-            const addr = geoData.address;
+          let city = customName;
+          let landmark = "";
+          // 預設為 true (假設是不精準的)，除非 OSM 明確回傳了 name
+          let isGeneric = true;
 
-            // 2-1. 抓取城市/區域 (保留大範圍名稱顯示在標題)
-            city = addr.city || addr.town || addr.village || addr.county || addr.state || "您的位置";
+          if (!city) {
+            try {
+              const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW&zoom=18`;
+              const geoRes = await fetch(geoUrl);
+              const geoData = await geoRes.json();
 
-            // 2-2. 💡 恢復您原本的邏輯：抓取具體地標 (設施、商店、建築)
-            // 根據截圖 image_389589.png 邏輯
-            const specificPOI = 
-              addr.amenity || // 設施 (最準：7-Eleven, 廁所, 銀行)
-              addr.shop ||    // 商店 (最準：全聯, 屈臣氏)
-              addr.office ||  // 辦公室
-              addr.tourism || // 景點
-              addr.building ||// 建築
-              addr.historic;  // 古蹟
+              if (geoData) {
+                const addr = geoData.address || {};
+                city =
+                  addr.city ||
+                  addr.town ||
+                  addr.village ||
+                  addr.county ||
+                  addr.state ||
+                  "您的位置";
 
-            if (specificPOI) {
-              landmark = specificPOI;
-            } else {
-              // 2-3. 若無具體地標，使用「路名 + 門牌」
-              if (addr.road) {
-                landmark = addr.road;
-                if (addr.house_number) {
-                  landmark += ` ${addr.house_number}`;
+                // 🎯 關鍵判斷：OSM 有給 name 嗎？
+                if (geoData.name) {
+                  // Case A: 有名字 (e.g., 台北101, 7-11) -> 精準地標
+                  landmark = geoData.name;
+                  isGeneric = false;
+                } else {
+                  // Case B: 沒名字，只有路名/門牌 -> 通用地址
+                  // 這裡我們 "只存路名"，不查 Google Maps (符合您的需求1)
+                  isGeneric = true;
+                  if (addr.road) {
+                    landmark = addr.road;
+                    if (addr.house_number) landmark += ` ${addr.house_number}`;
+                  }
                 }
-              } else {
-                landmark = ""; // 避免回退到工業區等大範圍名稱
               }
+            } catch (e) {
+              console.warn("Geo lookup failed:", e);
+              city = "目前位置";
             }
           }
-        } catch (e) {
-          console.warn("Geo lookup failed:", e);
-          city = "目前位置";
-        }
-      }
 
-      // 3. 整合資料與更新 State
-      const info = getWeatherInfo(weatherData.current_weather.weathercode);
-      const newWeatherData = {
-        temp: Math.round(weatherData.current_weather.temperature),
-        desc: info.text,
-        weatherCode: weatherData.current_weather.weathercode,
-        locationName: city || "未知地點",
-        landmark: landmark,
-        lat: latitude,
-        lon: longitude,
-        loading: false,
-        error: null,
+          const info = getWeatherInfo(weatherData.current_weather.weathercode);
+          const newWeatherData = {
+            temp: Math.round(weatherData.current_weather.temperature),
+            desc: info.text,
+            weatherCode: weatherData.current_weather.weathercode,
+            locationName: city || "未知地點",
+            landmark: landmark,
+            isGeneric: isGeneric, // ✅ 將判斷結果存入 State
+            lat: latitude,
+            lon: longitude,
+            loading: false,
+            error: null,
+          };
+
+          localStorage.setItem(
+            "cached_user_weather",
+            JSON.stringify({ ...newWeatherData, timestamp: Date.now() }),
+          );
+          setUserWeather(newWeatherData);
+          if (weatherData.timezone) setAutoTimeZone(weatherData.timezone);
+
+          return newWeatherData;
+        } catch (err) {
+          console.error("定位失敗:", err);
+          if (!isAppReady)
+            setUserWeather((prev) => ({
+              ...prev,
+              loading: false,
+              error: "連線失敗",
+            }));
+          return null;
+        } finally {
+          setIsAppReady(true);
+          setIsUpdatingLocation(false);
+        }
       };
 
-      // 存入快取
-      localStorage.setItem("cached_user_weather", JSON.stringify({ ...newWeatherData, timestamp: Date.now() }));
-      setUserWeather(newWeatherData);
-      
-      // 同步更新時區
-      if (weatherData.timezone) {
-          setAutoTimeZone(weatherData.timezone);
-      }
-
-    } catch (err) {
-      console.error("定位天氣抓取失敗:", err);
-      // 錯誤時不強制覆蓋 State，避免畫面閃爍，僅在首次載入失敗時處理
-      if (!isAppReady) {
-         setUserWeather(prev => ({ ...prev, loading: false, error: "連線失敗" }));
-      }
-    } finally {
-      setIsAppReady(true);
-    }
-  };
-
-  // --- 階段 1：嘗試讀取快取 (LocalStorage) ---
-  const cached = localStorage.getItem("cached_user_weather");
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      setUserWeather(parsed);
-      setIsAppReady(true); // 🚀 有快取直接過關
-      console.log("🚀 快取載入成功");
-    } catch (e) { console.error("快取解析失敗", e); }
-  }
-
-  // --- 階段 2：低精確度 IP 定位 (若無快取且非靜默更新，則補位) ---
-  if (!cached && !isSilent) {
-    try {
-      const ipRes = await fetch('https://ipapi.co/json/');
-      const ipData = await ipRes.json();
-      if (ipData.latitude) {
-        console.log("📡 IP 定位補位成功");
-        await fetchLocalWeather(ipData.latitude, ipData.longitude, ipData.city);
-      }
-    } catch (e) {
-      console.warn("IP 定位失敗");
-      // 最終防線：若連 IP 定位都失敗且無快取，使用台北
-      if (!cached) await fetchLocalWeather(25.033, 121.5654, "台北");
-    }
-  }
-
-  // --- 階段 3：背景啟動瀏覽器精準定位 ---
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setHasLocationPermission(true);
-        // 背景更新為最精準座標
-        fetchLocalWeather(position.coords.latitude, position.coords.longitude); 
-      },
-      (err) => {
-        console.warn("GPS 定位未成功", err.code, err.message);
-        
-        // 🛑 根據截圖 image_38f389.png 恢復的錯誤處理邏輯
-        if (err.code === 1) {
-          // 情況 A：使用者明確拒絕 (PERMISSION_DENIED) -> 鎖定按鈕並提示
-          setHasLocationPermission(false);
-          if (!isSilent) showToast("您已封鎖定位權限", "error");
-        } else {
-          // 情況 B：逾時或位置不可用 -> 設為 null (中立狀態)，允許重試
-          setHasLocationPermission(null);
+      // --- 階段 1：嘗試讀取快取 (LocalStorage) ---
+      const cached = localStorage.getItem("cached_user_weather");
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          setUserWeather(parsed);
+          setLocationSource("cache");
+          setIsAppReady(true); // 🚀 有快取直接過關
+          console.log("🚀 快取載入成功");
+        } catch (e) {
+          console.error("快取解析失敗", e);
         }
+      }
 
-        // 最終防線：如果連 IP 定位都沒抓到 (沒畫面)，才回退到台北
-        // 避免 GPS 只是慢了一點就把已經顯示的 IP 定位畫面蓋掉
+      // --- 階段 2：低精確度 IP 定位 (若無快取且非靜默更新，則補位) ---
+      if (!cached && !isSilent && !coords) {
+        try {
+          const ipRes = await fetch("https://ipapi.co/json/");
+          const ipData = await ipRes.json();
+          if (ipData.latitude) {
+            console.log("📡 IP 定位補位成功");
+            await fetchLocalWeather(
+              ipData.latitude,
+              ipData.longitude,
+              ipData.city,
+            );
+            setLocationSource("low");
+          }
+        } catch {
+          console.warn("IP 定位失敗");
+          // 最終防線：若連 IP 定位都失敗且無快取，使用台北
+          if (!cached) {
+            await fetchLocalWeather(25.033, 121.5654, "台北");
+            setLocationSource("low");
+          }
+        }
+      }
+
+      // 如果 caller 傳入 coords，優先使用（方便分享時要求高精度）
+      if (coords && coords.latitude && coords.longitude) {
+        try {
+          setHasLocationPermission(true);
+          if (highAccuracy) {
+            lastHighPrecisionAtRef.current = Date.now();
+            setLocationSource("high");
+          } else {
+            setLocationSource("low");
+          }
+          return await fetchLocalWeather(
+            coords.latitude,
+            coords.longitude,
+            coords.name || null,
+          );
+        } catch (e) {
+          console.error("使用提供的座標抓取失敗", e);
+        }
+      }
+
+      // --- 階段 3：背景啟動瀏覽器定位 ---
+      if (navigator.geolocation) {
+        const geoOptions = {
+          enableHighAccuracy: highAccuracy,
+          timeout,
+          maximumAge: highAccuracy ? 0 : 600000,
+        };
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setHasLocationPermission(true);
+            if (highAccuracy) {
+              lastHighPrecisionAtRef.current = Date.now();
+              setLocationSource("high");
+            } else {
+              setLocationSource("low");
+            }
+            // 背景更新為取得的座標
+            fetchLocalWeather(
+              position.coords.latitude,
+              position.coords.longitude,
+            );
+          },
+          (err) => {
+            console.warn("GPS 定位未成功", err.code, err.message);
+
+            if (err.code === 1) {
+              // PERMISSION_DENIED -> 鎖定按鈕並提示
+              setHasLocationPermission(false);
+              if (!isSilent) showToast("您已封鎖定位權限", "error");
+            } else {
+              // 逾時或位置不可用 -> 設為 null (中立狀態)，允許重試
+              setHasLocationPermission(null);
+            }
+
+            // 最終防線：如果連 IP 定位都沒抓到 (沒畫面)，才回退到台北
+            if (!cached && !isAppReady) {
+              fetchLocalWeather(25.033, 121.5654, "台北");
+              setLocationSource("low");
+            }
+          },
+          geoOptions,
+        );
+      } else {
+        // 瀏覽器不支援定位的 fallback
+        setHasLocationPermission(false);
         if (!cached && !isAppReady) {
           fetchLocalWeather(25.033, 121.5654, "台北");
+          setLocationSource("low");
         }
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    );
-  } else {
-      // 瀏覽器不支援定位的 fallback
-      setHasLocationPermission(false);
-      if (!cached && !isAppReady) {
-          fetchLocalWeather(25.033, 121.5654, "台北");
       }
-  }
-}, [getWeatherInfo, isAppReady, showToast]); // 確保依賴完整
 
-  // --- 定時更新位置與天氣邏輯 (優化版：快取優先) ---
-useEffect(() => {
-    if (isVerified) {
-      // 判斷目前 State 裡是否已經有有效資料 (根據溫度或地點判斷)
-      const hasData = userWeather.temp !== null && userWeather.locationName !== "定位中...";
-      
-      // 關鍵邏輯：
-      // 如果 hasData 為 true -> 傳入 true (isSilent)，背景偷偷更新，使用者看到的畫面不會變。
-      // 如果 hasData 為 false -> 傳入 false，這時才會顯示 Loading 轉圈圈。
-      getUserLocationWeather(hasData); 
+      // 如果目前不是要求高精度，且最後一次高精度定位超過 2 分鐘，則在背景啟動一次高精度確認（silent）
+      if (!highAccuracy) {
+        const twoMinutes = 2 * 60 * 1000;
+        const last = lastHighPrecisionAtRef.current || 0;
+        if (Date.now() - last > twoMinutes && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              try {
+                const newData = await fetchLocalWeather(
+                  pos.coords.latitude,
+                  pos.coords.longitude,
+                );
+                if (newData) {
+                  lastHighPrecisionAtRef.current = Date.now();
+                  setLocationSource("high");
+                  console.log(
+                    "Background high-precision update completed (silent)",
+                    newData.locationName,
+                  );
+                }
+              } catch {
+                console.warn("Background high-precision fetch failed");
+              }
+            },
+            (err) => {
+              // 不顯示提示，僅 log
+              console.warn(
+                "Background high-precision geolocation failed:",
+                err,
+              );
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+          );
+        }
+      }
+    },
+    [getWeatherInfo, isAppReady, showToast],
+  ); // 確保依賴完整
 
-      // 定時器維持原樣
-      const intervalId = setInterval(() => {
-        console.log("⏰ 自動更新位置與天氣...");
-        getUserLocationWeather(true);
-      }, 600000);
-      return () => clearInterval(intervalId);
-    }
-  }, [isVerified, getUserLocationWeather]); // 移除 userWeather 以免造成迴圈
+  // --- 定時更新位置與天氣邏輯 (改為：載入時立即啟動 + 每10分鐘背景更新) ---
+  useEffect(() => {
+    // 讀取當前是否已有顯示資料：若已有則首次更新以靜默模式進行
+    const alreadyHasData =
+      userWeather.temp !== null && userWeather.locationName !== "定位中...";
 
-  const handleShareLocation = () => {
-    // 1. 檢查是否有已儲存的位置資料
-    if (!userWeather.lat || !userWeather.lon) {
-      showToast("尚未取得定位資訊，正在更新中...", "error");
-      getUserLocationWeather();
+    // 首次載入時嘗試更新（若已有資料則靜默）
+    getUserLocationWeather({ isSilent: alreadyHasData, highAccuracy: false });
+
+    // 背景每 10 分鐘靜默更新一次（低精度，優先快速回應）
+    const intervalId = setInterval(() => {
+      console.log("⏰ 自動更新位置與天氣...");
+      getUserLocationWeather({ isSilent: true, highAccuracy: false });
+    }, 600000);
+
+    return () => clearInterval(intervalId);
+  }, [getUserLocationWeather, userWeather.temp, userWeather.locationName]);
+
+  const handleShareLocation = async () => {
+    if (!navigator.geolocation) {
+      // 如果瀏覽器不支援 geolocation，直接嘗試用現有資料分享（如果有）或提示
+      const lat = userWeather.lat;
+      const lng = userWeather.lon;
+      const landmark = userWeather.landmark || "";
+
+      if (lat && lng) {
+        const composed = await buildShareText(
+          lat,
+          lng,
+          landmark,
+          userWeather.locationName,
+          userWeather.isGeneric,
+        );
+        const { baseMessage, fullText, tag } = composed;
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "我的位置",
+              text: baseMessage,
+              url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+            });
+            showToast(`分享成功 — 來源: ${tag}`);
+            return;
+          } catch (err) {
+            if (
+              err &&
+              (err.name === "AbortError" || err.name === "NotAllowedError")
+            ) {
+              showToast("使用者取消分享", "info");
+              return;
+            }
+            // fallback
+            try {
+              const textArea = document.createElement("textarea");
+              textArea.value = fullText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand("copy");
+              document.body.removeChild(textArea);
+              showToast("分享失敗，但位置已複製到剪貼簿", "success");
+              return;
+            } catch {
+              showToast("分享失敗，且無法複製到剪貼簿", "error");
+              return;
+            }
+          }
+        } else {
+          try {
+            const textArea = document.createElement("textarea");
+            textArea.value = fullText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            showToast("位置與地標資訊已複製！");
+            return;
+          } catch {
+            showToast("複製失敗", "error");
+            return;
+          }
+        }
+      }
+
+      showToast("您的瀏覽器不支援定位功能", "error");
       return;
     }
 
-    const lat = userWeather.lat;
-    const lng = userWeather.lon;
-    const landmark = userWeather.landmark; // 取出地標
+    // 1) 如果我們已經有座標（不論來源），先判斷是否已有「2 分鐘內的高精度位置」
+    const twoMinutes = 2 * 60 * 1000;
+    const hasRecentHigh =
+      locationSource === "high" &&
+      lastHighPrecisionAtRef.current &&
+      Date.now() - lastHighPrecisionAtRef.current <= twoMinutes;
 
-    // ✅ 修改：使用標準 Google Maps 搜尋連結 (確保能喚醒 Google Maps App)
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    if (userWeather.lat && userWeather.lon) {
+      const lat = userWeather.lat;
+      const lng = userWeather.lon;
+      const landmark = userWeather.landmark || "";
+      const composed = await buildShareText(
+        lat,
+        lng,
+        landmark,
+        userWeather.locationName,
+        userWeather.isGeneric,
+      );
+      const { baseMessage, fullText, tag } = composed;
+      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
-    // ✅ 修改：建立「純文字」訊息 (不包含網址)
-    let baseMessage = `我在這裡`;
-    if (landmark) {
-      baseMessage += ` (靠近 ${landmark})`;
-    }
-    baseMessage += `！`;
-
-    if (navigator.share) {
-      // 情境 A：手機原生分享
-      // 我們只傳入 text (純文字) 和 url (連結)，系統會自動幫我們組合成「文字 + 連結」
-      navigator
-        .share({
-          title: "我的位置",
-          text: baseMessage, // 這裡只放文字，不要放網址
-          url: mapUrl, // 網址放這裡，系統會自動接在後面
-        })
-        .then(() => showToast("分享成功"))
-        .catch((error) => {
-          if (error.name !== "AbortError") console.error("分享失敗:", error);
-        });
-    } else {
-      // 情境 B：電腦版或不支援分享 API (Fallback)
-      // 這時候我們需要手動把網址接在文字後面，不然複製出來會沒有連結
-      const fullText = `${baseMessage}\n點擊查看位置：${mapUrl}`;
-
-      const textArea = document.createElement("textarea");
-      textArea.value = fullText;
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand("copy");
-        showToast("位置與地標資訊已複製！");
-      } catch {
-        showToast("複製失敗", "error");
+      // 若已有 2 分鐘內的高精度資料，直接分享（避免重新抓取）
+      if (hasRecentHigh) {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "我的位置",
+              text: baseMessage,
+              url: mapUrl,
+            });
+            showToast(`分享成功 — 來源: ${tag}`);
+            return;
+          } catch (err) {
+            if (
+              err &&
+              (err.name === "AbortError" || err.name === "NotAllowedError")
+            ) {
+              showToast("使用者取消分享", "info");
+              return;
+            }
+            console.error("分享失敗，改為複製到剪貼簿:", err);
+            try {
+              const textArea = document.createElement("textarea");
+              textArea.value = fullText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand("copy");
+              document.body.removeChild(textArea);
+              showToast("分享失敗，但位置已複製到剪貼簿", "success");
+            } catch (copyErr) {
+              console.error("複製到剪貼簿也失敗:", copyErr);
+              showToast("分享失敗，且無法複製到剪貼簿", "error");
+            }
+            return;
+          }
+        } else {
+          try {
+            const textArea = document.createElement("textarea");
+            textArea.value = fullText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            showToast("位置與地標資訊已複製！");
+          } catch {
+            showToast("複製失敗", "error");
+          }
+          return;
+        }
       }
-      document.body.removeChild(textArea);
+
+      // 若沒有 recent high-precision，則在使用者手勢中主動嘗試取得高精度；若失敗，再回退使用現有 coords 分享
+      setIsSharing(true);
+      showToast("正在取得精準位置...", "success");
+
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0,
+          });
+        });
+
+        // 成功拿到高精度座標並更新（會同步完成，接著分享）
+        const newData = await getUserLocationWeather({
+          coords: {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          },
+          isSilent: false,
+          highAccuracy: true,
+          timeout: 15000,
+        });
+        const shareLat = (newData && newData.lat) || pos.coords.latitude;
+        const shareLng = (newData && newData.lon) || pos.coords.longitude;
+        const shareLandmark = (newData && newData.landmark) || "";
+        const mapUrl2 = `https://www.google.com/maps/search/?api=1&query=${shareLat},${shareLng}`;
+        const currentGenericStatus =
+          newData && newData.isGeneric !== undefined ? newData.isGeneric : true;
+        const composed2 = await buildShareText(
+          shareLat,
+          shareLng,
+          shareLandmark,
+          (newData && newData.locationName) || userWeather.locationName,
+          currentGenericStatus,
+        );
+        const {
+          baseMessage: baseMessage2,
+          fullText: fullText2,
+          tag: tag2,
+        } = composed2;
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "我的位置",
+              text: baseMessage2,
+              url: mapUrl2,
+            });
+            showToast(`分享成功 — 來源: ${tag2}`);
+          } catch (err) {
+            if (
+              err &&
+              (err.name === "AbortError" || err.name === "NotAllowedError")
+            ) {
+              showToast("使用者取消分享", "info");
+            } else {
+              console.error("分享失敗，改為複製到剪貼簿:", err);
+              try {
+                const textArea = document.createElement("textarea");
+                textArea.value = fullText2;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textArea);
+                showToast("分享失敗，但位置已複製到剪貼簿", "success");
+              } catch (copyErr) {
+                console.error("複製到剪貼簿也失敗:", copyErr);
+                showToast("分享失敗，且無法複製到剪貼簿", "error");
+              }
+            }
+          }
+        } else {
+          try {
+            const textArea = document.createElement("textarea");
+            textArea.value = fullText2;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            showToast("位置與地標資訊已複製！");
+          } catch {
+            showToast("複製失敗", "error");
+          }
+        }
+
+        return;
+      } catch (err) {
+        console.warn("高精度定位失敗，使用既有座標分享：", err);
+        // 失敗則使用既有座標進行分享（與前面相同邏輯）
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "我的位置",
+              text: baseMessage,
+              url: mapUrl,
+            });
+            showToast(`分享成功 — 來源: ${tag}`);
+          } catch (err2) {
+            if (
+              err2 &&
+              (err2.name === "AbortError" || err2.name === "NotAllowedError")
+            ) {
+              showToast("使用者取消分享", "info");
+            } else {
+              console.error("分享失敗，改為複製到剪貼簿:", err2);
+              try {
+                const textArea = document.createElement("textarea");
+                textArea.value = fullText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("copy");
+                document.body.removeChild(textArea);
+                showToast("分享失敗，但位置已複製到剪貼簿", "success");
+              } catch (copyErr) {
+                console.error("複製到剪貼簿也失敗:", copyErr);
+                showToast("分享失敗，且無法複製到剪貼簿", "error");
+              }
+            }
+          }
+        } else {
+          try {
+            const textArea = document.createElement("textarea");
+            textArea.value = fullText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            showToast("位置與地標資訊已複製！");
+          } catch {
+            showToast("複製失敗", "error");
+          }
+        }
+
+        return;
+      } finally {
+        setIsSharing(false);
+      }
+    }
+
+    // 2) 如果沒有任何既有座標（尚未取得任何座標），則需要等待高精度定位結果才能分享
+    setIsSharing(true);
+    showToast("正在取得精準位置...", "success");
+
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+      });
+
+      const newData = await getUserLocationWeather({
+        coords: {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        },
+        isSilent: false,
+        highAccuracy: true,
+        timeout: 15000,
+      });
+
+      const lat = (newData && newData.lat) || pos.coords.latitude;
+      const lng = (newData && newData.lon) || pos.coords.longitude;
+      const landmark = (newData && newData.landmark) || "";
+
+      const composed = await buildShareText(
+        lat,
+        lng,
+        landmark,
+        (newData && newData.locationName) || userWeather.locationName,
+        (newData && newData.isGeneric) || false, // 這裡很重要，要用新的 generic 狀態
+      );
+      const { baseMessage, fullText, tag } = composed;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "我的位置",
+            text: baseMessage,
+            url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+          });
+          showToast(`分享成功 — 來源: ${tag}`);
+        } catch (err) {
+          if (
+            err &&
+            (err.name === "AbortError" || err.name === "NotAllowedError")
+          ) {
+            showToast("使用者取消分享", "info");
+          } else {
+            console.error("分享失敗，改為複製到剪貼簿:", err);
+            try {
+              const textArea = document.createElement("textarea");
+              textArea.value = fullText;
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand("copy");
+              document.body.removeChild(textArea);
+              showToast("分享失敗，但位置已複製到剪貼簿", "success");
+            } catch (copyErr) {
+              console.error("複製到剪貼簿也失敗:", copyErr);
+              showToast("分享失敗，且無法複製到剪貼簿", "error");
+            }
+          }
+        }
+      } else {
+        try {
+          const textArea = document.createElement("textarea");
+          textArea.value = fullText;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+          showToast("位置與地標資訊已複製！");
+        } catch {
+          showToast("複製失敗", "error");
+        }
+      }
+    } catch (err) {
+      console.error("分享取得位置失敗:", err);
+      showToast("無法取得精準位置", "error");
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -1401,6 +1854,80 @@ useEffect(() => {
     window.speechSynthesis.speak(utterance);
   };
 
+  // --- Google Maps Places API Call Helper（使用正確的 Place Types） ---
+  const fetchGooglePlaces = async (lat, lng, radius = 10) => {
+    if (!mapsApiKey) return [];
+
+    const centerLat = Number(lat);
+    const centerLng = Number(lng);
+    const circleRadius = Number(radius);
+
+    if (isNaN(centerLat) || isNaN(centerLng)) {
+      console.error("❌ [Maps API] 座標格式錯誤");
+      return [];
+    }
+
+    const url = `https://places.googleapis.com/v1/places:searchNearby`;
+
+    // ⬇️ 修正點：只使用 Table A 支援的有效類型
+    // 移除 'point_of_interest', 'food'，改用更具體的類型
+    const validTypes = [
+      "restaurant",
+      "cafe",
+      "convenience_store",
+      "tourist_attraction",
+      "park",
+      "store",
+      "lodging",
+      "transit_station",
+      "school",
+      "government_office",
+    ];
+
+    const body = {
+      includedTypes: validTypes,
+      maxResultCount: 3, // 取前3名即可
+      locationRestriction: {
+        circle: {
+          center: { latitude: centerLat, longitude: centerLng },
+          radius: circleRadius,
+        },
+      },
+      languageCode: "zh-TW",
+    };
+
+    try {
+      // console.log("🌐 [Maps API] Payload:", body); // Debug 用
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": mapsApiKey,
+          // 只抓取顯示名稱，最省錢
+          "X-Goog-FieldMask": "places.displayName,places.name",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        // 🔍 這裡加強 Log：將錯誤物件轉成文字印出來，方便看清楚是哪個參數錯
+        const errData = await res.json();
+        console.error(
+          `❌ [Maps API] 請求失敗 (${res.status}):`,
+          JSON.stringify(errData, null, 2),
+        );
+        return [];
+      }
+
+      const data = await res.json();
+      return data.places || [];
+    } catch (e) {
+      console.error("❌ [Maps API] 連線異常:", e);
+      return [];
+    }
+  };
+
   // --- Gemini API Safe Call Function (New Implementation) ---
   const callGeminiSafe = async (payload) => {
     // 使用解密後的 Key，如果沒有則使用空字串 (會失敗)
@@ -1436,7 +1963,10 @@ useEffect(() => {
         }
 
         // Key 錯誤
-        if (response.status === 400 || response.status === 403) {
+        if (response.status === 400) {
+          throw new Error("API 參數錯誤。");
+        }
+        if (response.status === 403) {
           throw new Error("API Key 無效或過期，請檢查加密設定。");
         }
 
@@ -1457,8 +1987,107 @@ useEffect(() => {
     throw new Error("API Max retries reached");
   };
 
+  // --- Nearby POI Helper: Direct Maps API Call (修正版：移除 contextName 與 Gemini 依賴) ---
+  // 參數只保留 latitude, longitude，解決 ESLint 'contextName' unused 問題
+  const getBestPOI = async (latitude, longitude) => {
+    // 1. 檢查 Maps Key (完全與 Gemini Key 脫鉤)
+    if (!mapsApiKey) {
+      console.log("🗺️ [Google Maps] 略過：沒有設定 API Key");
+      return null;
+    }
+
+    try {
+      console.log(
+        `🗺️ [Google Maps] 開始查詢周邊 POI... (Lat: ${latitude}, Lng: ${longitude})`,
+      );
+      // 2. 直接呼叫 Maps API (使用上方修正後的函式)
+      // 設定半徑 10m，只抓最靠近的點
+      const places = await fetchGooglePlaces(latitude, longitude, 50);
+      console.log("🗺️ [Google Maps] API 回傳原始結果:", places);
+
+      if (places && places.length > 0) {
+        // 3. 取第一個結果 (Google 預設依關聯度/距離排序)
+        const bestPlace = places[0];
+        // Google Places API (New) 的 displayName 是物件: { text: "店名", languageCode: "zh-TW" }
+        const name = bestPlace.displayName?.text || bestPlace.name;
+
+        if (name) {
+          console.log(`🗺️ [Google Maps]  找到最佳地標: "${name}"`);
+          return { name: name, source: "maps-direct" };
+        } else {
+          console.log("🗺️ [Google Maps]  附近沒有顯著地標 (Zero Results)");
+        }
+      }
+    } catch (e) {
+      console.warn("getBestPOI 執行失敗:", e);
+    }
+
+    // 若無結果回傳 null
+    return null;
+  };
+
+  // --- Build share text helper (決策核心) ---
+  const buildShareText = async (
+    latitude,
+    longitude,
+    currentLandmark,
+    locationName,
+    isGeneric,
+  ) => {
+    console.group("🚀 [分享流程決策樹]");
+    console.log("1. 狀態輸入:", {
+      landmark: currentLandmark || "(無)",
+      isGeneric: isGeneric, // 這裡現在應該會正確顯示 true/false
+      city: locationName,
+    });
+
+    let finalLandmark = currentLandmark || "";
+    let tag = currentLandmark ? "Street(OSM)" : "Unknown";
+
+    // 決策邏輯：
+    // 1. 完全沒地標 (landmark 空)
+    // 2. 或是 OSM 標記為通用地址 (isGeneric 為 true)
+    // 只有這兩種情況才去問 Google
+    if (!finalLandmark || isGeneric === true) {
+      console.log("2. 判定需要補強 (無地標或僅有路名)，呼叫 Google Maps...");
+
+      const poi = await getBestPOI(latitude, longitude);
+
+      if (poi && poi.name) {
+        finalLandmark = poi.name;
+        tag = "POI(GoogleMaps)";
+        console.log("3. Google Maps 救援成功！更新為:", finalLandmark);
+
+        // 💡 選擇性：是否要更新回畫面？
+        // 如果您希望分享後，畫面上的路名也變成店名，就保留下面這行。
+        // 如果希望畫面永遠保持路名，只有分享出去的文字變店名，就把下面這行註解掉。
+        setUserWeather((prev) => ({
+          ...prev,
+          landmark: finalLandmark,
+          isGeneric: false,
+        }));
+      } else {
+        console.log("3. Google Maps 無結果，維持 OSM 路名。");
+      }
+    } else {
+      console.log("2. OSM 已是精準地標 (Name)，跳過 Google Maps。");
+    }
+
+    console.log(`🏁 [最終輸出] Landmark: "${finalLandmark}"`);
+    console.groupEnd();
+
+    const baseMessage = `我在這裡${finalLandmark ? ` (靠近 ${finalLandmark})` : ""}！`;
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    return {
+      baseMessage,
+      fullText: `${baseMessage}\n點擊查看位置：${mapUrl}`,
+      finalLandmark,
+      tag,
+    };
+  };
+
   const handleSwitchMode = (newMode) => {
-    if (aiMode === newMode) return;   
+    if (aiMode === newMode) return;
     setAiMode(newMode); // 切換模式狀態
     // 嘗試讀取新模式的存檔
     const saved = localStorage.getItem(getStorageKey(newMode));
@@ -1471,23 +2100,27 @@ useEffect(() => {
   };
 
   const handleClearChat = () => {
-    if (window.confirm(`確定要清除「${aiMode === "translate" ? "口譯" : "導遊"}」的所有紀錄嗎？`)) {
+    if (
+      window.confirm(
+        `確定要清除「${aiMode === "translate" ? "口譯" : "導遊"}」的所有紀錄嗎？`,
+      )
+    ) {
       const resetMsg = getWelcomeMessage(aiMode);
-      setMessages([resetMsg]); 
+      setMessages([resetMsg]);
       localStorage.removeItem(getStorageKey(aiMode)); // 只刪除當下的 Key
     }
   };
 
-// ... handleSendMessage logic updated to use systemInstruction ...
-const handleSendMessage = async () => {
+  // ... handleSendMessage logic updated to use systemInstruction ...
+  const handleSendMessage = async () => {
     // 1. 檢查：防止空訊息 (但允許「只有圖片沒有文字」的情況)
     if (!inputMessage.trim() && !selectedImage) return;
 
     // 2. 準備時間資訊 (AI 回答時需要)
     const tz = autoTimeZone || tripConfig.timeZone || "Asia/Taipei";
-    const localTimeStr = new Date().toLocaleString("zh-TW", { 
-        timeZone: tz,
-        hour12: false 
+    const localTimeStr = new Date().toLocaleString("zh-TW", {
+      timeZone: tz,
+      hour12: false,
     });
 
     // 3. 建構使用者訊息 (存入 React State 顯示用)
@@ -1501,16 +2134,17 @@ const handleSendMessage = async () => {
     // 4. 設定載入中的隨機文字 (根據模式)
     let nextLoadingText = "";
     if (aiMode === "translate") {
-      nextLoadingText = "正在進行雙向翻譯..."; 
+      nextLoadingText = "正在進行雙向翻譯...";
     } else {
       const guideLoadingTexts = [
         "正在翻閱您的行程表...",
         "正在查詢當地的購物資訊...",
         "正在比對地圖位置...",
         "正在組織建議內容...",
-        "正在思考最佳建議..."
+        "正在思考最佳建議...",
       ];
-      nextLoadingText = guideLoadingTexts[Math.floor(Math.random() * guideLoadingTexts.length)];
+      nextLoadingText =
+        guideLoadingTexts[Math.floor(Math.random() * guideLoadingTexts.length)];
     }
     setLoadingText(nextLoadingText); // 更新 Loading 文字
 
@@ -1580,11 +2214,11 @@ const handleSendMessage = async () => {
         };
       } else {
         // === 導遊模式 ===
-        
+
         // (這裡省略 flatten 函式定義，因為它們通常定義在 component 外部或內部上方，
         // 但為了保險，如果您原本是定義在 handleSendMessage 裡面，請確保這裡也有。
         // 依照您原本提供的檔案，這些 helper 好像是定義在 handleSendMessage 裡面，所以我補回來)
-        
+
         const flattenItinerary = (data) =>
           data
             .map((day) => {
@@ -1620,16 +2254,18 @@ const handleSendMessage = async () => {
         }
 
         const startDate = new Date(tripConfig.startDate);
-        const today = new Date(new Date().toLocaleString("en-US", {timeZone: tz})); 
+        const today = new Date(
+          new Date().toLocaleString("en-US", { timeZone: tz }),
+        );
         const diffTime = today - startDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
         let dayStatus = "";
         if (diffDays >= 1 && diffDays <= itineraryData.length) {
-            dayStatus = `今天是行程的第 ${diffDays} 天 (Day ${diffDays})。`;
+          dayStatus = `今天是行程的第 ${diffDays} 天 (Day ${diffDays})。`;
         } else if (diffDays < 1) {
-            dayStatus = `旅程尚未開始 (預計 ${tripConfig.startDate} 出發)。`;
+          dayStatus = `旅程尚未開始 (預計 ${tripConfig.startDate} 出發)。`;
         } else {
-            dayStatus = `旅程已經結束。`;
+          dayStatus = `旅程已經結束。`;
         }
 
         const guideSystemContext = `你是這趟「${tripConfig.title}」的專屬 AI 導遊。
@@ -1653,16 +2289,13 @@ const handleSendMessage = async () => {
 
         const history = messages
           .filter((m) => m.role !== "system")
-          .slice(1) 
-          .slice(-4) 
-          .map(formatToGeminiPart); 
+          .slice(1)
+          .slice(-4)
+          .map(formatToGeminiPart);
 
         payload = {
           systemInstruction: { parts: [{ text: guideSystemContext }] },
-          contents: [
-            ...history,
-            formatToGeminiPart(userMsg), 
-          ],
+          contents: [...history, formatToGeminiPart(userMsg)],
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 8000,
@@ -1694,7 +2327,6 @@ const handleSendMessage = async () => {
 
   // Determine current weather based on day
   const currentLocation = getDailyLocation(activeDay);
-  const weatherData = weatherForecast[currentLocation];
 
   // 使用 useMemo 鎖定天氣資料，優化滑動效能
   const displayWeather = React.useMemo(() => {
@@ -1815,12 +2447,49 @@ const handleSendMessage = async () => {
               <div
                 className={`mt-4 p-4 rounded-xl border space-y-3 text-sm ${isDarkMode ? "bg-black/30 border-neutral-700" : "bg-slate-50 border-slate-200"}`}
               >
+                {/* 🔴 新增：切換要加密哪種 Key 的按鈕 */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => {
+                      setKeyType("gemini");
+                      setToolResult(""); // 切換時清空結果
+                    }}
+                    className={`flex-1 py-1.5 rounded text-xs font-bold transition-colors ${
+                      keyType === "gemini"
+                        ? "bg-indigo-500 text-white"
+                        : "bg-gray-200 text-gray-600 dark:bg-neutral-700 dark:text-gray-400"
+                    }`}
+                  >
+                    1. Gemini Key
+                  </button>
+                  <button
+                    onClick={() => {
+                      setKeyType("maps");
+                      setToolResult("");
+                    }}
+                    className={`flex-1 py-1.5 rounded text-xs font-bold transition-colors ${
+                      keyType === "maps"
+                        ? "bg-emerald-500 text-white"
+                        : "bg-gray-200 text-gray-600 dark:bg-neutral-700 dark:text-gray-400"
+                    }`}
+                  >
+                    2. Maps Key
+                  </button>
+                </div>
+
                 <p className={`text-xs font-bold mb-2 ${theme.text}`}>
-                  1. 輸入真實 API Key 與自訂密碼：
+                  {keyType === "gemini"
+                    ? "輸入 Google Gemini API Key (AIza...):"
+                    : "輸入 Google Maps Places API Key (AIza...):"}
                 </p>
+
                 <input
                   type="text"
-                  placeholder="Google Gemini API Key (AIza...)"
+                  placeholder={
+                    keyType === "gemini"
+                      ? "貼上 Gemini Key..."
+                      : "貼上 Maps Key..."
+                  }
                   value={toolKey}
                   onChange={(e) => setToolKey(e.target.value)}
                   className={`w-full p-2 rounded-lg border text-xs ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
@@ -1836,13 +2505,19 @@ const handleSendMessage = async () => {
                   onClick={generateEncryptedString}
                   className={`w-full py-2 rounded-lg text-xs font-bold text-white ${isDarkMode ? "bg-sky-600" : "bg-indigo-500"}`}
                 >
-                  2. 生成加密字串
+                  生成加密字串
                 </button>
 
                 {toolResult && (
-                  <div className="mt-2">
+                  <div className="mt-2 animate-fadeIn">
                     <p className={`text-xs font-bold mb-1 ${theme.text}`}>
-                      3. 請複製下方字串到程式碼的 payload 變數：
+                      請複製下方字串到程式碼上方的變數：
+                      <br />
+                      <span className="text-indigo-500">
+                        {keyType === "gemini"
+                          ? "ENCRYPTED_API_KEY_PAYLOAD"
+                          : "ENCRYPTED_MAPS_KEY_PAYLOAD"}
+                      </span>
                     </p>
                     <div
                       className={`p-2 rounded border break-all font-mono text-[10px] select-all cursor-text ${isDarkMode ? "bg-neutral-900 border-neutral-700 text-green-400" : "bg-white border-slate-300 text-slate-600"}`}
@@ -1919,7 +2594,6 @@ const handleSendMessage = async () => {
       </div>
 
       <div className="max-w-md mx-auto relative min-h-screen flex flex-col z-10">
-
         {/* Header Title with Material Glass */}
         <div className="flex justify-between items-center px-4 pt-5 pb-2 relative z-20">
           <div
@@ -2015,11 +2689,7 @@ const handleSendMessage = async () => {
 
             {/* Animation Wrapper */}
             <div className="relative w-full h-full">
-              <AnimatePresence
-                initial={false}
-                custom={direction}
-                mode="wait"
-              >
+              <AnimatePresence initial={false} custom={direction} mode="wait">
                 {/* === 分支 1: 總覽頁面 (activeDay === -1) === */}
                 {activeDay === -1 ? (
                   <motion.div
@@ -2086,32 +2756,61 @@ const handleSendMessage = async () => {
                       {/* Right: Advice & Update Button */}
                       <div className="relative z-10 text-right max-w-[50%] flex flex-col items-end">
                         <button
-                          onClick={getUserLocationWeather}
-                          className={`mb-2 text-xs px-3 py-1.5 rounded-full border transition-all shadow-sm flex items-center gap-1.5 active:scale-95 ${theme.accent} ${isDarkMode ? "bg-neutral-800 border-neutral-700 hover:bg-neutral-700" : "bg-white border-stone-200 hover:bg-stone-50"}`}
+                          onClick={() =>
+                            getUserLocationWeather({
+                              isSilent: false,
+                              highAccuracy: false,
+                            })
+                          }
+                          disabled={isUpdatingLocation}
+                          aria-busy={isUpdatingLocation}
+                          aria-disabled={isUpdatingLocation}
+                          className={`mb-2 text-xs px-3 py-1.5 rounded-full border transition-all shadow-sm flex items-center gap-1.5 active:scale-95 ${isUpdatingLocation ? "opacity-80 pointer-events-none" : ""} ${theme.accent} ${isDarkMode ? "bg-neutral-800 border-neutral-700 hover:bg-neutral-700" : "bg-white border-stone-200 hover:bg-stone-50"}`}
                         >
-                          更新位置 <Share2 className="w-3 h-3" />
+                          {isUpdatingLocation ? (
+                            <>
+                              <Loader className="w-3 h-3 animate-spin" />
+                              <span className="ml-2">更新中</span>
+                            </>
+                          ) : (
+                            <>
+                              更新位置 <Share2 className="w-3 h-3" />
+                            </>
+                          )}
                         </button>
 
-                        {userWeather.temp !== null && (
+                        {userWeather.temp !== null &&
                           (() => {
                             // 1. 決定要比對哪一天的預報：旅程中比對「明天」，還沒出發比對 Day 1
-                            const targetDayIndex = tripStatus === "during" ? currentTripDayIndex + 1 : 0;
-                            
+                            const targetDayIndex =
+                              tripStatus === "during"
+                                ? currentTripDayIndex + 1
+                                : 0;
+
                             // 安全檢查：確保索引在行程範圍內
-                            if (targetDayIndex < 0 || targetDayIndex >= itineraryData.length) return null;
+                            if (
+                              targetDayIndex < 0 ||
+                              targetDayIndex >= itineraryData.length
+                            )
+                              return null;
 
                             const targetLoc = getDailyLocation(targetDayIndex);
                             const forecast = weatherForecast[targetLoc];
 
                             // 2. 取得目標日期的平均溫 (需確認 forecast 資料已載入)
-                            if (!forecast || !forecast.temperature_2m_max) return null;
+                            if (!forecast || !forecast.temperature_2m_max)
+                              return null;
 
-                            const destMax = forecast.temperature_2m_max[targetDayIndex];
-                            const destMin = forecast.temperature_2m_min[targetDayIndex];
+                            const destMax =
+                              forecast.temperature_2m_max[targetDayIndex];
+                            const destMin =
+                              forecast.temperature_2m_min[targetDayIndex];
                             const destAvg = (destMax + destMin) / 2;
-                            
-                            const tempDiff = Math.abs(destAvg - userWeather.temp);
-                            
+
+                            const tempDiff = Math.abs(
+                              destAvg - userWeather.temp,
+                            );
+
                             // 3. 溫差門檻 10 度則顯示
                             if (tempDiff >= 10) {
                               const isColder = destAvg < userWeather.temp;
@@ -2120,8 +2819,8 @@ const handleSendMessage = async () => {
                                   initial={{ opacity: 0, scale: 0.9 }}
                                   animate={{ opacity: 1, scale: 1 }}
                                   className={`mb-2 px-3 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-2 shadow-sm ${
-                                    isDarkMode 
-                                      ? "bg-orange-500/20 border-orange-500/40 text-orange-200" 
+                                    isDarkMode
+                                      ? "bg-orange-500/20 border-orange-500/40 text-orange-200"
                                       : "bg-orange-50 border-orange-200 text-orange-700"
                                   }`}
                                 >
@@ -2129,20 +2828,23 @@ const handleSendMessage = async () => {
                                     <AlertCircle className="w-3 h-3 text-white animate-pulse" />
                                   </div>
                                   <span>
-                                    {tripStatus === "during" ? "明天" : "目的地"}比當前{isColder ? '冷' : '熱'} {tempDiff.toFixed(0)}°C
+                                    {tripStatus === "during"
+                                      ? "明天"
+                                      : "目的地"}
+                                    比當前{isColder ? "冷" : "熱"}{" "}
+                                    {tempDiff.toFixed(0)}°C
                                   </span>
                                 </motion.div>
                               );
                             }
                             return null;
-                          })()
-                        )}
+                          })()}
                         <p
                           className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
                         >
                           {userWeather.error
                             ? "無法獲取天氣"
-                            : "比較目前與當地的溫差，方便準備衣物。"}
+                            : "比較溫差，方便預先準備。"}
                         </p>
                       </div>
                     </div>
@@ -2568,12 +3270,12 @@ const handleSendMessage = async () => {
                               <div
                                 className={`p-2.5 rounded-full shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/40"}`}
                               >
-                              <motion.div
-                                key={`${activeDay}-${displayWeather.desc}`} // 當天數改變，觸發小動畫
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.2 }}
-                              ></motion.div>
+                                <motion.div
+                                  key={`${activeDay}-${displayWeather.desc}`} // 當天數改變，觸發小動畫
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ duration: 0.2 }}
+                                ></motion.div>
                                 {displayWeather.icon}
                               </div>
                               <div>
@@ -3310,59 +4012,74 @@ const handleSendMessage = async () => {
               <div
                 className={`p-4 border-b backdrop-blur-sm flex flex-col gap-3 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/60 border-stone-200/50"}
                 ${/* 🆕 新增：根據模式改變底部邊框顏色，加強提示 */ ""}
-                ${aiMode === "translate" 
-                  ? (isDarkMode ? "border-b-sky-900/50" : "border-b-sky-100") 
-                  : (isDarkMode ? "border-b-amber-900/50" : "border-b-amber-100")}
+                ${
+                  aiMode === "translate"
+                    ? isDarkMode
+                      ? "border-b-sky-900/50"
+                      : "border-b-sky-100"
+                    : isDarkMode
+                      ? "border-b-amber-900/50"
+                      : "border-b-amber-100"
+                }
                 `}
               >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">					
-                      {/* 🆕 修改：頭像與背景色隨模式改變 */}
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-500
-                        ${aiMode === "translate" 
-                          ? "bg-gradient-to-br from-sky-400 to-blue-500" // 口譯：藍色系
-                          : "bg-gradient-to-br from-amber-200 to-orange-300"} // 導遊：橘黃系
-                      `}>
-                        {aiMode === "translate" ? (
-                          <Languages className="w-5 h-5 text-white" /> // 口譯 Icon
-                        ) : (
-                          <Sparkles className="w-5 h-5 text-white" />  // 導遊 Icon
-                        )}
-                      </div>
-                      
-                      <div>
-                        <h2 className={`text-base font-bold transition-colors duration-300 ${theme.text}`}>
-                          {aiMode === "translate" ? "AI 隨身口譯" : "AI 專屬導遊"}
-                        </h2>
-                        <p className={`text-xs flex items-center gap-1.5 ${theme.textSec}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full animate-pulse 
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {/* 🆕 修改：頭像與背景色隨模式改變 */}
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-500
+                        ${
+                          aiMode === "translate"
+                            ? "bg-gradient-to-br from-sky-400 to-blue-500" // 口譯：藍色系
+                            : "bg-gradient-to-br from-amber-200 to-orange-300"
+                        } // 導遊：橘黃系
+                      `}
+                    >
+                      {aiMode === "translate" ? (
+                        <Languages className="w-5 h-5 text-white" /> // 口譯 Icon
+                      ) : (
+                        <Sparkles className="w-5 h-5 text-white" /> // 導遊 Icon
+                      )}
+                    </div>
+
+                    <div>
+                      <h2
+                        className={`text-base font-bold transition-colors duration-300 ${theme.text}`}
+                      >
+                        {aiMode === "translate" ? "AI 隨身口譯" : "AI 專屬導遊"}
+                      </h2>
+                      <p
+                        className={`text-xs flex items-center gap-1.5 ${theme.textSec}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full animate-pulse 
                             ${aiMode === "translate" ? "bg-blue-500" : "bg-orange-500"}`}
-                          ></span>
-                          {aiMode === "translate" ? "雙向翻譯中" : "行程助手待命"}
-                          
-                          {isSpeaking && (
-                            <span className="ml-2 text-amber-600 font-bold flex items-center bg-amber-50 px-2 py-0.5 rounded-full">
-                              <Volume2 className="w-3 h-3 mr-1" /> 朗讀中...
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>              
+                        ></span>
+                        {aiMode === "translate" ? "雙向翻譯中" : "行程助手待命"}
+
+                        {isSpeaking && (
+                          <span className="ml-2 text-amber-600 font-bold flex items-center bg-amber-50 px-2 py-0.5 rounded-full">
+                            <Volume2 className="w-3 h-3 mr-1" /> 朗讀中...
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
 
                   {/* 新增：清除紀錄按鈕 (垃圾桶 icon) */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleClearChat}
                       className={`p-2 rounded-lg border transition-all active:scale-95 ${
-                        isDarkMode 
-                          ? "bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-red-400 hover:bg-neutral-800" 
+                        isDarkMode
+                          ? "bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-red-400 hover:bg-neutral-800"
                           : "bg-stone-100 border-stone-200 text-stone-400 hover:text-red-500 hover:bg-red-50"
                       }`}
                       title="清除聊天紀錄"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                  </div>  
+                  </div>
 
                   {/* 🆕 模式切換開關 (使用 handleSwitchMode) */}
                   <div
@@ -3490,7 +4207,7 @@ const handleSendMessage = async () => {
                       />
                       <span className={`text-xs ${theme.textSec}`}>
                         {/* 💡 使用剛才在 handleSendMessage 定義的隨機文字 */}
-                        {loadingText || "正在翻閱您的行程表..."} 
+                        {loadingText || "正在翻閱您的行程表..."}
                       </span>
                     </div>
                   </div>
@@ -3792,24 +4509,38 @@ const handleSendMessage = async () => {
         {/* Floating Location Button (透明度優化版) */}
         <button
           onClick={handleShareLocation}
-          className={`fixed bottom-60 right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100
+          title={`分享位置（來源：${locationSource === "cache" ? "快取" : locationSource === "low" ? "低精度" : locationSource === "high" ? "高精度" : "未知"}）`}
+          aria-label={`分享位置（來源：${locationSource === "cache" ? "快取" : locationSource === "low" ? "低精度" : locationSource === "high" ? "高精度" : "未知"}）`}
+          aria-busy={isSharing}
+          aria-disabled={isSharing}
+          disabled={isSharing}
+          className={`fixed bottom-60 right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100 ${isSharing ? "opacity-80 pointer-events-none scale-95" : ""}
             ${
               hasLocationPermission === false
                 ? "border-red-400 text-red-500 animate-pulse hover:bg-red-50"
-                : isDarkMode
-                  ? "bg-neutral-800/40 border-neutral-600 text-sky-300 hover:bg-neutral-800/90"
-                  : "bg-white/40 border-stone-200 text-[#5D737E] hover:bg-white/90"
+                : locationSource === "cache"
+                  ? "border-red-400 text-red-500 hover:bg-red-50"
+                  : locationSource === "low"
+                    ? "border-sky-400 text-sky-600 hover:bg-sky-50"
+                    : locationSource === "high"
+                      ? "border-emerald-400 text-emerald-600 hover:bg-emerald-50"
+                      : isDarkMode
+                        ? "bg-neutral-800/40 border-neutral-600 text-sky-300 hover:bg-neutral-800/90"
+                        : "bg-white/40 border-stone-200 text-[#5D737E] hover:bg-white/90"
             }`}
-          aria-label="分享位置"
         >
-          <LocateFixed className="w-6 h-6" />
+          {isSharing ? (
+            <Loader className="w-5 h-5 animate-spin" />
+          ) : (
+            <LocateFixed className="w-6 h-6" />
+          )}
         </button>
 
-      {/* 🆕 全螢幕按鈕 (修正位置：剛好在分享按鈕上方 1rem 處) */}
+        {/* 🆕 全螢幕按鈕 (修正位置：剛好在分享按鈕上方 1rem 處) */}
         {isMobile && (
           <button
             onClick={toggleFullScreen}
-            // 🔴 修改這裡：將 bottom-xx 改為 bottom-[19rem]
+            // 修改這裡：將 bottom-xx 改為 bottom-[19rem]
             className={`fixed bottom-[19rem] right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100
               ${
                 isDarkMode

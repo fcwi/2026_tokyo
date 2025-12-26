@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{js,jsx,css}\" \"*.{js,json,html}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,css}\" \"*.{js,json,html}\"",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
@@ -30,6 +32,7 @@
     "gh-pages": "^6.3.0",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
+    "prettier": "^3.7.4",
     "tailwindcss": "^3.4.17",
     "vite": "^7.2.4"
   }
