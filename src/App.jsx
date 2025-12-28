@@ -80,6 +80,8 @@ import {
 // 有時 ESLint 會誤判 JSX 中的 `motion` 為未使用，為避免噪音先在此行暫時抑制該檢查
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
+import ChatMessageList from "./components/ChatMessageList.jsx";
+import ChatInput from "./components/ChatInput.jsx";
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
 const CryptoUtils = {
@@ -4410,105 +4412,17 @@ const ItineraryApp = () => {
               </div>
 
               {/* Chat Messages */}
-              <div
-                className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 ${isDarkMode ? "bg-black/20" : "bg-[#F9F9F6]/50"}`}
-              >
-                {messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
-                  >
-                    {/* Avatar Column */}
-                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                      <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm border
-                        ${
-                          msg.role === "user"
-                            ? isDarkMode
-                              ? "bg-sky-800 text-white border-sky-700"
-                              : "bg-[#5D737E] text-white border-[#4A606A]"
-                            : isDarkMode
-                              ? "bg-neutral-800 text-sky-300 border-neutral-700"
-                              : "bg-white text-[#5D737E] border-stone-200"
-                        }`}
-                      >
-                        {msg.role === "user" ? (
-                          <User className="w-5 h-5" />
-                        ) : (
-                          <Bot className="w-5 h-5" />
-                        )}
-                      </div>
-
-                      {/* Speak Button - Moved here */}
-                      {msg.role === "model" && (
-                        <button
-                          onClick={() => handleSpeak(msg.text)}
-                          className={`p-1 rounded-full transition-all ${isDarkMode ? "text-sky-300 hover:bg-neutral-700" : "text-[#5D737E] hover:bg-stone-200"}`}
-                          title="朗讀訊息"
-                        >
-                          <Volume2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Message Bubble */}
-                    <div
-                      className={`max-w-[75%] group relative transition-all duration-300`}
-                    >
-                      <div
-                        className={`p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm border
-                        ${
-                          msg.role === "user"
-                            ? isDarkMode
-                              ? "bg-sky-800 text-white border-sky-700 rounded-tr-none"
-                              : "bg-[#5D737E] text-white rounded-tr-none border-[#4A606A]"
-                            : isDarkMode
-                              ? "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700 rounded-tl-none"
-                              : "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200 rounded-tl-none"
-                        }`}
-                      >
-                        {/* 🆕 新增：如果有圖片，先顯示圖片 */}
-                        {msg.image && (
-                          <img
-                            src={msg.image}
-                            alt="Sent Image"
-                            onClick={() => setFullPreviewImage(msg.image)}
-                            className="mb-2 max-w-full h-auto rounded-lg border border-white/20 shadow-sm object-cover cursor-zoom-in active:scale-95 transition-transform"
-                          />
-                        )}
-
-                        {/* 顯示文字 */}
-                        {renderMessage(msg.text)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Loading Indicator (維持原樣) */}
-                {isLoading && (
-                  <div className="flex gap-3">
-                    <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm border ${isDarkMode ? "bg-neutral-800 border-neutral-700" : "bg-white border-stone-200"}`}
-                    >
-                      <Bot
-                        className={`w-5 h-5 ${isDarkMode ? "text-sky-300" : "text-[#5D737E]"}`}
-                      />
-                    </div>
-                    <div
-                      className={`p-3 rounded-2xl rounded-tl-none border shadow-sm flex items-center gap-2 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/80 border-stone-200"}`}
-                    >
-                      <Loader
-                        className={`w-4 h-4 animate-spin ${isDarkMode ? "text-sky-300" : "text-[#5D737E]"}`}
-                      />
-                      <span className={`text-xs ${theme.textSec}`}>
-                        {/* 💡 使用剛才在 handleSendMessage 定義的隨機文字 */}
-                        {loadingText || "正在翻閱您的行程表..."}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
+              <ChatMessageList
+                messages={messages}
+                isDarkMode={isDarkMode}
+                theme={theme}
+                renderMessage={renderMessage}
+                handleSpeak={handleSpeak}
+                isLoading={isLoading}
+                loadingText={loadingText}
+                chatEndRef={chatEndRef}
+                setFullPreviewImage={setFullPreviewImage}
+              />
 
               {/* Quick Suggestions */}
               <div
@@ -4537,160 +4451,23 @@ const ItineraryApp = () => {
               </div>
 
               {/* Input Area */}
-              <div
-                className={`p-2 border-t backdrop-blur-md transition-colors duration-300 flex-shrink-0 z-10 
-                  ${isDarkMode ? "bg-neutral-800/90 border-neutral-700" : "bg-white/90 border-stone-200/80"}`}
-              >
-                {/* 1. 圖片預覽區域 (當有選擇圖片時顯示) */}
-                {selectedImage && (
-                  <div className="mb-2 px-1 relative w-fit group animate-slideUp">
-                    <img
-                      src={selectedImage}
-                      alt="Upload Preview"
-                      className="h-16 w-auto rounded-xl border shadow-md object-cover"
-                    />
-                    <button
-                      onClick={clearImage}
-                      className="absolute -top-2 -right-2 p-1.5 rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all active:scale-90"
-                      title="移除圖片"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-
-                {/* 隱藏的檔案上傳元件 */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageSelect}
-                  accept="image/*"
-                  className="hidden"
-                />
-
-                {/* 2. 主要輸入區 (Flexbox 佈局) */}
-                <div className="flex items-end gap-2">
-                  {/* 左側功能按鈕群 (語音 + 圖片) */}
-                  <div className="flex gap-1 pb-0.5">
-                    {/* 中文語音按鈕 */}
-                    <button
-                      onClick={() => toggleListening("zh-TW")}
-                      className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
-                        ${
-                          listeningLang === "zh-TW"
-                            ? "bg-[#5D737E] text-white animate-pulse shadow-md border-[#4A606A]"
-                            : isDarkMode
-                              ? "bg-neutral-800 text-sky-400 hover:bg-neutral-700 border-neutral-600"
-                              : "bg-white text-[#5D737E] hover:bg-stone-50 border-stone-200"
-                        }`}
-                      title="中文語音輸入"
-                    >
-                      {listeningLang === "zh-TW" ? (
-                        <MicOff className="w-5 h-5" />
-                      ) : (
-                        <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
-                          中
-                        </div>
-                      )}
-                    </button>
-
-                    {/* 外語語音按鈕 */}
-                    {aiMode === "translate" && (
-                      <button
-                        onClick={() =>
-                          toggleListening(tripConfig.language.code)
-                        }
-                        className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
-                          ${
-                            listeningLang === tripConfig.language.code
-                              ? "bg-rose-400 text-white animate-pulse shadow-md border-rose-500"
-                              : isDarkMode
-                                ? "bg-neutral-800 text-rose-300 hover:bg-neutral-700 border-neutral-600"
-                                : "bg-white text-[#BC8F8F] hover:bg-stone-50 border-stone-200"
-                          }`}
-                        title={`${tripConfig.language.name}語音輸入`}
-                      >
-                        {listeningLang === tripConfig.language.code ? (
-                          <MicOff className="w-5 h-5" />
-                        ) : (
-                          <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
-                            {tripConfig.language.label}
-                          </div>
-                        )}
-                      </button>
-                    )}
-
-                    {/* 圖片上傳按鈕 */}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
-                        ${
-                          isDarkMode
-                            ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-600"
-                            : "bg-white text-stone-500 hover:bg-stone-50 border-stone-200"
-                        }`}
-                      title="上傳圖片"
-                    >
-                      <Camera className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {/* 3. 文字輸入框 (調整字體與 Padding 避免換行) */}
-                  <textarea
-                    value={inputMessage}
-                    onChange={(e) => {
-                      setInputMessage(e.target.value);
-                      e.target.style.height = "auto";
-                      e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                        e.target.style.height = "auto";
-                      }
-                    }}
-                    rows={1}
-                    placeholder={
-                      listeningLang
-                        ? "正在聽取..."
-                        : aiMode === "translate"
-                          ? `輸入中文或${tripConfig.language.name}...`
-                          : "輸入問題或上傳照片..."
-                    }
-                    className={`flex-1 min-w-0 border rounded-2xl px-3 py-3 text-xs focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-50 resize-none max-h-[120px] leading-relaxed tracking-wide
-                      ${
-                        isDarkMode
-                          ? "bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500"
-                          : "bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400"
-                      }`}
-                  />
-
-                  {/* 4. 發送按鈕 */}
-                  <button
-                    onClick={() => {
-                      handleSendMessage();
-                      const textarea = document.querySelector("textarea");
-                      if (textarea) textarea.style.height = "auto";
-                    }}
-                    disabled={
-                      isLoading || (!inputMessage.trim() && !selectedImage)
-                    }
-                    className={`p-3 rounded-xl transition-all shadow-md flex-shrink-0 mb-0.5 font-bold active:scale-95
-                      ${
-                        isLoading || (!inputMessage.trim() && !selectedImage)
-                          ? isDarkMode
-                            ? "bg-neutral-700 text-neutral-500 shadow-none cursor-not-allowed"
-                            : "bg-stone-200 text-stone-400 shadow-none cursor-not-allowed"
-                          : isDarkMode
-                            ? "bg-gradient-to-r from-sky-600 to-blue-700 text-white hover:shadow-lg"
-                            : "bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white hover:shadow-lg"
-                      }`}
-                  >
-                    <Send className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+              <ChatInput
+                inputMessage={inputMessage}
+                setInputMessage={setInputMessage}
+                listeningLang={listeningLang}
+                toggleListening={
+                  aiMode === "translate" ? toggleListening : () => toggleListening("zh-TW")
+                }
+                fileInputRef={fileInputRef}
+                handleImageSelect={handleImageSelect}
+                selectedImage={selectedImage}
+                clearImage={clearImage}
+                handleSendMessage={handleSendMessage}
+                isLoading={isLoading}
+                isDarkMode={isDarkMode}
+                theme={theme}
+                tripConfig={aiMode === "translate" ? tripConfig : {}}
+              />
             </div>
           </div>
         )}
