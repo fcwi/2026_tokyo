@@ -725,26 +725,29 @@ const ItineraryApp = () => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   // --- Dynamic Theme Logic ---
-  // 從 Config 讀取設定，若無則使用預設值
-  const currentTheme = tripConfig.theme || {
-    colorBase: "stone",
-    colorAccent: "amber",
-    bgTexture: "url('...')", // (省略預設值)
-    bgGradientLight:
-      "bg-[#FDFBF7] from-stone-200/40 via-transparent to-transparent",
-    bgGradientDark:
-      "bg-[#0C0C0C] from-neutral-800/30 via-transparent to-transparent",
-    blobs: {
-      light: ["bg-stone-400/20", "bg-orange-300/20", "bg-gray-300/30"],
-      dark: ["bg-blue-500/10", "bg-purple-500/10", "bg-emerald-500/10"],
-    },
-  };
+  // 從 Config 讀取設定，若無則使用預設值 (Memo 化，避免每次渲染重建物件)
+  const currentTheme = React.useMemo(() => (
+    tripConfig.theme || {
+      colorBase: "stone",
+      colorAccent: "amber",
+      bgTexture: "url('...')", // (省略預設值)
+      bgGradientLight:
+        "bg-[#FDFBF7] from-stone-200/40 via-transparent to-transparent",
+      bgGradientDark:
+        "bg-[#0C0C0C] from-neutral-800/30 via-transparent to-transparent",
+      blobs: {
+        light: ["bg-stone-400/20", "bg-orange-300/20", "bg-gray-300/30"],
+        dark: ["bg-blue-500/10", "bg-purple-500/10", "bg-emerald-500/10"],
+      },
+      textColors: tripConfig.theme?.textColors || undefined,
+    }
+  ), []);
 
   const cBase = currentTheme.colorBase; // e.g., "slate"
   const cAccent = currentTheme.colorAccent; // e.g., "sky"
 
-// --- Dynamic Theme Logic ---
-  const theme = {
+  // 使用 useMemo 統一 Memo 風格，僅在 isDarkMode 變更時重建
+  const theme = React.useMemo(() => ({
     // 背景
     bg: isDarkMode
       ? `${currentTheme.bgGradientDark} bg-[image:var(--bg-texture)] bg-fixed`
@@ -761,21 +764,17 @@ const ItineraryApp = () => {
 
     // 🌟 卡片質感：夜間改為較亮的深灰玻璃
     cardBg: isDarkMode
-      ? `bg-[#262626]/60 backdrop-blur-xl backdrop-saturate-150 border-white/10` // 提亮了底色
+      ? `bg-[#262626]/60 backdrop-blur-xl backdrop-saturate-150 border-white/10`
       : `bg-white/60 backdrop-blur-xl backdrop-saturate-150 border-white/40`,
 
     // 邊框
-    cardBorder: isDarkMode
-      ? `border-white/10` 
-      : `border-${cBase}-200/50`,
+    cardBorder: isDarkMode ? `border-white/10` : `border-${cBase}-200/50`,
 
     // 陰影
-    cardShadow: isDarkMode
-      ? "shadow-2xl shadow-black/40" // 陰影稍微減淡，因為背景變亮了
-      : `shadow-xl shadow-${cBase}-500/5`,
+    cardShadow: isDarkMode ? "shadow-2xl shadow-black/40" : `shadow-xl shadow-${cBase}-500/5`,
 
     // 強調色
-    accent: isDarkMode ? `text-${cAccent}-300` : `text-${cAccent}-600`, // 夜間金色調亮一點
+    accent: isDarkMode ? `text-${cAccent}-300` : `text-${cAccent}-600`,
     accentBg: isDarkMode ? `bg-${cAccent}-500/20` : `bg-${cAccent}-100`,
 
     // 導覽列
@@ -787,12 +786,12 @@ const ItineraryApp = () => {
     blob1: isDarkMode ? currentTheme.blobs.dark[0] : currentTheme.blobs.light[0],
     blob2: isDarkMode ? currentTheme.blobs.dark[1] : currentTheme.blobs.light[1],
     blob3: isDarkMode ? currentTheme.blobs.dark[2] : currentTheme.blobs.light[2],
-  };
+  }), [isDarkMode, cBase, cAccent, currentTheme]);
 
-  // 重要：將紋理傳遞給 CSS 變數，解決 Tailwind string interpolation 的限制
-  const containerStyle = {
+  // 將紋理傳遞給 CSS 變數，避免每次渲染重建物件
+  const containerStyle = React.useMemo(() => ({
     "--bg-texture": currentTheme.bgTexture,
-  };
+  }), [currentTheme.bgTexture]);
 
   const colors = {
     blue: isDarkMode ? "text-sky-300" : "text-[#5D737E]",
@@ -1127,6 +1126,8 @@ const ItineraryApp = () => {
 
   // 追蹤最後一次高精度定位的時間（ms since epoch），用 useRef 避免不必要 rerender
   const lastHighPrecisionAtRef = useRef(null);
+  const isFetchingLocationRef = useRef(false); // 用於節流並避免並發
+  const lastFetchAtRef = useRef(0);
 
   // 目前分享流程是否正在進行（用於 disable 與顯示 spinner）
   const [isSharing, setIsSharing] = useState(false);
@@ -1404,6 +1405,16 @@ const ItineraryApp = () => {
         timeout = 10000,
         coords = null,
       } = options;
+      // 節流：避免短時間重複觸發與並發更新
+      const now = Date.now();
+      const minGapMs = isSilent ? 3000 : 1500; // 靜默更新允許更長間隔
+      if (!highAccuracy) {
+        if (isFetchingLocationRef.current || now - lastFetchAtRef.current < minGapMs) {
+          debugLog("⏳ 略過重複定位請求 (節流中)");
+          return null;
+        }
+      }
+      isFetchingLocationRef.current = true;
       if (!isSilent && !highAccuracy) setIsUpdatingLocation(true);
 
       const fetchLocalWeather = async (
@@ -1492,6 +1503,8 @@ const ItineraryApp = () => {
         } finally {
           setIsAppReady(true);
           setIsUpdatingLocation(false);
+          isFetchingLocationRef.current = false;
+          lastFetchAtRef.current = Date.now();
         }
       };
 
@@ -1575,6 +1588,11 @@ const ItineraryApp = () => {
               position.coords.latitude,
               position.coords.longitude,
             );
+            // 若為非高精度呼叫，成功取得位置後即解除節流鎖
+            if (!highAccuracy) {
+              isFetchingLocationRef.current = false;
+              lastFetchAtRef.current = Date.now();
+            }
           },
           (err) => {
             console.warn("GPS 定位未成功", err.code, err.message);
@@ -1593,6 +1611,7 @@ const ItineraryApp = () => {
               fetchLocalWeather(25.033, 121.5654, "台北");
               setLocationSource("low");
             }
+            isFetchingLocationRef.current = false;
           },
           geoOptions,
         );
@@ -1603,6 +1622,7 @@ const ItineraryApp = () => {
           fetchLocalWeather(25.033, 121.5654, "台北");
           setLocationSource("low");
         }
+        isFetchingLocationRef.current = false;
       }
 
       // 如果目前不是要求高精度，且最後一次高精度定位超過 2 分鐘，則在背景啟動一次高精度確認（silent）
