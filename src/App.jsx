@@ -169,6 +169,252 @@ const ENCRYPTED_MAPS_KEY_PAYLOAD = (
 // 簡單的延遲函式
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// --- 🆕 Weather Background Effect Component ---
+// 定義 CSS 動畫樣式 (注入到頁面中) - 保持不變
+const WeatherStyles = () => (
+  <style>{`
+    @keyframes fall {
+      0% { transform: translateY(-10vh) translateX(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(110vh) translateX(20px); opacity: 0; }
+    }
+    @keyframes drift {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(100vw); }
+    }
+    /* 🌟 新增：光斑浮動動畫 (緩慢、隨機感) */
+    @keyframes bokeh-float {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+      33% { transform: translate(30px, -50px) scale(1.1); opacity: 0.6; }
+      66% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.3; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+    
+    .weather-particle { position: absolute; pointer-events: none; }
+    
+    .rain-drop {
+      width: 2px;
+      height: 20px;
+      animation: fall 0.8s linear infinite;
+    }
+    
+    .snow-flake {
+      width: 8px;
+      height: 8px; 
+      border-radius: 50%;
+      filter: blur(1px);
+      animation: fall 3s linear infinite;
+    }
+    
+    .cloud-shape {
+      border-radius: 50%;
+      animation: drift 60s linear infinite;
+    }
+    
+    /* ☀️ 光斑樣式 */
+    .bokeh-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px); /* 高度模糊 */
+      animation: bokeh-float 20s infinite ease-in-out;
+      mix-blend-mode: overlay; /* 讓光斑與背景融合 */
+    }
+    
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      filter: blur(0.5px);
+      animation: twinkle 3s infinite ease-in-out;
+    }
+  `}</style>
+);
+
+  const WeatherBackground = ({ weatherCode, isDarkMode }) => {
+  const [particles, setParticles] = useState({
+    stars: [],
+    rainDrops: [],
+    snowFlakes: [],
+    bokehOrbs: [] // 新增光斑陣列
+  });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const newStars = Array.from({ length: 20 }).map((_, i) => ({
+        id: i,
+        width: Math.random() > 0.5 ? '2px' : '3px',
+        height: Math.random() > 0.5 ? '2px' : '3px',
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 50}%`,
+        delay: `${Math.random() * 3}s`,
+        opacity: Math.random() * 0.7 + 0.3
+      }));
+
+      const newRainDrops = Array.from({ length: 40 }).map((_, i) => ({
+        id: i,
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * -20}%`,
+        duration: `${0.5 + Math.random() * 0.3}s`,
+        delay: `${Math.random() * 2}s`
+      }));
+
+      const newSnowFlakes = Array.from({ length: 30 }).map((_, i) => ({
+        id: i,
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * -20}%`,
+        duration: `${3 + Math.random() * 4}s`,
+        delay: `${Math.random() * 5}s`,
+        opacityBase: Math.random() * 0.4 + 0.6, 
+        opacityLight: Math.random() * 0.5 + 0.5 
+      }));
+
+      // 🌟 生成 4 個隨機光斑 (取代原本的 sun-ray)
+      const newBokehOrbs = Array.from({ length: 4 }).map((_, i) => ({
+        id: i,
+        width: `${30 + Math.random() * 40}vw`, // 大小隨機 (30-70vw)
+        height: `${30 + Math.random() * 40}vw`,
+        left: `${Math.random() * 80}%`,
+        top: `${Math.random() * 60}%`,
+        animationDelay: `${Math.random() * -10}s`, // 隨機開始時間
+        duration: `${15 + Math.random() * 10}s` // 隨機速度
+      }));
+
+      setParticles({
+        stars: newStars,
+        rainDrops: newRainDrops,
+        snowFlakes: newSnowFlakes,
+        bokehOrbs: newBokehOrbs
+      });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const getType = (code) => {
+    if (code === null || code === undefined) return null;
+    if (code === 0) return 'clear';
+    if ([1, 2, 3, 45, 48].includes(code)) return 'cloud';
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) return 'rain';
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
+    return null;
+  };
+
+  const type = getType(weatherCode);
+  if (!type) return null;
+
+  return (
+    <div className={`absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0 ${isDarkMode ? 'dark-mode' : ''}`}>
+      <WeatherStyles />
+      
+      {/* === ☀️/🌙 晴朗特效：改用光斑 (Bokeh) === */}
+      {type === 'clear' && (
+        <>
+          {/* 光斑層：日夜皆有，顏色不同 */}
+          {particles.bokehOrbs.map((orb) => (
+            <div
+              key={orb.id}
+              className="bokeh-orb"
+              style={{
+                width: orb.width,
+                height: orb.height,
+                left: orb.left,
+                top: orb.top,
+                animationDelay: orb.animationDelay,
+                animationDuration: orb.duration,
+                // 日間：暖金/橙色 | 夜間：冷銀/藍色
+                background: isDarkMode 
+                  ? 'radial-gradient(circle, rgba(180, 200, 255, 0.15) 0%, rgba(255,255,255,0) 70%)' 
+                  : 'radial-gradient(circle, rgba(255, 200, 100, 0.4) 0%, rgba(255, 150, 50, 0.1) 60%, rgba(255,255,255,0) 70%)'
+              }}
+            />
+          ))}
+
+          {/* 夜間專屬：星星 (疊加在光斑之上) */}
+          {isDarkMode && particles.stars.map((s) => (
+            <div
+              key={s.id}
+              className="star"
+              style={{
+                width: s.width,
+                height: s.height,
+                left: s.left,
+                top: s.top,
+                animationDelay: s.delay,
+                opacity: s.opacity
+              }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* === ☁️ 多雲特效 === */}
+      {type === 'cloud' && (
+        <>
+           <div 
+             className="cloud-shape w-[70vw] h-[70vw] top-[5%]" 
+             style={{ 
+               animationDuration: '55s', 
+               animationDelay: '-5s',
+               background: isDarkMode 
+                 ? 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)' 
+                 : 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%)',
+               filter: isDarkMode ? 'none' : 'drop-shadow(0 10px 15px rgba(0,0,0,0.05))'
+             }} 
+           />
+           <div 
+             className="cloud-shape w-[90vw] h-[90vw] top-[25%]" 
+             style={{ 
+               animationDuration: '70s', 
+               animationDelay: '-25s',
+               background: isDarkMode 
+                 ? 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%)' 
+                 : 'radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%)'
+             }} 
+           />
+        </>
+      )}
+
+      {/* === 🌧️ 下雨特效 === */}
+      {type === 'rain' && particles.rainDrops.map((r) => (
+        <div
+          key={r.id}
+          className="weather-particle rain-drop"
+          style={{
+            left: r.left,
+            top: r.top,
+            animationDuration: r.duration,
+            animationDelay: r.delay,
+            background: isDarkMode 
+               ? 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.8))' 
+               : 'linear-gradient(to bottom, transparent, #3B82F6)' 
+          }}
+        />
+      ))}
+
+      {/* === ❄️ 下雪特效 === */}
+      {type === 'snow' && particles.snowFlakes.map((s) => (
+        <div
+          key={s.id}
+          className="weather-particle snow-flake"
+          style={{
+            left: s.left,
+            top: s.top,
+            animationDuration: s.duration,
+            animationDelay: s.delay,
+            opacity: isDarkMode ? s.opacityBase : s.opacityLight,
+            background: isDarkMode ? 'rgba(255,255,255,0.9)' : '#CBD5E1', 
+            boxShadow: isDarkMode ? '0 0 4px rgba(255,255,255,0.5)' : 'none'
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 const ItineraryApp = () => {
   // --- Security State ---
   const [isVerified, setIsVerified] = useState(false);
@@ -431,56 +677,50 @@ const ItineraryApp = () => {
   const cBase = currentTheme.colorBase; // e.g., "slate"
   const cAccent = currentTheme.colorAccent; // e.g., "sky"
 
-  // --- Dynamic Theme Logic ---
-  // 從 Config 讀取設定，若無則使用預設值
+// --- Dynamic Theme Logic ---
   const theme = {
-    // 背景：結合 紋理 + 漸層
+    // 背景
     bg: isDarkMode
       ? `${currentTheme.bgGradientDark} bg-[image:var(--bg-texture)] bg-fixed`
       : `${currentTheme.bgGradientLight} bg-[image:var(--bg-texture)] bg-fixed`,
 
-    // 主要文字
+    // 文字
     text: isDarkMode
-      ? currentTheme.textColors?.dark || `text-${cBase}-200`
+      ? currentTheme.textColors?.dark || `text-${cBase}-100`
       : currentTheme.textColors?.light || `text-${cBase}-800`,
 
-    // 次要文字
     textSec: isDarkMode
       ? currentTheme.textColors?.secDark || `text-${cBase}-400`
       : currentTheme.textColors?.secLight || `text-${cBase}-500`,
 
-    // 卡片玻璃質感
+    // 🌟 卡片質感：夜間改為較亮的深灰玻璃
     cardBg: isDarkMode
-      ? `bg-${cBase}-900/40 backdrop-blur-xl backdrop-saturate-150 border-${cBase}-700/50`
+      ? `bg-[#262626]/60 backdrop-blur-xl backdrop-saturate-150 border-white/10` // 提亮了底色
       : `bg-white/60 backdrop-blur-xl backdrop-saturate-150 border-white/40`,
 
+    // 邊框
     cardBorder: isDarkMode
-      ? `border-${cBase}-700/50`
+      ? `border-white/10` 
       : `border-${cBase}-200/50`,
 
+    // 陰影
     cardShadow: isDarkMode
-      ? "shadow-2xl shadow-black/40"
+      ? "shadow-2xl shadow-black/40" // 陰影稍微減淡，因為背景變亮了
       : `shadow-xl shadow-${cBase}-500/5`,
 
-    // 強調色 (按鈕、Icon)
-    accent: isDarkMode ? `text-${cAccent}-300` : `text-${cAccent}-600`,
+    // 強調色
+    accent: isDarkMode ? `text-${cAccent}-300` : `text-${cAccent}-600`, // 夜間金色調亮一點
     accentBg: isDarkMode ? `bg-${cAccent}-500/20` : `bg-${cAccent}-100`,
 
     // 導覽列
     navBg: isDarkMode
-      ? `bg-${cBase}-900/20 backdrop-blur-2xl border-${cBase}-700/30 shadow-lg`
+      ? `bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30`
       : `bg-white/30 backdrop-blur-2xl border-white/30 shadow-lg shadow-${cBase}-500/5`,
 
     // 裝飾光暈
-    blob1: isDarkMode
-      ? currentTheme.blobs.dark[0]
-      : currentTheme.blobs.light[0],
-    blob2: isDarkMode
-      ? currentTheme.blobs.dark[1]
-      : currentTheme.blobs.light[1],
-    blob3: isDarkMode
-      ? currentTheme.blobs.dark[2]
-      : currentTheme.blobs.light[2],
+    blob1: isDarkMode ? currentTheme.blobs.dark[0] : currentTheme.blobs.light[0],
+    blob2: isDarkMode ? currentTheme.blobs.dark[1] : currentTheme.blobs.light[1],
+    blob3: isDarkMode ? currentTheme.blobs.dark[2] : currentTheme.blobs.light[2],
   };
 
   // 重要：將紋理傳遞給 CSS 變數，解決 Tailwind string interpolation 的限制
@@ -786,6 +1026,24 @@ const ItineraryApp = () => {
       error: null,
     };
   });
+
+  // --- 🔧 DEBUG TOOL: 讓 Chrome Console 可以控制天氣 ---
+  // useEffect(() => {
+  //   window.setTestWeather = (code, isDark) => {
+  //     // 1. 強制修改天氣代碼 (影響總覽頁特效)
+  //     if (code !== undefined) {
+  //       setUserWeather(prev => ({ ...prev, weatherCode: code }));
+  //     }
+  //     // 2. 強制修改日夜模式 (true=黑夜, false=白天)
+  //     if (isDark !== undefined) {
+  //       setIsDarkMode(isDark);
+  //     }
+  //     console.log(`🧪 測試模式啟動: Code=${code}, DarkMode=${isDark}`);
+  //   };
+    
+  //   // 清理函式
+  //   return () => { delete window.setTestWeather; };
+  // }, []);
 
   // 位置來源狀態：'cache' | 'low' | 'high' | null
   const [locationSource, setLocationSource] = useState(() => {
@@ -2346,6 +2604,7 @@ const ItineraryApp = () => {
         temp: `${minTemp}°C / ${maxTemp}°C`,
         desc: info.text,
         advice: info.advice,
+        code: weatherCode, // 回傳原始代碼給背景特效用
       };
     }
 
@@ -2592,6 +2851,12 @@ const ItineraryApp = () => {
           className={`absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] rounded-full blur-3xl animate-blob animation-delay-4000 transition-colors duration-700 ${theme.blob3}`}
         ></div>
       </div>
+
+    {/* 🆕 Weather Effects Layer (放在 Blob 之後，內容之前) */}
+      <WeatherBackground 
+        weatherCode={activeDay === -1 ? userWeather.weatherCode : displayWeather.code} 
+        isDarkMode={isDarkMode} 
+      />
 
       <div className="max-w-md mx-auto relative min-h-screen flex flex-col z-10">
         {/* Header Title with Material Glass */}
@@ -4464,44 +4729,129 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* Bottom Navigation (Floating Glass Bar) */}
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-sm z-50">
+        {/* Bottom Navigation (Dynamic Theme + Tailwind Safe List) */}
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto">
           <div
-            className={`backdrop-blur-xl border rounded-full shadow-2xl p-1.5 flex justify-between items-center transition-all duration-300 ${theme.navBg}`}
+            // 容器：基礎色系通常較固定，這裡使用 style 變數輔助或是保留原樣 (若 cBase 是 stone/neutral 通常沒問題)
+            // 若發現容器背景也消失，建議同樣改用查表法，但目前主要問題在 AI 按鈕
+            className={`flex items-center gap-1 px-2 py-2 rounded-full backdrop-blur-xl border shadow-2xl transition-all duration-300
+            ${
+              isDarkMode
+                ? `bg-${cBase}-900/70 border-${cBase}-700/60 shadow-black/50`
+                : `bg-${cBase}-50/70 border-${cBase}-300/70 shadow-${cBase}-500/20`
+            }`}
           >
+            {/* 1. 行程 (Itinerary) */}
             <button
               onClick={() => setActiveTab("itinerary")}
-              className={`flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300 ${activeTab === "itinerary" ? (isDarkMode ? "bg-neutral-700 text-white shadow-lg scale-105" : "bg-[#5D737E] text-white shadow-lg scale-105") : isDarkMode ? "text-neutral-400 hover:bg-neutral-800" : "text-stone-400 hover:bg-stone-100"}`}
+              className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group backdrop-blur-md border
+                ${
+                  activeTab === "itinerary"
+                    ? isDarkMode
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30`
+                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                    : isDarkMode
+                      ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
+                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                }`}
             >
-              <Home className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold">行程</span>
+              <Home className={`w-5 h-5 ${activeTab === "itinerary" ? "stroke-[2.5px]" : "stroke-2"}`} />
+              {activeTab === "itinerary" && (
+                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+              )}
             </button>
+
+            {/* 2. 指南 (Guides) */}
             <button
               onClick={() => setActiveTab("guides")}
-              className={`flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300 ${activeTab === "guides" ? (isDarkMode ? "bg-neutral-700 text-white shadow-lg scale-105" : "bg-[#5D737E] text-white shadow-lg scale-105") : isDarkMode ? "text-neutral-400 hover:bg-neutral-800" : "text-stone-400 hover:bg-stone-100"}`}
+              className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
+                ${
+                   activeTab === "guides"
+                    ? isDarkMode 
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30` 
+                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                    : isDarkMode 
+                      ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20` 
+                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                }`}
             >
-              <BookOpen className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold">指南</span>
+              <BookOpen className={`w-5 h-5 ${activeTab === "guides" ? "stroke-[2.5px]" : "stroke-2"}`} />
+               {activeTab === "guides" && (
+                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+              )}
             </button>
+
+            {/* 3. AI 核心按鈕 (修正版：使用完整 Class 名稱) */}
             <button
               onClick={() => setActiveTab("ai")}
-              className={`flex flex-col items-center justify-center w-16 h-16 -mt-6 rounded-full transition-all duration-300 border-4 ${isDarkMode ? "bg-gradient-to-r from-amber-600 to-orange-700 border-neutral-800" : "bg-gradient-to-r from-[#D4AF37] to-[#C5A028] border-[#F9F9F6]"} text-white shadow-xl scale-110 shadow-md hover:scale-105`}
+              className={`mx-1 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg backdrop-blur-md active:scale-95 border
+                ${
+                  activeTab === "ai"
+                    ? "scale-105 ring-4 ring-opacity-30" 
+                    : "hover:scale-105"
+                }
+                ${
+                  /* 🌟 修正點：這裡使用 IIFE 或查表法回傳完整的 Class 字串 */
+                  (() => {
+                    // 定義顏色對應表 (包含日間/夜間)
+                    const styles = {
+                      amber: isDarkMode
+                        ? "bg-gradient-to-tr from-amber-600/90 to-amber-500/90 ring-amber-500/50 border-amber-400/30 shadow-amber-900/40"
+                        : "bg-gradient-to-tr from-amber-400 to-amber-500 ring-amber-400/50 border-amber-300/50 shadow-amber-500/40", // 日間：金黃漸層
+                      sky: isDarkMode
+                        ? "bg-gradient-to-tr from-sky-600/90 to-sky-500/90 ring-sky-500/50 border-sky-400/30 shadow-sky-900/40"
+                        : "bg-gradient-to-tr from-sky-400 to-sky-500 ring-sky-400/50 border-sky-300/50 shadow-sky-500/40",
+                      // 預設 fallback (避免設定檔打錯字時全白)
+                      default: isDarkMode
+                        ? "bg-gradient-to-tr from-stone-600 to-stone-500 ring-stone-500/50 border-stone-400/30"
+                        : "bg-gradient-to-tr from-stone-400 to-stone-500 ring-stone-400/50 border-stone-300/50"
+                    };
+                    return styles[cAccent] || styles.default;
+                  })()
+                }
+              `}
             >
-              <MessageSquare className="w-7 h-7" />
+              <MessageSquare className="w-6 h-6 text-white drop-shadow-md" />
             </button>
+
+            {/* 4. 商家 (Shops) */}
             <button
               onClick={() => setActiveTab("shops")}
-              className={`flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300 ${activeTab === "shops" ? (isDarkMode ? "bg-neutral-700 text-white shadow-lg scale-105" : "bg-[#5D737E] text-white shadow-lg scale-105") : isDarkMode ? "text-neutral-400 hover:bg-neutral-800" : "text-stone-400 hover:bg-stone-100"}`}
+              className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
+                ${
+                   activeTab === "shops"
+                    ? isDarkMode 
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30` 
+                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                    : isDarkMode 
+                      ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20` 
+                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                }`}
             >
-              <Store className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold">商家</span>
+              <Store className={`w-5 h-5 ${activeTab === "shops" ? "stroke-[2.5px]" : "stroke-2"}`} />
+              {activeTab === "shops" && (
+                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+              )}
             </button>
+
+            {/* 5. 連結 (Resources) */}
             <button
               onClick={() => setActiveTab("resources")}
-              className={`flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-300 ${activeTab === "resources" ? (isDarkMode ? "bg-neutral-700 text-white shadow-lg scale-105" : "bg-[#5D737E] text-white shadow-lg scale-105") : isDarkMode ? "text-neutral-400 hover:bg-neutral-800" : "text-stone-400 hover:bg-stone-100"}`}
+              className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
+                ${
+                   activeTab === "resources"
+                    ? isDarkMode 
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30` 
+                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                    : isDarkMode 
+                      ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20` 
+                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                }`}
             >
-              <LinkIcon className="w-5 h-5 mb-0.5" />
-              <span className="text-[10px] font-bold">連結</span>
+              <LinkIcon className={`w-5 h-5 ${activeTab === "resources" ? "stroke-[2.5px]" : "stroke-2"}`} />
+              {activeTab === "resources" && (
+                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+              )}
             </button>
           </div>
         </div>

@@ -964,35 +964,65 @@ export const tripConfig = {
     "LaLaport 豐洲",
   ],
 
-  // 個性化視覺主題
-  theme: {
-    // 1. 氣氛色系 (Tailwind 色票名稱，如 slate, zinc, stone, red, orange, sky...)
-    colorBase: "slate", // 文字與邊框的基礎冷色調
-    colorAccent: "sky", // 強調色 (按鈕、圖示)
+  // // 個性化視覺主題
+  // theme: {
+  //   // 1. 氣氛色系 (Tailwind 色票名稱，如 slate, zinc, stone, red, orange, sky...)
+  //   colorBase: "slate", // 文字與邊框的基礎冷色調
+  //   colorAccent: "sky", // 強調色 (按鈕、圖示)
 
-    // 明確指定文字顏色 (解決深色模式看不清楚的問題)
+  //   // 明確指定文字顏色 (解決深色模式看不清楚的問題)
+  //   textColors: {
+  //     light: "text-slate-800", // 日間標題色 (深)
+  //     dark: "text-slate-100", // 夜間標題色 (淺 - 改用 100 或 50 會更亮)
+  //     secLight: "text-slate-500", // 日間副標題色
+  //     secDark: "text-slate-400", // 夜間副標題色
+  //   },
+
+  //   // 2. 背景紋理 (SVG Data URI)
+  //   // 這裡使用的是一個帶有「擾動雜訊」的 SVG，模擬雪地或和紙質感
+  //   bgTexture: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
+
+  //   // 3. 背景漸層 (Tailwind Class)
+  //   // 日間：冷白 -> 透明
+  //   bgGradientLight: "bg-slate-50 from-slate-100/50 via-white to-transparent",
+  //   // 夜間：深灰藍 -> 透明
+  //   bgGradientDark:
+  //     "bg-[#0F172A] from-slate-900 via-slate-900/50 to-transparent",
+
+  //   // 4. 裝飾光暈球顏色 (Tailwind colors)
+  //   blobs: {
+  //     light: ["bg-sky-200/30", "bg-indigo-200/30", "bg-blue-100/40"],
+  //     dark: ["bg-sky-900/20", "bg-indigo-900/20", "bg-slate-800/30"],
+  //   },
+  // },
+
+  // 個性化視覺主題 (質感鐵灰版)
+  theme: {
+    // 1. 氣氛色系
+    colorBase: "stone", // 改回 stone 或 neutral，帶一點暖調的灰比較耐看
+    colorAccent: "amber", // 維持金色點綴
+
+    // 文字顏色微調 (夜間提亮)
     textColors: {
-      light: "text-slate-800", // 日間標題色 (深)
-      dark: "text-slate-100", // 夜間標題色 (淺 - 改用 100 或 50 會更亮)
-      secLight: "text-slate-500", // 日間副標題色
-      secDark: "text-slate-400", // 夜間副標題色
+      light: "text-stone-800",
+      dark: "text-stone-100", // 從原本偏暗的銀灰改成較亮的灰白
+      secLight: "text-stone-500",
+      secDark: "text-stone-300",
     },
 
-    // 2. 背景紋理 (SVG Data URI)
-    // 這裡使用的是一個帶有「擾動雜訊」的 SVG，模擬雪地或和紙質感
+    // 2. 背景紋理 (維持不變)
     bgTexture: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
 
-    // 3. 背景漸層 (Tailwind Class)
-    // 日間：冷白 -> 透明
-    bgGradientLight: "bg-slate-50 from-slate-100/50 via-white to-transparent",
-    // 夜間：深灰藍 -> 透明
-    bgGradientDark:
-      "bg-[#0F172A] from-slate-900 via-slate-900/50 to-transparent",
+    // 3. 背景漸層 (夜間大幅提亮)
+    // 日間：維持
+    bgGradientLight: "bg-[#FDFBF7] from-stone-100/50 via-white to-transparent",
+    // 夜間：改為深鐵灰，不再是死黑。模擬高級霧面金屬質感。
+    bgGradientDark: "bg-[#1A1A1A] from-[#252525] via-[#1A1A1A]/80 to-transparent",
 
-    // 4. 裝飾光暈球顏色 (Tailwind colors)
+    // 4. 裝飾光暈球 (維持)
     blobs: {
-      light: ["bg-sky-200/30", "bg-indigo-200/30", "bg-blue-100/40"],
-      dark: ["bg-sky-900/20", "bg-indigo-900/20", "bg-slate-800/30"],
+      light: ["bg-orange-200/30", "bg-stone-200/30", "bg-amber-100/40"],
+      dark: ["bg-amber-500/10", "bg-purple-500/10", "bg-blue-500/10"],
     },
   },
 
