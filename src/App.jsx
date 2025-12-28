@@ -180,12 +180,21 @@ const debugLog = (message, data = null) => {
   }
 };
 
+// 條件性日誌分組
+const debugGroup = (label) => {
+  if (isDev) console.group(label);
+};
+
+const debugGroupEnd = () => {
+  if (isDev) console.groupEnd();
+};
+
 // 簡單的延遲函式
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // --- 🆕 Weather Background Effect Component ---
 // 定義 CSS 動畫樣式 (注入到頁面中) - 保持不變
-const WeatherStyles = () => (
+const WeatherStyles = React.memo(() => (
   <style>{`
     @keyframes fall {
       0% { transform: translateY(-10vh) translateX(0); opacity: 0; }
@@ -247,7 +256,9 @@ const WeatherStyles = () => (
       animation: twinkle 3s infinite ease-in-out;
     }
   `}</style>
-);
+));
+
+WeatherStyles.displayName = 'WeatherStyles';
 
   const WeatherBackground = ({ weatherCode, isDarkMode }) => {
   const [particles, setParticles] = useState({
@@ -428,6 +439,15 @@ const WeatherStyles = () => (
     </div>
   );
 };
+
+// 使用 React.memo 優化 WeatherBackground，避免不必要的重新渲染
+const MemoizedWeatherBackground = React.memo(WeatherBackground, (prevProps, nextProps) => {
+  // 只在 weatherCode 或 isDarkMode 改變時才重新渲染
+  return prevProps.weatherCode === nextProps.weatherCode && 
+         prevProps.isDarkMode === nextProps.isDarkMode;
+});
+
+MemoizedWeatherBackground.displayName = 'WeatherBackground';
 
 const ItineraryApp = () => {
   // --- Security State ---
@@ -1446,7 +1466,7 @@ const ItineraryApp = () => {
           setUserWeather(parsed);
           setLocationSource("cache");
           setIsAppReady(true); // 🚀 有快取直接過關
-          console.log("🚀 快取載入成功");
+          debugLog("🚀 快取載入成功");
         } catch (e) {
           console.error("快取解析失敗", e);
         }
@@ -1458,7 +1478,7 @@ const ItineraryApp = () => {
           const ipRes = await fetch("https://ipapi.co/json/");
           const ipData = await ipRes.json();
           if (ipData.latitude) {
-            console.log("📡 IP 定位補位成功");
+            debugLog("📡 IP 定位補位成功");
             await fetchLocalWeather(
               ipData.latitude,
               ipData.longitude,
@@ -1563,7 +1583,7 @@ const ItineraryApp = () => {
                 if (newData) {
                   lastHighPrecisionAtRef.current = Date.now();
                   setLocationSource("high");
-                  console.log(
+                  debugLog(
                     "Background high-precision update completed (silent)",
                     newData.locationName,
                   );
@@ -1598,7 +1618,7 @@ const ItineraryApp = () => {
 
     // 背景每 10 分鐘靜默更新一次（低精度，優先快速回應）
     const intervalId = setInterval(() => {
-      console.log("⏰ 自動更新位置與天氣...");
+      debugLog("⏰ 自動更新位置與天氣...");
       getUserLocationWeather({ isSilent: true, highAccuracy: false });
     }, 600000);
 
@@ -2217,18 +2237,18 @@ const ItineraryApp = () => {
   const getBestPOI = async (latitude, longitude) => {
     // 1. 檢查 Maps Key (完全與 Gemini Key 脫鉤)
     if (!mapsApiKey) {
-      console.log("🗺️ [Google Maps] 略過：沒有設定 API Key");
+      debugLog("🗺️ [Google Maps] 略過：沒有設定 API Key");
       return null;
     }
 
     try {
-      console.log(
+      debugLog(
         `🗺️ [Google Maps] 開始查詢周邊 POI... (Lat: ${latitude}, Lng: ${longitude})`,
       );
       // 2. 直接呼叫 Maps API (使用上方修正後的函式)
       // 設定半徑 25m，只抓最靠近的點
       const places = await fetchGooglePlaces(latitude, longitude, 25);
-      console.log("🗺️ [Google Maps] API 回傳原始結果:", places);
+      debugLog("🗺️ [Google Maps] API 回傳原始結果:", places);
 
       if (places && places.length > 0) {
         // 3. 取第一個結果 (Google 預設依關聯度/距離排序)
@@ -2237,10 +2257,10 @@ const ItineraryApp = () => {
         const name = bestPlace.displayName?.text || bestPlace.name;
 
         if (name) {
-          console.log(`🗺️ [Google Maps]  找到最佳地標: "${name}"`);
+          debugLog(`🗺️ [Google Maps]  找到最佳地標: "${name}"`);
           return { name: name, source: "maps-direct" };
         } else {
-          console.log("🗺️ [Google Maps]  附近沒有顯著地標 (Zero Results)");
+          debugLog("🗺️ [Google Maps]  附近沒有顯著地標 (Zero Results)");
         }
       }
     } catch (e) {
@@ -2259,8 +2279,8 @@ const ItineraryApp = () => {
     locationName,
     isGeneric,
   ) => {
-    console.group("🚀 [分享流程決策樹]");
-    console.log("1. 狀態輸入:", {
+    debugGroup("🚀 [分享流程決策樹]");
+    debugLog("1. 狀態輸入:", {
       landmark: currentLandmark || "(無)",
       isGeneric: isGeneric, // 這裡現在應該會正確顯示 true/false
       city: locationName,
@@ -2274,14 +2294,14 @@ const ItineraryApp = () => {
     // 2. 或是 OSM 標記為通用地址 (isGeneric 為 true)
     // 只有這兩種情況才去問 Google
     if (!finalLandmark || isGeneric === true) {
-      console.log("2. 判定需要補強 (無地標或僅有路名)，呼叫 Google Maps...");
+      debugLog("2. 判定需要補強 (無地標或僅有路名)，呼叫 Google Maps...");
 
       const poi = await getBestPOI(latitude, longitude);
 
       if (poi && poi.name) {
         finalLandmark = poi.name;
         tag = "POI(GoogleMaps)";
-        console.log("3. Google Maps 救援成功！更新為:", finalLandmark);
+        debugLog("3. Google Maps 救援成功！更新為:", finalLandmark);
 
         // 💡 選擇性：是否要更新回畫面？
         // 如果您希望分享後，畫面上的路名也變成店名，就保留下面這行。
@@ -2292,14 +2312,14 @@ const ItineraryApp = () => {
           isGeneric: false,
         }));
       } else {
-        console.log("3. Google Maps 無結果，維持 OSM 路名。");
+        debugLog("3. Google Maps 無結果，維持 OSM 路名。");
       }
     } else {
-      console.log("2. OSM 已是精準地標 (Name)，跳過 Google Maps。");
+      debugLog("2. OSM 已是精準地標 (Name)，跳過 Google Maps。");
     }
 
-    console.log(`🏁 [最終輸出] Landmark: "${finalLandmark}"`);
-    console.groupEnd();
+    debugLog(`🏁 [最終輸出] Landmark: "${finalLandmark}"`);
+    debugGroupEnd();
 
     const baseMessage = `我在這裡${finalLandmark ? ` (靠近 ${finalLandmark})` : ""}！`;
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
@@ -2820,7 +2840,7 @@ const ItineraryApp = () => {
       </div>
 
     {/* 🆕 Weather Effects Layer (放在 Blob 之後，內容之前) */}
-      <WeatherBackground 
+      <MemoizedWeatherBackground 
         weatherCode={activeDay === -1 ? userWeather.weatherCode : displayWeather.code} 
         isDarkMode={isDarkMode} 
       />
