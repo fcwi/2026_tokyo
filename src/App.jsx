@@ -166,6 +166,20 @@ const ENCRYPTED_MAPS_KEY_PAYLOAD = (
   import.meta.env.VITE_ENCODED_MAPS_KEY || ""
 ).trim();
 
+// 環境檢查和除錯工具
+const isDev = import.meta.env.DEV; // Vite 環境變量：開發環境為 true
+
+// 條件性日誌：僅在開發環境輸出
+const debugLog = (message, data = null) => {
+  if (isDev) {
+    if (data === null) {
+      console.log(message);
+    } else {
+      console.log(message, data);
+    }
+  }
+};
+
 // 簡單的延遲函式
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -632,16 +646,43 @@ const ItineraryApp = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // 定義一個簡單的複製函式
+  // 定義一個強大的複製函式（支援 fallback）
+  const copyToClipboard = async (text, successMsg = "已複製到剪貼簿") => {
+    try {
+      // 優先使用 navigator.clipboard（現代瀏覽器）
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        showToast(successMsg);
+        return true;
+      } else {
+        // Fallback 到舊方法（某些舊瀏覽器或不安全上下文）
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          showToast(successMsg);
+          return true;
+        } else {
+          throw new Error("複製命令失敗");
+        }
+      }
+    } catch (err) {
+      console.error("複製失敗:", err);
+      showToast("複製失敗", "error");
+      return false;
+    }
+  };
+
+  // 定義一個簡單的複製函式（向後相容）
   const handleCopy = (text) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        showToast(`已複製：${text}`);
-      })
-      .catch(() => {
-        showToast("複製失敗", "error");
-      });
+    copyToClipboard(text, `已複製：${text}`);
   };
 
   // --- Theme Helpers ---
@@ -943,9 +984,13 @@ const ItineraryApp = () => {
     return checklistData; // 如果沒存檔過，就用預設資料
   });
 
-  // 當 checklist 改變時，自動存入 localStorage
+  // 當 checklist 改變時，使用防抖延遲自動存入 localStorage（避免頻繁寫入）
   useEffect(() => {
-    localStorage.setItem("trip_checklist_v1", JSON.stringify(checklist));
+    const debounceTimer = setTimeout(() => {
+      localStorage.setItem("trip_checklist_v1", JSON.stringify(checklist));
+    }, 500); // 500ms 防抖延遲
+
+    return () => clearTimeout(debounceTimer);
   }, [checklist]);
 
   // 新增：航班資訊收折狀態 (預設 false = 收折)
@@ -1007,7 +1052,7 @@ const ItineraryApp = () => {
         const parsed = JSON.parse(cached);
         // 簡單驗證資料完整性，確保有地點名稱
         if (parsed && parsed.locationName) {
-          console.log("🚀 State 初始化：直接載入快取資料", parsed.locationName);
+          debugLog("🚀 State 初始化：直接載入快取資料", parsed.locationName);
           return parsed; // 直接回傳快取物件作為初始狀態
         }
       }
@@ -1098,13 +1143,17 @@ const ItineraryApp = () => {
     return [getWelcomeMessage("translate")];
   });
 
-  // 3. 修改：當 messages 變動時，存入「當下模式」的 Key
+  // 3. 修改：當 messages 變動時，使用防抖延遲存入「當下模式」的 Key（避免頻繁寫入 localStorage）
   useEffect(() => {
-    const historyToSave = messages.map((msg) => ({
-      ...msg,
-      image: null, // 依然不存圖片
-    }));
-    localStorage.setItem(getStorageKey(aiMode), JSON.stringify(historyToSave));
+    const debounceTimer = setTimeout(() => {
+      const historyToSave = messages.map((msg) => ({
+        ...msg,
+        image: null, // 依然不存圖片
+      }));
+      localStorage.setItem(getStorageKey(aiMode), JSON.stringify(historyToSave));
+    }, 500); // 500ms 防抖延遲
+
+    return () => clearTimeout(debounceTimer);
   }, [messages, aiMode]); // 加入 aiMode 作為依賴
 
   const [inputMessage, setInputMessage] = useState("");
@@ -1591,34 +1640,12 @@ const ItineraryApp = () => {
               return;
             }
             // fallback
-            try {
-              const textArea = document.createElement("textarea");
-              textArea.value = fullText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand("copy");
-              document.body.removeChild(textArea);
-              showToast("分享失敗，但位置已複製到剪貼簿", "success");
-              return;
-            } catch {
-              showToast("分享失敗，且無法複製到剪貼簿", "error");
-              return;
-            }
+            await copyToClipboard(fullText, "分享失敗，但位置已複製到剪貼簿");
+            return;
           }
         } else {
-          try {
-            const textArea = document.createElement("textarea");
-            textArea.value = fullText;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            showToast("位置與地標資訊已複製！");
-            return;
-          } catch {
-            showToast("複製失敗", "error");
-            return;
-          }
+          await copyToClipboard(fullText, "位置與地標資訊已複製！");
+          return;
         }
       }
 
@@ -1667,32 +1694,11 @@ const ItineraryApp = () => {
               return;
             }
             console.error("分享失敗，改為複製到剪貼簿:", err);
-            try {
-              const textArea = document.createElement("textarea");
-              textArea.value = fullText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand("copy");
-              document.body.removeChild(textArea);
-              showToast("分享失敗，但位置已複製到剪貼簿", "success");
-            } catch (copyErr) {
-              console.error("複製到剪貼簿也失敗:", copyErr);
-              showToast("分享失敗，且無法複製到剪貼簿", "error");
-            }
+            await copyToClipboard(fullText, "分享失敗，但位置已複製到剪貼簿");
             return;
           }
         } else {
-          try {
-            const textArea = document.createElement("textarea");
-            textArea.value = fullText;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            showToast("位置與地標資訊已複製！");
-          } catch {
-            showToast("複製失敗", "error");
-          }
+          await copyToClipboard(fullText, "位置與地標資訊已複製！");
           return;
         }
       }
@@ -1755,32 +1761,11 @@ const ItineraryApp = () => {
               showToast("使用者取消分享", "info");
             } else {
               console.error("分享失敗，改為複製到剪貼簿:", err);
-              try {
-                const textArea = document.createElement("textarea");
-                textArea.value = fullText2;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand("copy");
-                document.body.removeChild(textArea);
-                showToast("分享失敗，但位置已複製到剪貼簿", "success");
-              } catch (copyErr) {
-                console.error("複製到剪貼簿也失敗:", copyErr);
-                showToast("分享失敗，且無法複製到剪貼簿", "error");
-              }
+              await copyToClipboard(fullText2, "分享失敗，但位置已複製到剪貼簿");
             }
           }
         } else {
-          try {
-            const textArea = document.createElement("textarea");
-            textArea.value = fullText2;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            showToast("位置與地標資訊已複製！");
-          } catch {
-            showToast("複製失敗", "error");
-          }
+          await copyToClipboard(fullText2, "位置與地標資訊已複製！");
         }
 
         return;
@@ -1803,32 +1788,11 @@ const ItineraryApp = () => {
               showToast("使用者取消分享", "info");
             } else {
               console.error("分享失敗，改為複製到剪貼簿:", err2);
-              try {
-                const textArea = document.createElement("textarea");
-                textArea.value = fullText;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand("copy");
-                document.body.removeChild(textArea);
-                showToast("分享失敗，但位置已複製到剪貼簿", "success");
-              } catch (copyErr) {
-                console.error("複製到剪貼簿也失敗:", copyErr);
-                showToast("分享失敗，且無法複製到剪貼簿", "error");
-              }
+              await copyToClipboard(fullText, "分享失敗，但位置已複製到剪貼簿");
             }
           }
         } else {
-          try {
-            const textArea = document.createElement("textarea");
-            textArea.value = fullText;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            showToast("位置與地標資訊已複製！");
-          } catch {
-            showToast("複製失敗", "error");
-          }
+          await copyToClipboard(fullText, "位置與地標資訊已複製！");
         }
 
         return;
@@ -1889,32 +1853,11 @@ const ItineraryApp = () => {
             showToast("使用者取消分享", "info");
           } else {
             console.error("分享失敗，改為複製到剪貼簿:", err);
-            try {
-              const textArea = document.createElement("textarea");
-              textArea.value = fullText;
-              document.body.appendChild(textArea);
-              textArea.select();
-              document.execCommand("copy");
-              document.body.removeChild(textArea);
-              showToast("分享失敗，但位置已複製到剪貼簿", "success");
-            } catch (copyErr) {
-              console.error("複製到剪貼簿也失敗:", copyErr);
-              showToast("分享失敗，且無法複製到剪貼簿", "error");
-            }
+            await copyToClipboard(fullText, "分享失敗，但位置已複製到剪貼簿");
           }
         }
       } else {
-        try {
-          const textArea = document.createElement("textarea");
-          textArea.value = fullText;
-          document.body.appendChild(textArea);
-          textArea.select();
-          document.execCommand("copy");
-          document.body.removeChild(textArea);
-          showToast("位置與地標資訊已複製！");
-        } catch {
-          showToast("複製失敗", "error");
-        }
+        await copyToClipboard(fullText, "位置與地標資訊已複製！");
       }
     } catch (err) {
       console.error("分享取得位置失敗:", err);
