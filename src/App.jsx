@@ -1170,69 +1170,93 @@ const ItineraryApp = () => {
   };
 
   // 2. Get Weather Info from WMO Code
-  const getWeatherInfo = React.useCallback(
+  // 純粹的數據版本，不依賴 isDarkMode（用於邏輯層）
+  const getWeatherData = React.useCallback(
     (code) => {
-      const iconClass = "w-7 h-7"; // Slightly larger icons
-      const color = isDarkMode ? "text-neutral-300" : "text-neutral-600"; // Muted icons
       if (code === 0)
         return {
-          icon: (
-            <Sun
-              className={`${iconClass} ${isDarkMode ? "text-amber-200" : "text-amber-500"}`}
-            />
-          ),
           text: "晴朗",
           advice: "天氣很好，注意防曬。",
         };
       if ([1, 2, 3].includes(code))
         return {
-          icon: <Cloud className={`${iconClass} ${color}`} />,
           text: "多雲",
           advice: "舒適，適合戶外。",
         };
       if ([45, 48].includes(code))
         return {
-          icon: <CloudFog className={`${iconClass} ${theme.textSec}`} />,
           text: "有霧",
           advice: "能見度低請小心。",
         };
       if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code))
         return {
-          icon: (
-            <CloudRain
-              className={`${iconClass} ${isDarkMode ? "text-sky-300" : "text-sky-600"}`}
-            />
-          ),
           text: "有雨",
           advice: "請務必攜帶雨具。",
         };
       if ([71, 73, 75, 77, 85, 86].includes(code))
         return {
-          icon: (
-            <Snowflake
-              className={`${iconClass} ${isDarkMode ? "text-cyan-200" : "text-cyan-500"}`}
-            />
-          ),
           text: "降雪",
           advice: "請穿防滑雪靴。",
         };
       if ([95, 96, 99].includes(code))
         return {
-          icon: (
-            <CloudLightning
-              className={`${iconClass} ${isDarkMode ? "text-yellow-200" : "text-yellow-600"}`}
-            />
-          ),
           text: "雷雨",
           advice: "請盡量待在室內。",
         };
       return {
-        icon: <Sun className={`${iconClass} ${color}`} />,
         text: "晴時多雲",
         advice: "注意日夜溫差。",
       };
     },
-    [isDarkMode, theme.textSec],
+    [],  // 不依賴任何外部狀態
+  );
+
+  // UI 版本，包含圖示和顏色（依賴 isDarkMode，用於顯示層）
+  const getWeatherInfo = React.useCallback(
+    (code) => {
+      const iconClass = "w-7 h-7"; // Slightly larger icons
+      const color = isDarkMode ? "text-neutral-300" : "text-neutral-600"; // Muted icons
+      const data = getWeatherData(code);
+      
+      let icon;
+      if (code === 0)
+        icon = (
+          <Sun
+            className={`${iconClass} ${isDarkMode ? "text-amber-200" : "text-amber-500"}`}
+          />
+        );
+      else if ([1, 2, 3].includes(code))
+        icon = <Cloud className={`${iconClass} ${color}`} />;
+      else if ([45, 48].includes(code))
+        icon = <CloudFog className={`${iconClass} ${theme.textSec}`} />;
+      else if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code))
+        icon = (
+          <CloudRain
+            className={`${iconClass} ${isDarkMode ? "text-sky-300" : "text-sky-600"}`}
+          />
+        );
+      else if ([71, 73, 75, 77, 85, 86].includes(code))
+        icon = (
+          <Snowflake
+            className={`${iconClass} ${isDarkMode ? "text-cyan-200" : "text-cyan-500"}`}
+          />
+        );
+      else if ([95, 96, 99].includes(code))
+        icon = (
+          <CloudLightning
+            className={`${iconClass} ${isDarkMode ? "text-yellow-200" : "text-yellow-600"}`}
+          />
+        );
+      else
+        icon = <Sun className={`${iconClass} ${color}`} />;
+
+      return {
+        icon,
+        text: data.text,
+        advice: data.advice,
+      };
+    },
+    [isDarkMode, theme.textSec, getWeatherData],
   );
 
   // 3. Determine Location based on Day Index
@@ -1328,7 +1352,7 @@ const ItineraryApp = () => {
             }
           }
 
-          const info = getWeatherInfo(weatherData.current_weather.weathercode);
+          const info = getWeatherData(weatherData.current_weather.weathercode);
           const newWeatherData = {
             temp: Math.round(weatherData.current_weather.temperature),
             desc: info.text,
@@ -1511,7 +1535,7 @@ const ItineraryApp = () => {
         }
       }
     },
-    [getWeatherInfo, isAppReady, showToast],
+    [getWeatherData, isAppReady, showToast],
   ); // 確保依賴完整
 
   // --- 定時更新位置與天氣邏輯 (改為：載入時立即啟動 + 每10分鐘背景更新) ---
