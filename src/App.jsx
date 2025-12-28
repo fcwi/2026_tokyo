@@ -559,27 +559,32 @@ const ItineraryApp = () => {
   const [keyType, setKeyType] = useState("gemini"); // 用來切換要加密哪種 Key
 
   // --- 輔助函式：解析 Markdown 粗體與 URL 連結 ---
-  const renderMessage = (text) => {
-    if (!text) return null;
-
-    // 蒐集行程中的地點名稱作為關鍵字
-    const allKeywords = [
+  // 先預先建立關鍵字 Set 與安全的 Regex，避免每次渲染反覆組裝大型字串
+  const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const { keywordsSet, combinedRegex } = React.useMemo(() => {
+    const allKeywordsRaw = [
       ...itineraryData.flatMap((day) => day.events.map((e) => e.title)),
       ...shopGuideData.flatMap((area) => area.mainShops.map((s) => s.name)),
     ];
-
-    // 建立 Regex (排除過短的字)
-    const keywordPattern = allKeywords.filter((k) => k.length >= 2).join("|");
-    const combinedRegex = new RegExp(
-      `(https?://[^\\s]+)|(${keywordPattern})|(\\*\\*.*?\\*\\*)`,
+    const filtered = allKeywordsRaw.filter((k) => k && k.length >= 2);
+    const set = new Set(filtered);
+    // 將每個關鍵字進行 Regex 逃脫，避免像 ( ), +, ? 等符號造成誤判
+    const pattern = filtered.map(escapeRegex).join("|");
+    const regex = new RegExp(
+      `(https?://[^\\s]+)|(${pattern})|(\\*\\*.*?\\*\\*)`,
       "g",
     );
+    return { keywordsSet: set, combinedRegex: regex };
+  }, []);
+
+  const renderMessage = (text) => {
+    if (!text) return null;
 
     return text.split(combinedRegex).map((part, index) => {
       if (!part) return null;
 
       // 1. 處理 URL
-      if (part.match(/^https?:\/\//)) {
+      if (/^https?:\/\//.test(part)) {
         return (
           <a
             key={index}
@@ -594,7 +599,7 @@ const ItineraryApp = () => {
       }
 
       // 💡 2. 處理行程關鍵字：點擊直接開地圖
-      if (allKeywords.includes(part)) {
+      if (keywordsSet.has(part)) {
         return (
           <a
             key={index}
@@ -1231,6 +1236,38 @@ const ItineraryApp = () => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
   }, []);
+
+  // --- 🧩 導遊模式：預先展平行程/指南/商家，減少每次發送重新組字 ---
+  const flattenItinerary = (data) =>
+    data
+      .map((day) => {
+        const events = day.events
+          .map((e) => `  - ${e.time} ${e.title}: ${e.desc}`)
+          .join("\n");
+        return `📅 ${day.day} (${day.locationKey}):\n${events}`;
+      })
+      .join("\n\n");
+  const flattenGuides = (data) =>
+    data.map((g) => `📘 ${g.title}: ${g.summary}`).join("\n");
+  const flattenShops = (data) =>
+    data
+      .map((area) => {
+        const shops = area.mainShops
+          .map((s) => `  * ${s.name}: ${s.note}`)
+          .join("\n");
+        return `🛍️ ${area.area}:\n${shops}`;
+      })
+      .join("\n\n");
+
+  const itineraryFlat = React.useMemo(
+    () => flattenItinerary(itineraryData),
+    [],
+  );
+  const guidesFlat = React.useMemo(() => flattenGuides(guidesData), []);
+  const shopsFlat = React.useMemo(
+    () => flattenShops(shopGuideData),
+    [],
+  );
 
   // ... existing map and weather helpers ...
   // 1. Get Google Map Link
@@ -1888,9 +1925,12 @@ const ItineraryApp = () => {
   };
 
   // ... existing weather fetch and voice logic ...
-  // --- Weather API Integration ---
+  // --- Weather API Integration (加上 AbortController，避免卸載後更新狀態) ---
   useEffect(() => {
     if (!isVerified) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
 
     const fetchWeather = async () => {
       try {
@@ -1899,15 +1939,17 @@ const ItineraryApp = () => {
         // 自動為 config 裡的每一個地點產生 fetch 請求
         const weatherPromises = tripConfig.locations.map(async (loc) => {
           const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&${params}`;
-          const res = await fetch(url);
+          const res = await fetch(url, { signal: controller.signal });
           const data = await res.json();
-          if (data.timezone) {
+          if (!cancelled && data.timezone) {
             setAutoTimeZone(data.timezone);
           }
           return { key: loc.key, data: data.daily };
         });
 
         const results = await Promise.all(weatherPromises);
+
+        if (cancelled) return;
 
         // 轉換成物件格式: { karuizawa: {...}, tokyo: {...} }
         const newForecast = {};
@@ -1920,12 +1962,18 @@ const ItineraryApp = () => {
           loading: false,
         });
       } catch (error) {
+        if (error?.name === "AbortError") return; // 忽略中止錯誤
         console.error("Failed to fetch weather:", error);
         setWeatherForecast((prev) => ({ ...prev, loading: false }));
       }
     };
 
     fetchWeather();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [isVerified]);
 
   // --- Voice Input ---
@@ -2460,31 +2508,6 @@ const ItineraryApp = () => {
       } else {
         // === 導遊模式 ===
 
-        // (這裡省略 flatten 函式定義，因為它們通常定義在 component 外部或內部上方，
-        // 但為了保險，如果您原本是定義在 handleSendMessage 裡面，請確保這裡也有。
-        // 依照您原本提供的檔案，這些 helper 好像是定義在 handleSendMessage 裡面，所以我補回來)
-
-        const flattenItinerary = (data) =>
-          data
-            .map((day) => {
-              const events = day.events
-                .map((e) => `  - ${e.time} ${e.title}: ${e.desc}`)
-                .join("\n");
-              return `📅 ${day.day} (${day.locationKey}):\n${events}`;
-            })
-            .join("\n\n");
-        const flattenGuides = (data) =>
-          data.map((g) => `📘 ${g.title}: ${g.summary}`).join("\n");
-        const flattenShops = (data) =>
-          data
-            .map((area) => {
-              const shops = area.mainShops
-                .map((s) => `  * ${s.name}: ${s.note}`)
-                .join("\n");
-              return `🛍️ ${area.area}:\n${shops}`;
-            })
-            .join("\n\n");
-
         // 位置判斷
         let locationInstruction = "";
         const isGpsAvailable =
@@ -2519,13 +2542,13 @@ const ItineraryApp = () => {
         ${locationInstruction}
         
         【行程資訊】：
-        ${flattenItinerary(itineraryData)}
+        ${itineraryFlat}
         
         【參考指南】：
-        ${flattenGuides(guidesData)}
+        ${guidesFlat}
         
         【推薦商家】：
-        ${flattenShops(shopGuideData)}
+        ${shopsFlat}
         
         規則：
         1. 簡潔、親切、重點式回答。
