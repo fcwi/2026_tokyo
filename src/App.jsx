@@ -2019,10 +2019,20 @@ const ItineraryApp = () => {
   };
 
   // ... existing weather fetch and voice logic ...
-  // --- 卸載清理：中止所有進行中的 API 請求 ---
+  // --- 卸載清理：中止所有進行中的 API 請求和語音資源 ---
   useEffect(() => {
     return () => {
-      // 卸載時中止所有 API 請求
+      // 🆕 清理語音朗讀
+      if ("speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.cancel();
+          setIsSpeaking(false);
+        } catch (error) {
+          console.error("清理語音朗讀資源時出錯:", error);
+        }
+      }
+
+      // 中止所有 API 請求
       if (geminiAbortControllerRef.current) {
         geminiAbortControllerRef.current.abort();
       }
@@ -2121,6 +2131,26 @@ const ItineraryApp = () => {
         setListeningLang(null);
       };
     }
+
+    // 🆕 清理函式：組件卸載時確保完全停止語音識別
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          // 停止語音識別
+          recognitionRef.current.stop();
+          // 清除所有事件監聽器，避免內存洩漏
+          recognitionRef.current.onresult = null;
+          recognitionRef.current.onend = null;
+          recognitionRef.current.onerror = null;
+          // 清除引用
+          recognitionRef.current = null;
+          // 重置狀態
+          setListeningLang(null);
+        } catch (error) {
+          console.error("清理語音識別資源時出錯:", error);
+        }
+      }
+    };
   }, []);
 
   const toggleListening = (lang) => {
@@ -2128,15 +2158,27 @@ const ItineraryApp = () => {
       alert("抱歉，您的瀏覽器不支援語音輸入功能。");
       return;
     }
-    if (listeningLang === lang) {
-      recognitionRef.current.stop();
+    
+    try {
+      if (listeningLang === lang) {
+        // 停止當前識別
+        recognitionRef.current.stop();
+        setListeningLang(null);
+      } else {
+        // 停止其他語言的識別（如果有的話）
+        if (listeningLang) {
+          recognitionRef.current.stop();
+        }
+        setInputMessage("");
+        recognitionRef.current.lang = lang;
+        recognitionRef.current.start();
+        setListeningLang(lang);
+      }
+    } catch (error) {
+      console.error("語音識別操作出錯:", error);
+      // 發生錯誤時重置狀態
       setListeningLang(null);
-    } else {
-      if (listeningLang) recognitionRef.current.stop();
-      setInputMessage("");
-      recognitionRef.current.lang = lang;
-      recognitionRef.current.start();
-      setListeningLang(lang);
+      showToast("語音輸入出現問題，請重試", "error");
     }
   };
 
