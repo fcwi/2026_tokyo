@@ -2300,139 +2300,6 @@ const ItineraryApp = () => {
   };
 
   // --- Google Maps Places API Call Helper（使用正確的 Place Types + 快取 + AbortController） ---
-  // const fetchGooglePlaces = async (lat, lng, radius = 35) => {
-  //   // 🔧 快取查詢：避免重複呼叫相同的地點
-  //   const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)},${radius}`;
-  //   const cached = googlePlacesCacheRef.current[cacheKey];
-  //   if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY_MS) {
-  //     debugLog(`🗺️ [快取命中] Google Places: ${cacheKey}`);
-  //     return cached.data;
-  //   }
-  //   if (!mapsApiKey) return [];
-
-  //   const centerLat = Number(lat);
-  //   const centerLng = Number(lng);
-  //   const circleRadius = Number(radius);
-
-  //   if (isNaN(centerLat) || isNaN(centerLng)) {
-  //     console.error("❌ [Maps API] 座標格式錯誤");
-  //     return [];
-  //   }
-
-  //   const url = `https://places.googleapis.com/v1/places:searchNearby`;
-
-  //   // ⬇️ 修正點：只使用 Table A 支援的有效類型
-  //   // 移除 'point_of_interest', 'food'，改用更具體的類型
-  //   const validTypes = [
-  //   "restaurant",
-  //   "cafe",
-  //   "convenience_store",
-  //   "tourist_attraction",
-  //   "park",
-  //   "store",
-  //   "lodging",
-  //   "transit_station",
-  //   "museum", // 新增推薦
-  //   "shopping_mall" // 新增推薦
-  // ];
-
-  //   const body = {
-  //     includedTypes: validTypes,
-  //     maxResultCount: 1, // 取第1名即可
-  //     locationRestriction: {
-  //       circle: {
-  //         center: { latitude: centerLat, longitude: centerLng },
-  //         radius: circleRadius,
-  //       },
-  //     },
-  //     languageCode: "zh-TW",
-  //   };
-
-  //   try {
-  //     // console.log("🌐 [Maps API] Payload:", body); // Debug 用
-
-  //     // 🆕 中止上一個未完成的 Maps API 請求
-  //     if (mapsAbortControllerRef.current) {
-  //       mapsAbortControllerRef.current.abort();
-  //     }
-  //     mapsAbortControllerRef.current = new AbortController();
-
-  //     const res = await fetch(url, {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         "X-Goog-Api-Key": mapsApiKey,
-  //         // 只抓取顯示名稱，最省錢
-  //         // "X-Goog-FieldMask": "places.displayName,places.name",
-  //         "X-Goog-FieldMask": "places.displayName,places.addressDescriptor",
-  //       },
-  //       body: JSON.stringify(body),
-  //       signal: mapsAbortControllerRef.current.signal,
-  //     });
-
-  //     if (!res.ok) {
-  //       // 🔍 這裡加強 Log：將錯誤物件轉成文字印出來，方便看清楚是哪個參數錯
-  //       try {
-  //         const errData = await res.json();
-  //         console.error(
-  //           `❌ [Maps API] 請求失敗 (${res.status}):`,
-  //           JSON.stringify(errData, null, 2),
-  //         );
-  //       } catch {
-  //         console.error(`❌ [Maps API] 請求失敗 (${res.status}): ${res.statusText}`);
-  //       }
-  //       return [];
-  //     }
-
-  //     const data = await res.json();
-  //     // 🆕 提取最合適的地標名稱
-  //     let finalName = "";
-  //     if (data.places && data.places.length > 0) {
-  //       const firstPlace = data.places[0];
-        
-  //       // 優先權 1: 使用 addressDescriptor 的地標描述
-  //       const landmarks = firstPlace.addressDescriptor?.landmarks;
-  //       if (landmarks && landmarks.length > 0) {
-  //         finalName = landmarks[0].displayName?.text;
-  //       }
-        
-  //       // 優先權 2: 如果沒地標描述，使用地點本身的名稱
-  //       if (!finalName) {
-  //         finalName = firstPlace.displayName?.text || firstPlace.name;
-  //       }
-  //     }
-
-  //     const result = finalName || ""; // 最終存入快取的結果
-
-  //     // 🔧 保存到快取
-  //     googlePlacesCacheRef.current[cacheKey] = {
-  //       data: result,
-  //       timestamp: Date.now()
-  //     };
-      
-  //     // 🔧 簡單的 LRU：超過大小限制時刪除最舊的
-  //     const cacheKeys = Object.keys(googlePlacesCacheRef.current);
-  //     if (cacheKeys.length > CACHE_MAX_SIZE) {
-  //       const oldestKey = cacheKeys.reduce((oldest, key) => {
-  //         const oldestTime = googlePlacesCacheRef.current[oldest].timestamp;
-  //         const currentTime = googlePlacesCacheRef.current[key].timestamp;
-  //         return currentTime < oldestTime ? key : oldest;
-  //       });
-  //       delete googlePlacesCacheRef.current[oldestKey];
-  //       debugLog(`🗺️ [快取淘汰] 移除最舊快取: ${oldestKey}`);
-  //     }
-      
-  //     return result;
-  //   } catch (error) {
-  //     // 🆕 中止請求不是真正的錯誤
-  //     if (error.name === "AbortError") {
-  //       debugLog(`⏸️ [Maps API] 請求已被中止`);
-  //       return [];
-  //     }
-  //     console.error(`❌ [Maps API] 錯誤:`, error);
-  //     return [];
-  //   }
-  // };
   const fetchGooglePlaces = async (lat, lng, initialRadius = 50) => {
   // 1. 內部執行搜尋的私有函式，方便重複呼叫 
   const performSearch = async (radius) => {
@@ -2503,15 +2370,15 @@ const ItineraryApp = () => {
 
   // 2. 核心重試邏輯
   // 第一跳：嘗試精準半徑 (預設 50m)
-  let result = await performSearch(initialRadius);
+  let placeName = await performSearch(initialRadius);
 
   // 第二跳：如果沒結果，且初次搜尋半徑小於 150m，則擴大範圍再試一次
-  if (!result && initialRadius < 150) {
+  if (!placeName && initialRadius < 150) {
     debugLog(`🔍 [Maps API] ${initialRadius}m 無結果，擴大至 150m 重試...`);
-    result = await performSearch(150);
+    placeName = await performSearch(150);
   }
 
-  return result || "";
+  return placeName || "";
 };
 
   // --- Gemini API Safe Call Function (New Implementation + AbortController) ---
@@ -2598,8 +2465,8 @@ const ItineraryApp = () => {
         `🗺️ [Google Maps] 開始查詢周邊 POI... (Lat: ${latitude}, Lng: ${longitude})`,
       );
       // 2. 直接呼叫 Maps API (使用上方修正後的函式)
-      // 設定半徑 25m，只抓最靠近的點
-      const places = await fetchGooglePlaces(latitude, longitude, 100);
+      // 設定半徑 50m，只抓最靠近的點
+      const places = await fetchGooglePlaces(latitude, longitude, 50);
       debugLog("🗺️ [Google Maps] API 回傳原始結果:", places);
 
       // if (places && places.length > 0) {
