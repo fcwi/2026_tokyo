@@ -82,6 +82,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import ChatMessageList from "./components/ChatMessageList.jsx";
 import ChatInput from "./components/ChatInput.jsx";
+import DayMap from "./components/DayMap.jsx";
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
 const CryptoUtils = {
@@ -927,7 +928,6 @@ const ItineraryApp = () => {
   // 初始值設為 0，避免第一次載入時有動畫
   // 注意：目前不直接使用 `page` 變數，因此用空位忽略以避免 lint 警告
   const [[, direction], setPage] = useState([activeDay, 0]);
-  const minSwipeDistance = 50;
   // 新增：定義 Framer Motion 動畫變數
   // 這裡決定了畫面要怎麼進場 (enter) 和退場 (exit)
   const slideVariants = {
@@ -957,33 +957,57 @@ const ItineraryApp = () => {
       transition: { duration: 0.2, ease: "easeIn" },
     }),
   };
-  // (原本的 onTouchStart 和 onTouchMove 不用變)
-  const onTouchStart = (e) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-  const onTouchMove = (e) => {
-    // 阻止滑動時的上下捲動干擾
-    e.preventDefault();
-  };
-  const onTouchEnd = (e) => {
-    if (!touchStart) return;
-    const endX = e.changedTouches[0].clientX;
-    const distance = touchStart - endX;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
 
-    if (isLeftSwipe) {
-      if (activeDay < itineraryData.length - 1) {
-        changeDay(activeDay + 1); // 往左滑 (去下一頁)
-      }
-    }
-    if (isRightSwipe) {
-      if (activeDay > -1) {
-        changeDay(activeDay - 1); // 往右滑 (回上一頁)
-      }
-    }
-    setTouchStart(null);
+  const onTouchStart = (e) => {
+    // 同時記錄 X 和 Y，用來判斷斜率
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
   };
+  // 🟢 新增：主動式防干擾監聽器 (解決 passive event 錯誤)
+
+  // 🟢 替換整個 onTouchEnd
+  const onTouchEnd = (e) => {
+  if (!touchStart) return;
+
+  const endX = e.changedTouches[0].clientX;
+  const endY = e.changedTouches[0].clientY;
+
+  // 計算水平與垂直的移動距離
+  const distanceX = touchStart.x - endX;
+  const distanceY = touchStart.y - endY;
+
+  // 取絕對值 (不管往左還往右，距離都是正的)
+  const absX = Math.abs(distanceX);
+  const absY = Math.abs(distanceY);
+
+  // ⚙️ 設定閥值
+  const minSwipeDistance = 75; // 門檻提高：要滑動 75px 才算數 (原本 50)
+  const slopeThreshold = 2.5;  // 嚴格度：水平距離必須是垂直距離的 2.5 倍以上
+
+  // 🛡️ 核心判斷：
+  // 1. 水平滑動距離夠長嗎？ (absX > minSwipeDistance)
+  // 2. 是純粹的水平滑動嗎？ (absX > absY * slopeThreshold)
+  //    如果 absY (垂直移動) 很大，代表使用者正在捲動網頁，這裡就會回傳 false，避免誤觸。
+  if (absX > minSwipeDistance && absX > absY * slopeThreshold) {
+    
+    // 判斷方向
+    if (distanceX > 0) {
+      // 往左滑 (手指由右向左) -> 下一頁
+      if (activeDay < itineraryData.length - 1) {
+        changeDay(activeDay + 1);
+      }
+    } else {
+      // 往右滑 (手指由左向右) -> 上一頁
+      if (activeDay > -1) {
+        changeDay(activeDay - 1);
+      }
+    }
+  }
+
+  setTouchStart(null);
+};
 
   const changeDay = (newDay) => {
     // 如果新頁碼 > 舊頁碼，代表去下一頁 (方向 1，內容往左移)
@@ -2941,7 +2965,6 @@ const ItineraryApp = () => {
           <div
             className="flex-1 space-y-4 px-4 pb-4 overflow-x-hidden relative"
             onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
             ref={scrollContainerRef}
           >
@@ -3875,7 +3898,7 @@ const ItineraryApp = () => {
                               );
                             })}
                           </div>
-
+                          
                           {/* Route Map Section */}
                           {current.routeInfo && (
                             <div
@@ -3893,6 +3916,11 @@ const ItineraryApp = () => {
                                   當日路線導航
                                 </h3>
                               </div>
+                              <DayMap 
+                                events={current.events} 
+                                userLocation={userWeather} 
+                                isDarkMode={isDarkMode}
+                              />
                               <div className="flex flex-col gap-3">
                                 <div
                                   className={`text-xs p-3 rounded-xl border leading-relaxed ${isDarkMode ? "bg-black/20 border-neutral-700 text-neutral-300" : "bg-white/50 border-stone-200 text-stone-600"}`}

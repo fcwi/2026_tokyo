@@ -378,14 +378,15 @@ export const itineraryData = [
     stay: "輕井澤王子大飯店西館 (露臺房 Terrace Room)",
     routeInfo: {
       summary: "成田機場 → 京成上野 → JR上野 → 輕井澤 → 飯店",
-      mapUrl:
-        "https://www.google.com/maps/dir/?api=1&origin=Narita+Airport&destination=Karuizawa+Prince+Hotel+West&waypoints=Keisei+Ueno+Station|Karuizawa+Station",
+      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.771986,140.392850",
     },
     events: [
       {
         time: "14:30",
         title: "抵達東京成田機場",
         mapQuery: "成田機場",
+        lat: 35.771986,
+        lon: 140.392850,
         icon: <MapPin />,
         desc: "領取行李，入境審查 (準備 VJW QR Code)。入境後請至 B1 找紅色招牌的「JR 東日本旅行服務中心」兌換/購買周遊券。",
         tips: [
@@ -398,6 +399,8 @@ export const itineraryData = [
         time: "15:40",
         title: "交通：成田 → 上野",
         mapQuery: "京成上野站",
+        lat: 35.711310,
+        lon: 139.774945,
         icon: <Train />,
         desc: "搭乘 Skyliner 前往市區。車廂內有大型行李架，不用擔心沒位子放。",
         transport: {
@@ -411,6 +414,8 @@ export const itineraryData = [
         time: "16:40",
         title: "上野站轉乘與午餐(點心)",
         mapQuery: "JR 上野站",
+        lat: 35.713768,
+        lon: 139.777254,
         icon: <Utensils />,
         desc: "購買知名的鐵路便當 (Ekiben)！新幹線上可以吃東西，當作遲來的午餐或點心。",
         highlights: [
@@ -426,6 +431,8 @@ export const itineraryData = [
         time: "17:30",
         title: "交通：上野 → 輕井澤",
         mapQuery: "輕井澤站",
+        lat: 36.342550,
+        lon: 138.635060,
         icon: <Train />,
         desc: "搭乘北陸新幹線，舒適直達。這段路程風景會從城市轉為雪景！",
         transport: {
@@ -439,6 +446,8 @@ export const itineraryData = [
         time: "18:50",
         title: "入住王子飯店",
         mapQuery: "輕井澤王子大飯店西館",
+        lat: 36.335300,
+        lon: 138.628800,
         icon: <Hotel />,
         desc: "抵達輕井澤站南口，前往 Outlet 方向搭乘接駁車。西館櫃檯辦理入住。",
         transport: {
@@ -456,6 +465,8 @@ export const itineraryData = [
         time: "19:30",
         title: "晚餐：Outlet 味之街",
         mapQuery: "輕井澤王子購物廣場 味之街",
+        lat: 36.340180,
+        lon: 138.632460,
         icon: <Utensils />,
         desc: "Outlet 商店約 19:00 打烊，但餐廳區 (味之街) 通常營業至 21:00 左右。",
         highlights: [
@@ -470,7 +481,7 @@ export const itineraryData = [
       },
     ],
     notice: {
-      type: "info", // 選項: 'info' (藍/綠) 或 'alert' (紅/橘)
+      type: "info",
       text: "重要提醒：新幹線指定席票券建議提前一個月預訂，以免向隅！",
     },
   },
@@ -482,14 +493,15 @@ export const itineraryData = [
     stay: "輕井澤王子大飯店西館 (露臺房 Terrace Room)",
     routeInfo: {
       summary: "飯店 → 王子滑雪場 → 王子Outlet → 飯店",
-      mapUrl:
-        "https://www.google.com/maps/dir/?api=1&origin=Karuizawa+Prince+Hotel+West&destination=Karuizawa+Prince+Hotel+West&waypoints=Karuizawa+Prince+Hotel+Ski+Resort|Karuizawa+Prince+Shopping+Plaza",
+      mapUrl: "https://www.google.com/maps/search/?api=1&query=$36.335000,138.634000",
     },
     events: [
       {
         time: "09:30",
         title: "王子飯店滑雪場 Kids Park",
         mapQuery: "輕井澤王子大飯店滑雪場",
+        lat: 36.335000,
+        lon: 138.634000,
         icon: <Snowflake />,
         desc: "就在 Outlet 旁，專為兒童設計的戲雪區，不滑雪也能玩得很開心。",
         highlights: [
@@ -507,6 +519,8 @@ export const itineraryData = [
         time: "12:30",
         title: "午餐：Outlet 美食街",
         mapQuery: "輕井澤王子購物廣場 Food Court",
+        lat: 36.341500,
+        lon: 138.634000,
         icon: <Utensils />,
         desc: "Food Court 選擇多，位置也多，適合親子。",
         highlights: [
@@ -523,6 +537,8 @@ export const itineraryData = [
         time: "14:00",
         title: "Outlet 深度購物",
         mapQuery: "輕井澤王子購物廣場",
+        lat: 36.340000,
+        lon: 138.633000,
         icon: <ShoppingBag />,
         desc: "全日本最美 Outlet，風景如畫。分為東、西、新東、新西等多個區域。",
         highlights: [
@@ -540,6 +556,8 @@ export const itineraryData = [
         time: "18:00",
         title: "晚餐：Outlet 餐廳",
         mapQuery: "輕井澤王子購物廣場",
+        lat: 36.340180,
+        lon: 138.632460,
         icon: <Utensils />,
         desc: "找一家喜歡的餐廳好好享用晚餐。",
         highlights: [
@@ -562,14 +580,15 @@ export const itineraryData = [
     stay: "&HERE TOKYO UENO (上野)",
     routeInfo: {
       summary: "輕井澤 → 上野站 → 飯店 → Yamashiroya → PARCO_ya → 阿美橫丁",
-      mapUrl:
-        "https://www.google.com/maps/dir/?api=1&origin=Karuizawa+Prince+Hotel+West&destination=Ameyoko+Shopping+District&waypoints=Karuizawa+Station|Ueno+Station|Yamashiroya|PARCO_ya+Ueno",
+      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.711800,139.771600",
     },
     events: [
       {
         time: "10:00",
         title: "交通：輕井澤 → 上野",
         mapQuery: "JR 上野站",
+        lat: 36.342550,
+        lon: 138.635060,
         icon: <Train />,
         desc: "Check-out 飯店，搭乘接駁車回輕井澤站。搭乘新幹線返回東京。",
         transport: {
@@ -583,6 +602,8 @@ export const itineraryData = [
         time: "11:30",
         title: "抵達飯店 & 午餐",
         mapQuery: "&HERE TOKYO UENO",
+        lat: 35.711800,
+        lon: 139.771600,
         icon: <Hotel />,
         desc: "抵達上野站，從「不忍口」出站，步行至 &HERE TOKYO UENO 寄放行李。",
         transport: {
@@ -601,6 +622,8 @@ export const itineraryData = [
         time: "13:30",
         title: "爸媽分組行動 (安太座時光)",
         mapQuery: "Yamashiroya 上野",
+        lat: 35.712600,
+        lon: 139.775800,
         icon: <Star />,
         desc: "爸爸帶小孩逛玩具，媽媽去百貨下午茶。",
         highlights: [
@@ -608,7 +631,7 @@ export const itineraryData = [
           "👩 媽媽：PARCO_ya 上野 (質感百貨，好逛不擠)。",
         ],
         tips: [
-          "媽媽務必去 PARCO_ya 的 HARBS 吃水果千層蛋糕！(通常要排隊，建議先去登記)。",
+          "媽媽務必去 PARCO_ya 的 HARBS 吃水果千層蛋糕！(35.7078, 139.7743)",
           "Yamashiroya 門口有很多扭蛋機。",
         ],
       },
@@ -616,6 +639,8 @@ export const itineraryData = [
         time: "17:30",
         title: "阿美橫丁",
         mapQuery: "阿美橫丁",
+        lat: 35.710500,
+        lon: 139.774500,
         icon: <ShoppingBag />,
         desc: "感受東京下町熱鬧氣氛，藥妝零食大採購。",
         highlights: [
@@ -639,14 +664,15 @@ export const itineraryData = [
     stay: "&HERE TOKYO UENO (上野)",
     routeInfo: {
       summary: "上野 → 麻布台之丘 → teamLab → 六本木之丘 → 櫸木坂點燈 → 上野",
-      mapUrl:
-        "https://www.google.com/maps/dir/?api=1&origin=&HERE+TOKYO+UENO&destination=&HERE+TOKYO+UENO&waypoints=Azabudai+Hills|teamLab+Borderless|Roppongi+Hills|Roppongi+Keyakizaka+Dori",
+      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.660600,139.740400",
     },
     events: [
       {
         time: "08:20",
         title: "交通：上野 → 麻布台之丘",
         mapQuery: "麻布台之丘",
+        lat: 35.711310,
+        lon: 139.774945,
         icon: <Train />,
         desc: "提早出發，前往東京最新地標。避開上班尖峰最擠的時段。",
         transport: {
@@ -660,6 +686,8 @@ export const itineraryData = [
         time: "09:00",
         title: "teamLab Borderless",
         mapQuery: "teamLab Borderless 麻布台",
+        lat: 35.661000,
+        lon: 139.741000,
         icon: <Camera />,
         desc: "沉浸式光影藝術，視覺震撼。位於麻布台之丘 Garden Plaza B B1。",
         highlights: [
@@ -677,6 +705,8 @@ export const itineraryData = [
         time: "12:00",
         title: "午餐：麻布台之丘",
         mapQuery: "麻布台之丘",
+        lat: 35.660600,
+        lon: 139.740400,
         icon: <Utensils />,
         desc: "享用質感午餐。麻布台之丘有很多新餐廳。",
         tips: [
@@ -689,6 +719,8 @@ export const itineraryData = [
         time: "13:30",
         title: "移動 & 東京城市景觀",
         mapQuery: "六本木之丘展望台",
+        lat: 35.660500,
+        lon: 139.729200,
         icon: <Camera />,
         desc: "前往六本木之丘展望台。",
         transport: {
@@ -707,6 +739,8 @@ export const itineraryData = [
         time: "17:00",
         title: "六本木櫸木坂點燈",
         mapQuery: "六本木櫸木坂",
+        lat: 35.659500,
+        lon: 139.729000,
         icon: <Star />,
         desc: "媽媽心願達成！冬季限定的浪漫燈飾。",
         highlights: [
@@ -732,14 +766,15 @@ export const itineraryData = [
     stay: "&HERE TOKYO UENO (上野)",
     routeInfo: {
       summary: "上野 → 台場DiverCity → LaLaport豐洲 → 上野",
-      mapUrl:
-        "https://www.google.com/maps/dir/?api=1&origin=&HERE+TOKYO+UENO&destination=&HERE+TOKYO+UENO&waypoints=DiverCity+Tokyo+Plaza|Urban+Dock+LaLaport+Toyosu",
+      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.625167,139.775361",
     },
     events: [
       {
         time: "09:30",
         title: "交通：上野 → 台場",
         mapQuery: "百合海鷗號 台場站",
+        lat: 35.624700,
+        lon: 139.770900,
         icon: <Train />,
         desc: "搭乘著名的百合海鷗號 (無人駕駛電車)。",
         transport: {
@@ -753,6 +788,8 @@ export const itineraryData = [
         time: "10:30",
         title: "哆啦A夢未來百貨",
         mapQuery: "哆啦A夢未來百貨公司",
+        lat: 35.625167,
+        lon: 139.775361,
         icon: <Star />,
         desc: "位於 DiverCity Tokyo Plaza 2F。全球第一家哆啦A夢官方商店。",
         highlights: [
@@ -768,6 +805,8 @@ export const itineraryData = [
         time: "14:00",
         title: "交通：台場 → 豐洲",
         mapQuery: "LaLaport 豐洲",
+        lat: 35.624700,
+        lon: 139.770900,
         icon: <Train />,
         desc: "搭乘百合海鷗號前往豐洲。",
         transport: {
@@ -781,6 +820,8 @@ export const itineraryData = [
         time: "14:30",
         title: "童裝採購：LaLaport 豐洲",
         mapQuery: "LaLaport 豐洲",
+        lat: 35.655400,
+        lon: 139.792500,
         icon: <ShoppingBag />,
         desc: "東京親子友善商場 No.1，可以看海。",
         highlights: [
@@ -797,6 +838,8 @@ export const itineraryData = [
         time: "18:00",
         title: "晚餐 & 返回上野",
         mapQuery: "上野站",
+        lat: 35.713768,
+        lon: 139.777254,
         icon: <Utensils />,
         desc: "欣賞東京灣夜景後回程。",
         transport: {
@@ -816,14 +859,15 @@ export const itineraryData = [
     stay: "溫暖的家",
     routeInfo: {
       summary: "上野多慶屋 → 京成上野站 → 成田機場",
-      mapUrl:
-        "https://www.google.com/maps/dir/?api=1&origin=&HERE+TOKYO+UENO&destination=Narita+Airport+Terminal+2&waypoints=Takeya+1|Keisei+Ueno+Station",
+      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.706700,139.776700",
     },
     events: [
       {
         time: "09:00",
         title: "上野補貨",
         mapQuery: "多慶屋 上野",
+        lat: 35.706700,
+        lon: 139.776700,
         icon: <ShoppingBag />,
         desc: "把握最後採買機會。",
         highlights: [
@@ -840,6 +884,8 @@ export const itineraryData = [
         time: "12:00",
         title: "交通：上野 → 成田機場",
         mapQuery: "成田機場第2航廈",
+        lat: 35.711310,
+        lon: 139.774945,
         icon: <Train />,
         desc: "搭乘 Skyliner 前往機場。",
         transport: {
@@ -853,6 +899,8 @@ export const itineraryData = [
         time: "13:30",
         title: "機場最後衝刺",
         mapQuery: "成田機場第2航廈",
+        lat: 35.771986,
+        lon: 140.392850,
         icon: <Star />,
         desc: "成田機場第2航廈 4F 商店街。",
         highlights: [
@@ -869,6 +917,8 @@ export const itineraryData = [
         time: "15:40",
         title: "班機：星宇 JX803",
         mapQuery: "成田機場",
+        lat: 35.771986,
+        lon: 140.392850,
         icon: <Train />,
         desc: "快樂返台！",
         transport: {
