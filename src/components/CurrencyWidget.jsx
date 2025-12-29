@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, ExternalLink } from "lucide-react";
 import { tripConfig } from "../tripdata_2026_karuizawa.jsx";
 
-// 🔴 修改 1: 移除未使用的 'theme' prop
 const CurrencyWidget = ({ isDarkMode }) => {
   const [rateData, setRateData] = useState({
     current: null,
@@ -12,7 +11,6 @@ const CurrencyWidget = ({ isDarkMode }) => {
     error: false,
   });
 
-  // 🔴 修改 2: 移除未使用的 'label'
   const { code, target } = tripConfig.currency;
 
   useEffect(() => {
@@ -60,14 +58,25 @@ const CurrencyWidget = ({ isDarkMode }) => {
   if (rateData.error) return null;
 
   const formatRate = (val) => val ? val.toFixed(3) : "--";
+  
+  // 🟢 產生 Google 匯率搜尋連結
+  const queryUrl = `https://www.google.com/search?q=1+${code.toUpperCase()}+to+${target.toUpperCase()}`;
 
   return (
-    <div
-      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border backdrop-blur-md shadow-sm transition-all duration-300 whitespace-nowrap
+    <a
+      href={queryUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="點擊查看詳細匯率走勢"
+      // 🟢 修改 class:
+      // 1. cursor-pointer: 滑鼠變手型
+      // 2. hover:scale-105 active:scale-95: 增加按鈕互動感
+      // 3. hover:shadow-md: 懸浮時增加陰影
+      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border backdrop-blur-md shadow-sm transition-all duration-300 whitespace-nowrap cursor-pointer hover:scale-105 active:scale-95 hover:shadow-md
       ${
         isDarkMode
-          ? "bg-neutral-800/60 border-neutral-600 text-neutral-200"
-          : "bg-white/60 border-stone-200 text-stone-700"
+          ? "bg-neutral-800/60 border-neutral-600 text-neutral-200 hover:bg-neutral-800/80"
+          : "bg-white/60 border-stone-200 text-stone-700 hover:bg-white/90"
       }`}
     >
       {rateData.loading ? (
@@ -103,7 +112,7 @@ const CurrencyWidget = ({ isDarkMode }) => {
           </div>
         </>
       )}
-    </div>
+    </a>
   );
 };
 
