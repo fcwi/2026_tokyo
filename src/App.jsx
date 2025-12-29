@@ -1,7 +1,7 @@
 // 概述：ItineraryApp 主介面與互動邏輯
 // 功能：狀態管理、定位/天氣、語音與朗讀、行程呈現、UI 控制
 // 說明：本次優化僅更新註解與排版，不更動核心流程。
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   Sun,
   CloudSnow,
@@ -265,63 +265,55 @@ const WeatherStyles = React.memo(() => (
 WeatherStyles.displayName = 'WeatherStyles';
 
   const WeatherBackground = ({ weatherCode, isDarkMode }) => {
-  const [particles, setParticles] = useState({
-    stars: [],
-    rainDrops: [],
-    snowFlakes: [],
-    bokehOrbs: [] // 新增光斑陣列
-  });
+  // 優化：使用 useMemo 快取粒子陣列生成邏輯，只在組件初始時計算一次
+  // 避免每次重新渲染都重新生成新的粒子陣列（影響性能）
+  const particles = useMemo(() => {
+    const newStars = Array.from({ length: 20 }).map((_, i) => ({
+      id: i,
+      width: Math.random() > 0.5 ? '2px' : '3px',
+      height: Math.random() > 0.5 ? '2px' : '3px',
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 50}%`,
+      delay: `${Math.random() * 3}s`,
+      opacity: Math.random() * 0.7 + 0.3
+    }));
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const newStars = Array.from({ length: 20 }).map((_, i) => ({
-        id: i,
-        width: Math.random() > 0.5 ? '2px' : '3px',
-        height: Math.random() > 0.5 ? '2px' : '3px',
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 50}%`,
-        delay: `${Math.random() * 3}s`,
-        opacity: Math.random() * 0.7 + 0.3
-      }));
+    const newRainDrops = Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * -20}%`,
+      duration: `${0.5 + Math.random() * 0.3}s`,
+      delay: `${Math.random() * 2}s`
+    }));
 
-      const newRainDrops = Array.from({ length: 40 }).map((_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * -20}%`,
-        duration: `${0.5 + Math.random() * 0.3}s`,
-        delay: `${Math.random() * 2}s`
-      }));
+    const newSnowFlakes = Array.from({ length: 30 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * -20}%`,
+      duration: `${3 + Math.random() * 4}s`,
+      delay: `${Math.random() * 5}s`,
+      opacityBase: Math.random() * 0.4 + 0.6, 
+      opacityLight: Math.random() * 0.5 + 0.5 
+    }));
 
-      const newSnowFlakes = Array.from({ length: 30 }).map((_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * -20}%`,
-        duration: `${3 + Math.random() * 4}s`,
-        delay: `${Math.random() * 5}s`,
-        opacityBase: Math.random() * 0.4 + 0.6, 
-        opacityLight: Math.random() * 0.5 + 0.5 
-      }));
+    // 🌟 生成 4 個隨機光斑 (取代原本的 sun-ray)
+    const newBokehOrbs = Array.from({ length: 4 }).map((_, i) => ({
+      id: i,
+      width: `${30 + Math.random() * 40}vw`, // 大小隨機 (30-70vw)
+      height: `${30 + Math.random() * 40}vw`,
+      left: `${Math.random() * 80}%`,
+      top: `${Math.random() * 60}%`,
+      animationDelay: `${Math.random() * -10}s`, // 隨機開始時間
+      duration: `${15 + Math.random() * 10}s` // 隨機速度
+    }));
 
-      // 🌟 生成 4 個隨機光斑 (取代原本的 sun-ray)
-      const newBokehOrbs = Array.from({ length: 4 }).map((_, i) => ({
-        id: i,
-        width: `${30 + Math.random() * 40}vw`, // 大小隨機 (30-70vw)
-        height: `${30 + Math.random() * 40}vw`,
-        left: `${Math.random() * 80}%`,
-        top: `${Math.random() * 60}%`,
-        animationDelay: `${Math.random() * -10}s`, // 隨機開始時間
-        duration: `${15 + Math.random() * 10}s` // 隨機速度
-      }));
-
-      setParticles({
-        stars: newStars,
-        rainDrops: newRainDrops,
-        snowFlakes: newSnowFlakes,
-        bokehOrbs: newBokehOrbs
-      });
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
+    return {
+      stars: newStars,
+      rainDrops: newRainDrops,
+      snowFlakes: newSnowFlakes,
+      bokehOrbs: newBokehOrbs
+    };
+  }, []); // 空依賴陣列：粒子陣列只生成一次
 
   const getType = (code) => {
     if (code === null || code === undefined) return null;
@@ -633,40 +625,65 @@ const ItineraryApp = () => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // 檢查檔案大小（超過 5MB 可能阻塞主線程）
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxFileSize) {
+      showToast("圖片檔案過大（超過 5MB），請選擇較小的圖片", "error");
+      return;
+    }
+
+    // 使用 requestIdleCallback 將 Base64 轉換延遲到空閒時間
     const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let width = img.width;
-        let height = img.height;
-
-        // 限制最長邊為 1600px，這在 Gemini 辨識與流量間取得了極佳平衡
-        const MAX_SIDE = 1600;
-        if (width > height) {
-          if (width > MAX_SIDE) {
-            height *= MAX_SIDE / width;
-            width = MAX_SIDE;
-          }
-        } else {
-          if (height > MAX_SIDE) {
-            width *= MAX_SIDE / height;
-            height = MAX_SIDE;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // 使用 jpeg 格式並設定 0.8 的品質，能顯著壓縮檔案體積但保留細節
-        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
-        setTempImage(compressedBase64);
-      };
+      const imageData = event.target.result;
+      
+      // 異步處理圖片壓縮（使用 requestIdleCallback 避免阻塞主線程）
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          processImageCompression(imageData);
+        }, { timeout: 2000 });
+      } else {
+        // Fallback: setTimeout for older browsers
+        setTimeout(() => {
+          processImageCompression(imageData);
+        }, 100);
+      }
     };
     reader.readAsDataURL(file);
+  };
+
+  // 提取圖片壓縮邏輯到獨立函式
+  const processImageCompression = (imageData) => {
+    const img = new Image();
+    img.src = imageData;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let width = img.width;
+      let height = img.height;
+
+      // 限制最長邊為 1600px，這在 Gemini 辨識與流量間取得了極佳平衡
+      const MAX_SIDE = 1600;
+      if (width > height) {
+        if (width > MAX_SIDE) {
+          height *= MAX_SIDE / width;
+          width = MAX_SIDE;
+        }
+      } else {
+        if (height > MAX_SIDE) {
+          width *= MAX_SIDE / height;
+          height = MAX_SIDE;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // 使用 jpeg 格式並設定 0.8 的品質，能顯著壓縮檔案體積但保留細節
+      const compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+      setTempImage(compressedBase64);
+    };
   };
 
   // 輔助函式：移除圖片
