@@ -1179,6 +1179,11 @@ const ItineraryApp = () => {
   // 目前使用者主動更新位置的 loading 狀態（用於更新按鈕）
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
+  // --- 🆕 API 中止控制器（AbortController）---
+  // 用於中止長期 API 調用，避免卸載後的狀態更新
+  const geminiAbortControllerRef = useRef(null);
+  const mapsAbortControllerRef = useRef(null);
+
   // --- 🔧 API 結果快取（內存快取，使用 LRU 策略） ---
   // 快取 Google Places API 查詢結果，key 為 "lat,lng,radius"
   const googlePlacesCacheRef = useRef({});
@@ -2014,6 +2019,19 @@ const ItineraryApp = () => {
   };
 
   // ... existing weather fetch and voice logic ...
+  // --- 卸載清理：中止所有進行中的 API 請求 ---
+  useEffect(() => {
+    return () => {
+      // 卸載時中止所有 API 請求
+      if (geminiAbortControllerRef.current) {
+        geminiAbortControllerRef.current.abort();
+      }
+      if (mapsAbortControllerRef.current) {
+        mapsAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // --- Weather API Integration (加上 AbortController，避免卸載後更新狀態) ---
   useEffect(() => {
     if (!isVerified) return;
@@ -2236,7 +2254,7 @@ const ItineraryApp = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  // --- Google Maps Places API Call Helper（使用正確的 Place Types + 快取） ---
+  // --- Google Maps Places API Call Helper（使用正確的 Place Types + 快取 + AbortController） ---
   const fetchGooglePlaces = async (lat, lng, radius = 25) => {
     // 🔧 快取查詢：避免重複呼叫相同的地點
     const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)},${radius}`;
@@ -2288,6 +2306,12 @@ const ItineraryApp = () => {
     try {
       // console.log("🌐 [Maps API] Payload:", body); // Debug 用
 
+      // 🆕 中止上一個未完成的 Maps API 請求
+      if (mapsAbortControllerRef.current) {
+        mapsAbortControllerRef.current.abort();
+      }
+      mapsAbortControllerRef.current = new AbortController();
+
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -2297,15 +2321,20 @@ const ItineraryApp = () => {
           "X-Goog-FieldMask": "places.displayName,places.name",
         },
         body: JSON.stringify(body),
+        signal: mapsAbortControllerRef.current.signal,
       });
 
       if (!res.ok) {
         // 🔍 這裡加強 Log：將錯誤物件轉成文字印出來，方便看清楚是哪個參數錯
-        const errData = await res.json();
-        console.error(
-          `❌ [Maps API] 請求失敗 (${res.status}):`,
-          JSON.stringify(errData, null, 2),
-        );
+        try {
+          const errData = await res.json();
+          console.error(
+            `❌ [Maps API] 請求失敗 (${res.status}):`,
+            JSON.stringify(errData, null, 2),
+          );
+        } catch (e) {
+          console.error(`❌ [Maps API] 請求失敗 (${res.status}): ${res.statusText}`);
+        }
         return [];
       }
 
@@ -2331,13 +2360,18 @@ const ItineraryApp = () => {
       }
       
       return result;
-    } catch (e) {
-      console.error("❌ [Maps API] 連線異常:", e);
+    } catch (error) {
+      // 🆕 中止請求不是真正的錯誤
+      if (error.name === "AbortError") {
+        debugLog(`⏸️ [Maps API] 請求已被中止`);
+        return [];
+      }
+      console.error(`❌ [Maps API] 錯誤:`, error);
       return [];
     }
   };
 
-  // --- Gemini API Safe Call Function (New Implementation) ---
+  // --- Gemini API Safe Call Function (New Implementation + AbortController) ---
   const callGeminiSafe = async (payload) => {
     // 使用解密後的 Key，如果沒有則使用空字串 (會失敗)
     const currentKey = apiKey;
@@ -2349,10 +2383,17 @@ const ItineraryApp = () => {
 
     while (attempt < maxRetries) {
       try {
+        // 🆕 中止上一個未完成的 Gemini API 請求
+        if (geminiAbortControllerRef.current) {
+          geminiAbortControllerRef.current.abort();
+        }
+        geminiAbortControllerRef.current = new AbortController();
+
         const response = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal: geminiAbortControllerRef.current.signal,
         });
 
         // 成功回應
@@ -2382,6 +2423,10 @@ const ItineraryApp = () => {
         // 其他 API 錯誤直接拋出
         throw new Error(`API Error: ${response.status}`);
       } catch (error) {
+        // 🆕 中止請求不是真正的錯誤，直接拋出
+        if (error.name === "AbortError") {
+          throw new Error("API 請求已被中止");
+        }
         console.error("Fetch attempt error:", error);
         if (error.message.includes("API Key")) throw error; // Key 錯就不重試了
 
