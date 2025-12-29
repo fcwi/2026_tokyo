@@ -938,6 +938,12 @@ export const tripConfig = {
   // 基本資訊
   title: "東京輕井澤親子之旅",
   timeZone: "Asia/Tokyo",
+  currency: {
+    code: "jpy", // API 使用小寫 (jpy, usd, eur...)
+    label: "日圓",
+    source: "JPY",
+    target: "TWD", // 目標貨幣 (固定為TWD)
+  },
   subTitle: "2026/1/24 - 1/29",
   startDate: "2026-01-24T00:00:00",
   endDate: "2026-01-29T23:59:59",

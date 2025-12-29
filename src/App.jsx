@@ -83,6 +83,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ChatMessageList from "./components/ChatMessageList.jsx";
 import ChatInput from "./components/ChatInput.jsx";
 import DayMap from "./components/DayMap.jsx";
+import CurrencyWidget from "./components/CurrencyWidget.jsx";
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
 const CryptoUtils = {
@@ -2916,45 +2917,61 @@ const ItineraryApp = () => {
 
       <div className="max-w-md mx-auto relative min-h-screen flex flex-col z-10">
         {/* Header Title with Material Glass */}
-        <div className="flex justify-between items-center px-4 pt-5 pb-2 relative z-20">
+        {/* 1. items-end: 讓左邊標題卡片與右邊匯率卡片的「底部」對齊 */}
+        {/* 2. gap-4: 拉開左右兩邊的距離，創造呼吸感 */}
+        <div className="flex justify-between items-end px-4 pt-5 pb-2 relative z-20 gap-4">
+          
+          {/* 左側：標題卡片 */}
+          {/* 3. min-w-0: 允許 flex item 縮小，防止破版 */}
           <div
-            className={`px-4 py-2 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+            className={`px-3 py-2 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 ${theme.cardBg} ${theme.cardBorder}`}
           >
+            {/* 4. text-base + whitespace-nowrap: 字體改小一點，且強制不換行 */}
             <h1
-              className={`text-lg font-bold tracking-wide transition-colors ${theme.text}`}
+              className={`text-base font-bold tracking-wide transition-colors whitespace-nowrap ${theme.text}`}
             >
               {tripConfig.title}
             </h1>
+            {/* 5. text-[10px]: 副標題改更小，視覺層次更好 */}
             <p
-              className={`text-xs mt-0.5 font-medium tracking-widest ${theme.textSec}`}
+              className={`text-[10px] mt-0.5 font-medium tracking-widest whitespace-nowrap ${theme.textSec}`}
             >
               {tripConfig.subTitle}
             </p>
           </div>
 
-          <div className="flex gap-2">
-            {/* Lock Button */}
-            <button
-              onClick={() => {
-                setIsVerified(false);
-                localStorage.removeItem("trip_password");
-              }}
-              className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
-              title="鎖定行程"
-            >
-              <Lock className="w-5 h-5 fill-current" />
-            </button>
-            {/* Theme Toggle Button */}
-            <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
-            >
-              {isDarkMode ? (
-                <Moon className="w-5 h-5 fill-current" />
-              ) : (
-                <Sun className="w-5 h-5 text-amber-500 fill-current" />
-              )}
-            </button>
+          {/* 右側：按鈕組 + 匯率卡片 */}
+          {/* flex-shrink-0: 防止右側被擠壓變形 */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            
+            {/* 第一排：功能按鈕 (維持原樣) */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setIsVerified(false);
+                  localStorage.removeItem("trip_password");
+                }}
+                className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
+                title="鎖定行程"
+              >
+                <Lock className="w-4 h-4 fill-current" />
+              </button>
+              
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
+              >
+                {isDarkMode ? (
+                  <Moon className="w-4 h-4 fill-current" />
+                ) : (
+                  <Sun className="w-4 h-4 text-amber-500 fill-current" />
+                )}
+              </button>
+            </div>
+
+            {/* 第二排：匯率資訊 */}
+            <CurrencyWidget isDarkMode={isDarkMode} theme={theme} />
+            
           </div>
         </div>
 
