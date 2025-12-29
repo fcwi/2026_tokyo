@@ -1162,6 +1162,15 @@ const ItineraryApp = () => {
   // 目前使用者主動更新位置的 loading 狀態（用於更新按鈕）
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
+  // --- 🔧 API 結果快取（內存快取，使用 LRU 策略） ---
+  // 快取 Google Places API 查詢結果，key 為 "lat,lng,radius"
+  const googlePlacesCacheRef = useRef({});
+  // 快取地名查詢結果，key 為 "lat,lng"
+  const geoNamesCacheRef = useRef({});
+  // 快取大小限制（LRU）
+  const CACHE_MAX_SIZE = 50;
+  const CACHE_EXPIRY_MS = 3600000; // 1 小時過期
+
   // Chat State
   // 🆕 輔助函式：根據模式取得對應的歡迎詞 (更新版)
   const getWelcomeMessage = (mode) => {
@@ -1461,9 +1470,24 @@ const ItineraryApp = () => {
 
           if (!city) {
             try {
-              const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW&zoom=18`;
-              const geoRes = await fetch(geoUrl);
-              const geoData = await geoRes.json();
+              // 🔧 快取地名查詢結果
+              const geoKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+              let geoData = geoNamesCacheRef.current[geoKey]?.data;
+              
+              if (!geoData || Date.now() - (geoNamesCacheRef.current[geoKey]?.timestamp || 0) > CACHE_EXPIRY_MS) {
+                const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=zh-TW&zoom=18`;
+                const geoRes = await fetch(geoUrl);
+                geoData = await geoRes.json();
+                
+                // 保存到快取
+                geoNamesCacheRef.current[geoKey] = {
+                  data: geoData,
+                  timestamp: Date.now()
+                };
+                debugLog(`🌍 [地名查詢] 新查詢: ${geoKey}`);
+              } else {
+                debugLog(`🌍 [地名快取命中] ${geoKey}`);
+              }
 
               if (geoData) {
                 const addr = geoData.address || {};
@@ -1688,10 +1712,11 @@ const ItineraryApp = () => {
         }
       }
     },
-    [getWeatherData, isAppReady, showToast],
-  ); // 確保依賴完整
+    [getWeatherData, showToast],
+  ); // 🔧 優化：移除 isAppReady 依賴（內部邏輯已處理）
 
   // --- 定時更新位置與天氣邏輯 (改為：載入時立即啟動 + 每10分鐘背景更新) ---
+  // 🔧 優化：移除過度的 userWeather 依賴項，避免無限迴圈
   useEffect(() => {
     // 讀取當前是否已有顯示資料：若已有則首次更新以靜默模式進行
     const alreadyHasData =
@@ -1707,7 +1732,7 @@ const ItineraryApp = () => {
     }, 600000);
 
     return () => clearInterval(intervalId);
-  }, [getUserLocationWeather, userWeather.temp, userWeather.locationName]);
+  }, [getUserLocationWeather]); // 🔧 優化後的依賴項：只依賴 function 本身，避免無限迴圈
 
   const handleShareLocation = async () => {
     if (!navigator.geolocation) {
@@ -2194,8 +2219,15 @@ const ItineraryApp = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  // --- Google Maps Places API Call Helper（使用正確的 Place Types） ---
+  // --- Google Maps Places API Call Helper（使用正確的 Place Types + 快取） ---
   const fetchGooglePlaces = async (lat, lng, radius = 25) => {
+    // 🔧 快取查詢：避免重複呼叫相同的地點
+    const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)},${radius}`;
+    const cached = googlePlacesCacheRef.current[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY_MS) {
+      debugLog(`🗺️ [快取命中] Google Places: ${cacheKey}`);
+      return cached.data;
+    }
     if (!mapsApiKey) return [];
 
     const centerLat = Number(lat);
@@ -2261,7 +2293,27 @@ const ItineraryApp = () => {
       }
 
       const data = await res.json();
-      return data.places || [];
+      const result = data.places || [];
+      
+      // 🔧 保存到快取
+      googlePlacesCacheRef.current[cacheKey] = {
+        data: result,
+        timestamp: Date.now()
+      };
+      
+      // 🔧 簡單的 LRU：超過大小限制時刪除最舊的
+      const cacheKeys = Object.keys(googlePlacesCacheRef.current);
+      if (cacheKeys.length > CACHE_MAX_SIZE) {
+        const oldestKey = cacheKeys.reduce((oldest, key) => {
+          const oldestTime = googlePlacesCacheRef.current[oldest].timestamp;
+          const currentTime = googlePlacesCacheRef.current[key].timestamp;
+          return currentTime < oldestTime ? key : oldest;
+        });
+        delete googlePlacesCacheRef.current[oldestKey];
+        debugLog(`🗺️ [快取淘汰] 移除最舊快取: ${oldestKey}`);
+      }
+      
+      return result;
     } catch (e) {
       console.error("❌ [Maps API] 連線異常:", e);
       return [];
