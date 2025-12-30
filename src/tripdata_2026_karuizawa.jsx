@@ -1,5 +1,31 @@
-// 這個檔案僅包含行程與相關資料 (data only)
-// 不包含視圖或邏輯，方便被其他元件匯入使用。
+/**
+ * ============================================================================
+ * 行程資料檔案 (Trip Data Only)
+ * ============================================================================
+ * 
+ * 本檔案僅包含行程與相關資料，不含視圖或邏輯。
+ * 所有資料都是靜態結構，供其他元件匯入使用。
+ * 
+ * 【匯出項目】
+ * - `guidesData`      : 行前指南與購票流程
+ * - `usefulLinks`     : 分類的參考連結 (交通、天氣、購物、緊急...)
+ * - `shopGuideData`   : 各區域商店與購物建議
+ * - `itineraryData`   : 每日行程與事件列表
+ * - `tripConfig`      : 全域設定 (標題、日期、飯店、主題等)
+ * - `checklistData`   : 行前檢查清單 (可用於 todo / checkbox UI)
+ * 
+ * 【修改指南】
+ * 若要改為其他行程，請依序調整以下內容：
+ * 1. 修改 tripConfig 中的基本資訊 (標題、日期、飯店名稱、地點等)
+ * 2. 更新 itineraryData 中的每日行程 (日期、地點、事件時間、交通)
+ * 3. 替換 shopGuideData 中的景點與商店資訊
+ * 4. 新增/刪除 usefulLinks 中的相關連結
+ * 5. 根據新行程調整 guidesData 中的實用指南
+ * 6. 更新 checklistData 中的行前檢查項目
+ * 
+ * ============================================================================
+ */
+
 import React from "react";
 import {
   Train,
@@ -19,16 +45,27 @@ import {
   Map,
 } from "lucide-react";
 
-// 匯出總覽：
-// - `guidesData`      : 行前指南與購票流程
-// - `usefulLinks`     : 分類的參考連結 (交通、天氣、購物...)
-// - `shopGuideData`   : 各區域商店與購物建議
-// - `itineraryData`   : 每日行程與事件列表
-// - `tripConfig`      : 全域設定 (標題、日期、飯店、主題等)
-// - `checklistData`   : 行前檢查清單 (可用於 todo / checkbox UI)
-
-// === 1. 指南資料 (Guides) ===
+// ============================================================================
+// 1. 指南資料 (Guides)
+// ============================================================================
+// 
 // 旅行前的實用指南與購票/入場流程說明，僅為參考。
+// 
+// 【資料結構】
+// {
+//   title         : 指南標題
+//   icon          : Lucide React 圖示
+//   summary       : 簡短說明
+//   steps         : 步驟陣列 (循序說明)
+//   link          : { text: "連結文字", url: "網址" }
+//   blogs         : 相關部落格連結陣列
+// }
+// 
+// 【如何修改】
+// - 修改日期相關指南時，檢查取票期限 (通常提前 1 個月)
+// - 若更換景點，請更新 summary / steps 與官方連結
+// - blogs 陣列可根據搜尋結果新增/刪除相關文章連結
+//
 export const guidesData = [
   {
     title: "Skyliner 臉部辨識購票 (Face Check-in Go)",
@@ -148,8 +185,32 @@ export const guidesData = [
   },
 ];
 
-// === 2. 參考連結 (Useful links) ===
-// 將常用網站分類整理，包含交通、天氣、景點、購物與緊急資訊。
+// ============================================================================
+// 2. 參考連結 (Useful links)
+// ============================================================================
+//
+// 將常用網站分類整理，方便快速查詢。
+//
+// 【資料結構】
+// {
+//   category   : 連結分類名稱 (交通、天氣、購物、緊急等)
+//   items      : 連結項目陣列
+// }
+//
+// 單個項目結構：
+// {
+//   title      : 連結標題
+//   desc       : 連結描述 (簡短說明用途)
+//   url        : 完整網址
+//   icon       : Lucide React 圖示
+// }
+//
+// 【如何修改】
+// - 新增分類：複製一個 category 物件，改變 category 名稱與 items 內容
+// - 新增連結：在 items 陣列中加入新物件，確保 url 正確
+// - 更新連結：若網址變動，直接修改 url 欄位
+// - 移除連結：整個物件刪除即可 (務必檢查陣列逗號)
+//
 export const usefulLinks = [
   {
     category: "交通與工具",
@@ -280,8 +341,36 @@ export const usefulLinks = [
   },
 ];
 
-// === 3. 商店與購物指南 (Shop guide) ===
+// ============================================================================
+// 3. 商店與購物指南 (Shop guide)
+// ============================================================================
+//
 // 各區域推薦店家、特色與附近連鎖店，方便安排行程與購物。
+//
+// 【資料結構】
+// {
+//   area              : 區域名稱 + 行程日期
+//   desc              : 區域簡要描述
+//   mapQuerySuffix    : Google 地圖搜尋用的地點名稱
+//   mainShops         : 主要景點/店家陣列
+//   specialShops      : 特色小店陣列
+//   nearbyChains      : 附近連鎖店 (便利店、咖啡廳等)
+// }
+//
+// 單個店家物件結構：
+// {
+//   name     : 店家名稱
+//   tag      : 分類標籤 (如: 玩具、美食、購物等)
+//   note     : 簡短備註 (如: "Outlet 內"、"大型店" 等)
+//   location : 位置 (nearbyChains 專用)
+// }
+//
+// 【如何修改】
+// - 新增區域：複製一個 area 物件，改變區域名稱、日期、店家清單
+// - 更新店家：修改 name、tag、note 欄位，刪除已關閉的店家
+// - mapQuerySuffix：用於生成 Google 地圖搜尋，務必使用正確的地點名稱
+// - 若要為店家添加更多詳細資訊，可擴展物件結構 (如新增 address、phone 等)
+//
 export const shopGuideData = [
   {
     area: "輕井澤 (Day 1-2)",
@@ -367,8 +456,53 @@ export const shopGuideData = [
   },
 ];
 
-// === 4. 行程核心資料 (Itinerary) ===
+// ============================================================================
+// 4. 行程核心資料 (Itinerary)
+// ============================================================================
+//
 // 每日行程包含事件時間、地點、交通與小提醒，供 UI 呈現用。
+// 這是整個行程檔案的最重要部分，需要精心維護。
+//
+// 【Day 物件結構】
+// {
+//   day            : 日期標籤 (如: "Day 1", "Day 2")
+//   locationKey    : 地點識別符，需與 tripConfig.locations 對應
+//   date           : 西曆日期 (如: "1/24 (六)")
+//   title          : 該日行程主題
+//   stay           : 住宿飯店名稱
+//   routeInfo      : 日程整體路線資訊
+//   events         : 當日事件陣列
+//   notice         : (選項) 重要提醒 { type: "info" | "warning", text: "..." }
+// }
+//
+// 【routeInfo 結構】
+// {
+//   summary        : 路線簡述 (如: "成田機場 → 京成上野 → ...")
+//   mapUrl         : Google Maps 完整網址 (用 direction API)
+// }
+//
+// 【Event 物件結構】
+// {
+//   time           : 事件時間 (如: "14:30")
+//   title          : 事件標題
+//   mapQuery       : Google 地圖搜尋用的地點名稱
+//   lat / lon      : 座標 (用於地圖標記)
+//   icon           : Lucide React 圖示 (如: <Train /> <Utensils /> 等)
+//   desc           : 事件詳細描述
+//   transport      : (交通事件) { mode: "...", duration: "...", route: "...", note: "..." }
+//   highlights     : (可選) 亮點項目陣列
+//   tips           : (可選) 小提示陣列
+// }
+//
+// 【如何修改】
+// - 修改日期：更新 day、date、routeInfo.summary、routeInfo.mapUrl
+// - 修改飯店：更新 stay 欄位
+// - 新增事件：在 events 陣列中插入新物件，注意時間排序
+// - 修改事件：編輯 title、desc、highlights、tips 內容
+// - 坐標查詢：可用 Google Maps 取得 lat/lon，或用地點名稱讓 UI 轉換
+// - 交通資訊：更新 transport 物件中的 mode、duration、route、note
+// - 若事件涉及預訂，務必在 desc 或 tips 中說明提前預約的需求
+//
 export const itineraryData = [
   {
     day: "Day 1",
@@ -378,7 +512,7 @@ export const itineraryData = [
     stay: "輕井澤王子大飯店西館 (露臺房 Terrace Room)",
     routeInfo: {
       summary: "成田機場 → 京成上野 → JR上野 → 輕井澤 → 飯店",
-      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.771986,140.392850",
+      mapUrl: "https://www.google.com/maps/dir/?api=1&origin=Narita+Airport&destination=Karuizawa+Prince+Hotel+West&waypoints=Keisei+Ueno+Station|Karuizawa+Station",
     },
     events: [
       {
@@ -493,7 +627,7 @@ export const itineraryData = [
     stay: "輕井澤王子大飯店西館 (露臺房 Terrace Room)",
     routeInfo: {
       summary: "飯店 → 王子滑雪場 → 王子Outlet → 飯店",
-      mapUrl: "https://www.google.com/maps/search/?api=1&query=$36.335000,138.634000",
+      mapUrl: "https://www.google.com/maps/dir/?api=1&origin=Karuizawa+Prince+Hotel+West&destination=Karuizawa+Prince+Hotel+West&waypoints=Karuizawa+Prince+Hotel+Ski+Resort|Karuizawa+Prince+Shopping+Plaza",
     },
     events: [
       {
@@ -580,7 +714,7 @@ export const itineraryData = [
     stay: "&HERE TOKYO UENO (上野)",
     routeInfo: {
       summary: "輕井澤 → 上野站 → 飯店 → Yamashiroya → PARCO_ya → 阿美橫丁",
-      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.711800,139.771600",
+      mapUrl: "https://www.google.com/maps/dir/?api=1&origin=Karuizawa+Prince+Hotel+West&destination=Ameyoko+Shopping+District&waypoints=Karuizawa+Station|Ueno+Station|Yamashiroya|PARCO_ya+Ueno",
     },
     events: [
       {
@@ -664,7 +798,7 @@ export const itineraryData = [
     stay: "&HERE TOKYO UENO (上野)",
     routeInfo: {
       summary: "上野 → 麻布台之丘 → teamLab → 六本木之丘 → 櫸木坂點燈 → 上野",
-      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.660600,139.740400",
+      mapUrl: "https://www.google.com/maps/dir/?api=1&origin=&HERE+TOKYO+UENO&destination=&HERE+TOKYO+UENO&waypoints=Azabudai+Hills|teamLab+Borderless|Roppongi+Hills|Roppongi+Keyakizaka+Dori",
     },
     events: [
       {
@@ -766,7 +900,7 @@ export const itineraryData = [
     stay: "&HERE TOKYO UENO (上野)",
     routeInfo: {
       summary: "上野 → 台場DiverCity → LaLaport豐洲 → 上野",
-      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.625167,139.775361",
+      mapUrl: "https://www.google.com/maps/dir/?api=1&origin=&HERE+TOKYO+UENO&destination=&HERE+TOKYO+UENO&waypoints=DiverCity+Tokyo+Plaza|Urban+Dock+LaLaport+Toyosu",
     },
     events: [
       {
@@ -859,7 +993,7 @@ export const itineraryData = [
     stay: "溫暖的家",
     routeInfo: {
       summary: "上野多慶屋 → 京成上野站 → 成田機場",
-      mapUrl: "https://www.google.com/maps/search/?api=1&query=$35.706700,139.776700",
+      mapUrl: "https://www.google.com/maps/dir/?api=1&origin=&HERE+TOKYO+UENO&destination=Narita+Airport+Terminal+2&waypoints=Takeya+1|Keisei+Ueno+Station",
     },
     events: [
       {
@@ -932,10 +1066,41 @@ export const itineraryData = [
   },
 ];
 
-// === 5. 專案全域設定 (Config) ===
+// ============================================================================
+// 5. 專案全域設定 (Config)
+// ============================================================================
+//
 // 用於控制行程標題、日期、飯店、緊急聯絡與 UI 主題等。
+// 這些設定會被多個 UI 元件使用，修改時需謹慎。
+//
+// 【基本結構】
+// {
+//   title            : 行程標題
+//   timeZone         : 時區 (如: "Asia/Tokyo")
+//   currency         : 貨幣設定 { code, label, source, target }
+//   subTitle         : 副標題 (顯示日期範圍)
+//   startDate / endDate : ISO 8601 格式的開始與結束時間
+//   flights          : 航班資訊 (去程 outbound / 回程 inbound)
+//   hotels           : 住宿飯店陣列
+//   emergency        : 緊急聯絡資訊
+//   locations        : 地點列表 (與 itineraryData 的 locationKey 對應)
+//   tripHighlights   : 行程亮點
+//   theme            : UI 視覺主題 (顏色、背景、文字等)
+//   language         : 語言與語音設定
+// }
+//
+// 【如何修改】
+// - 修改標題/日期：更新 title、subTitle、startDate、endDate
+// - 更新航班：修改 flights.outbound / .inbound 的 code 與 time
+// - 新增/修改飯店：編輯 hotels 陣列，每間飯店包含 name、phone、address、note
+// - 更新時區：若行程在其他國家，改變 timeZone (如: "Europe/Paris")
+// - 修改貨幣：若行程涉及其他幣別，更新 currency.code / .label / .source
+// - 新增地點：在 locations 陣列中新增 { key, name, lat, lon }
+// - 更新亮點：修改 tripHighlights 陣列中的景點
+// - 客製化主題：編輯 theme 物件中的顏色、漸層、文字等 (需懂 Tailwind CSS)
+//
 export const tripConfig = {
-  // 基本資訊
+  // ========== 基本資訊 ==========
   title: "東京輕井澤親子之旅",
   timeZone: "Asia/Tokyo",
   currency: {
@@ -948,7 +1113,10 @@ export const tripConfig = {
   startDate: "2026-01-24T00:00:00",
   endDate: "2026-01-29T23:59:59",
 
-  // 航班資訊 (去程/回程)
+  // ========== 航班資訊 ==========
+  // 【如何修改】
+  // - code: 航空公司代碼 + 班機號
+  // - time: 出發時間 (出發地時區) ➝ 抵達時間 (目的地時區)
   flights: {
     outbound: {
       code: "星宇 JX802",
@@ -960,7 +1128,12 @@ export const tripConfig = {
     },
   },
 
-  // 住宿資訊 (可放多個)
+  // ========== 住宿資訊 ==========
+  // 【如何修改】
+  // - 新增飯店：在陣列中新增物件 { name, phone, address, note }
+  // - phone: 國際格式 (含國家碼，如: +81-3-...)
+  // - address: 完整地址 (日文或英文皆可)
+  // - note: 房型、特色備註 (如: "露臺房"、"海景房" 等)
   hotels: [
     {
       name: "輕井澤王子西館",
@@ -976,7 +1149,11 @@ export const tripConfig = {
     },
   ],
 
-  // 緊急聯絡
+  // ========== 緊急聯絡 ==========
+  // 【如何修改】
+  // - police: 當地警察電話
+  // - ambulance: 當地救護車電話
+  // - contact: 外交部駐當地辦事處或緊急聯絡電話
   emergency: {
     police: "110",
     ambulance: "119",
@@ -999,7 +1176,19 @@ export const tripConfig = {
     "翻譯「我要去這裡」",
   ],
 
-  // 地點定義
+  // ========== 地點定義 ==========
+  // 【結構】
+  // {
+  //   key   : 識別符，用於 itineraryData 的 locationKey 對應
+  //   name  : 地點名稱 (顯示用)
+  //   lat   : 緯度
+  //   lon   : 經度
+  // }
+  // 【如何修改】
+  // - 新增地點：在陣列中新增物件，key 必須與 itineraryData 中的 locationKey 相同
+  // - 座標可用 Google Maps 或 GPS 座標網站查詢
+  // - key 名稱應簡短且能代表該地點 (如: "karuizawa", "ueno", "roppongi" 等)
+  //
   locations: [
     { key: "karuizawa", name: "輕井澤", lat: 36.34, lon: 138.63 },
     { key: "ueno", name: "上野", lat: 35.71, lon: 139.78 },
@@ -1008,7 +1197,15 @@ export const tripConfig = {
     { key: "tokyo", name: "東京市區", lat: 35.68, lon: 139.76 },
     { key: "narita", name: "成田機場", lat: 35.77, lon: 140.39 },
   ],
-  // 旅程亮點
+
+  // ========== 旅程亮點 ==========
+  // 【說明】
+  // 簡短列舉行程中最精彩的景點/體驗。
+  // 用於 UI 的行程概覽卡片或社群媒體分享。
+  // 【如何修改】
+  // - 修改景點名稱或新增景點
+  // - 順序可自行調整 (通常按行程順序或重要度排列)
+  //
   tripHighlights: [
     "輕井澤滑雪場",
     "王子 Outlet",
@@ -1020,78 +1217,90 @@ export const tripConfig = {
     "LaLaport 豐洲",
   ],
 
-  // // 個性化視覺主題
-  // theme: {
-  //   // 1. 氣氛色系 (Tailwind 色票名稱，如 slate, zinc, stone, red, orange, sky...)
-  //   colorBase: "slate", // 文字與邊框的基礎冷色調
-  //   colorAccent: "sky", // 強調色 (按鈕、圖示)
-
-  //   // 明確指定文字顏色 (解決深色模式看不清楚的問題)
-  //   textColors: {
-  //     light: "text-slate-800", // 日間標題色 (深)
-  //     dark: "text-slate-100", // 夜間標題色 (淺 - 改用 100 或 50 會更亮)
-  //     secLight: "text-slate-500", // 日間副標題色
-  //     secDark: "text-slate-400", // 夜間副標題色
-  //   },
-
-  //   // 2. 背景紋理 (SVG Data URI)
-  //   // 這裡使用的是一個帶有「擾動雜訊」的 SVG，模擬雪地或和紙質感
-  //   bgTexture: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
-
-  //   // 3. 背景漸層 (Tailwind Class)
-  //   // 日間：冷白 -> 透明
-  //   bgGradientLight: "bg-slate-50 from-slate-100/50 via-white to-transparent",
-  //   // 夜間：深灰藍 -> 透明
-  //   bgGradientDark:
-  //     "bg-[#0F172A] from-slate-900 via-slate-900/50 to-transparent",
-
-  //   // 4. 裝飾光暈球顏色 (Tailwind colors)
-  //   blobs: {
-  //     light: ["bg-sky-200/30", "bg-indigo-200/30", "bg-blue-100/40"],
-  //     dark: ["bg-sky-900/20", "bg-indigo-900/20", "bg-slate-800/30"],
-  //   },
-  // },
-
-  // 個性化視覺主題 (質感鐵灰版)
+  // ========== 視覺主題 (UI 樣式) ==========
+  // 【說明】
+  // 控制應用整體的配色、文字顏色、背景紋理與裝飾。
+  // 使用 Tailwind CSS 色票名稱，支援日間/夜間模式。
+  // 【資料結構】
+  // {
+  //   colorBase      : 基礎色系 (如: stone, slate, zinc, neutral 等)
+  //   colorAccent    : 強調色 (如: amber, sky, indigo 等)
+  //   textColors     : 文字顏色 { light, dark, secLight, secDark }
+  //   bgTexture      : SVG 背景紋理 (資料 URI)
+  //   bgGradientLight: 日間背景漸層
+  //   bgGradientDark : 夜間背景漸層
+  //   blobs          : 裝飾光暈球 { light: [...], dark: [...] }
+  // }
+  // 【如何修改】
+  // - 變更基礎色：修改 colorBase (推薦: stone, slate, zinc, neutral, warm 等)
+  // - 變更強調色：修改 colorAccent (推薦: amber, sky, rose, indigo 等)
+  // - 調整文字亮度：修改 textColors 中的 Tailwind 色票 (如: text-stone-100, text-stone-800)
+  // - 背景漸層：修改 bgGradientLight / bgGradientDark 的 Tailwind class 或 RGB 十六進制值
+  // - 裝飾顏色：修改 blobs 中的 Tailwind class (可調整透明度與色系)
+  // - 提示：更換主題時需同時調整 light & dark 版本，確保深色模式可讀性
+  //
   theme: {
-    // 1. 氣氛色系
-    colorBase: "stone", // 改回 stone 或 neutral，帶一點暖調的灰比較耐看
-    colorAccent: "amber", // 維持金色點綴
+    colorBase: "stone",
+    colorAccent: "amber",
 
-    // 文字顏色微調 (夜間提亮)
     textColors: {
       light: "text-stone-800",
-      dark: "text-stone-100", // 從原本偏暗的銀灰改成較亮的灰白
+      dark: "text-stone-100",
       secLight: "text-stone-500",
       secDark: "text-stone-300",
     },
 
-    // 2. 背景紋理 (維持不變)
     bgTexture: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
 
-    // 3. 背景漸層 (夜間大幅提亮)
-    // 日間：維持
     bgGradientLight: "bg-[#FDFBF7] from-stone-100/50 via-white to-transparent",
-    // 夜間：改為深鐵灰，不再是死黑。模擬高級霧面金屬質感。
     bgGradientDark: "bg-[#1A1A1A] from-[#252525] via-[#1A1A1A]/80 to-transparent",
 
-    // 4. 裝飾光暈球 (維持)
     blobs: {
       light: ["bg-orange-200/30", "bg-stone-200/30", "bg-amber-100/40"],
       dark: ["bg-amber-500/10", "bg-purple-500/10", "bg-blue-500/10"],
     },
   },
 
-  // 語言設定
+  // ========== 語言與語音設定 ==========
+  // 【說明】
+  // 用於 AI 語音辨識、多語言顯示等功能。
+  // 【如何修改】
+  // - code: 改為其他語言代碼 (如: en-US, ko-KR, th-TH, es-ES 等)
+  // - label: 按鈕顯示的簡短文字 (如: 日, 英, 韓, 泰 等)
+  // - name: 用於 AI 提示詞的完整語言名稱
+  //
   language: {
-    code: "ja-JP", // 語音辨識代碼 (如: ja-JP, en-US, ko-KR, th-TH)
-    label: "日", // 按鈕顯示文字 (如: 日, 英, 韓, 泰)
-    name: "日文", // AI 提示詞用的語言名稱
+    code: "ja-JP",
+    label: "日",
+    name: "日文",
   },
 };
 
-// === 6. 行前檢查清單 (Pre-departure checklist) ===
-// 常用出發前檢查項目，UI 可依 `checked` 屬性顯示選取狀態。
+
+// ============================================================================
+// 6. 行前檢查清單 (Pre-departure checklist)
+// ============================================================================
+//
+// 常用出發前檢查項目。
+// UI 可依 `checked` 屬性顯示選取狀態，形成 todo list。
+//
+// 【資料結構】
+// {
+//   id     : 項目編號 (唯一識別，用於刪除或更新)
+//   text   : 檢查項目的文字描述
+//   checked: 布林值，表示是否已完成 (通常初始為 false)
+// }
+//
+// 【如何修改】
+// - 新增項目：在陣列最後加入新物件，id 要遞增 (如: 21, 22, 23...)
+// - 刪除項目：整個物件刪除，注意陣列逗號
+// - 修改文字：編輯 text 欄位，保持語氣一致
+// - 分類建議：可按類別組織 (簽證/護照、交通、金錢、裝備、健康等)
+//
+// 【範例新增】
+// 若要新增"確認行李尺寸"項目，應在陣列最後加:
+// { id: 21, text: "確認行李尺寸與重量限制", checked: false }
+//
 export const checklistData = [
   { id: 1, text: "護照 (效期6個月以上)", checked: false },
   { id: 2, text: "VJW 入境申報 QR Code (建議截圖)", checked: false },
