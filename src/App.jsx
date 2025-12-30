@@ -2300,7 +2300,7 @@ const ItineraryApp = () => {
   };
 
   // --- Google Maps Places API Call Helper（使用正確的 Place Types + 快取 + AbortController） ---
-  const fetchGooglePlaces = async (lat, lng, initialRadius = 150) => {
+  const fetchGooglePlaces = async (lat, lng, initialRadius = 100) => {
   // 1. 內部執行搜尋的私有函式，方便重複呼叫 
   const performSearch = async (radius) => {
     const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)},${radius}`;
@@ -2369,7 +2369,7 @@ const ItineraryApp = () => {
   };
 
   // 2. 核心重試邏輯
-  // 第一跳：嘗試精準半徑 (預設 150m)
+  // 第一跳：嘗試精準半徑 (預設 100m)
   let placeName = await performSearch(initialRadius);
 
   // 第二跳：如果沒結果，且初次搜尋半徑小於 300m，則擴大範圍再試一次
@@ -2466,7 +2466,7 @@ const ItineraryApp = () => {
       );
       // 2. 直接呼叫 Maps API (使用上方修正後的函式)
       // 設定半徑 150m，只抓最靠近的點
-      const places = await fetchGooglePlaces(latitude, longitude, 150);
+      const places = await fetchGooglePlaces(latitude, longitude, 100);
       debugLog("🗺️ [Google Maps] API 回傳原始結果:", places);
 
       // if (places && places.length > 0) {
