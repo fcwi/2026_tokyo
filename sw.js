@@ -2,22 +2,10 @@
 const CACHE_NAME = 'tokyo-trip-cache-v1';
 const RUNTIME_CACHE = 'tokyo-trip-runtime-v1';
 
-// 需要預緩存的核心資源
-const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-];
-
-// 安裝事件：預緩存核心資源
+// 安裝事件
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_URLS).catch((err) => {
-        console.log('預緩存失敗，部分資源可能不可用:', err);
-      });
-    }),
-  );
+  // 不主動預緩存，讓首次訪問時動態緩存
+  // 這樣可避免預緩存失敗導致整個 SW 安裝失敗
   self.skipWaiting(); // 立即激活新 SW
 });
 
