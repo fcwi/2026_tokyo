@@ -2,6 +2,18 @@
 const CACHE_NAME = 'tokyo-trip-cache-v1';
 const RUNTIME_CACHE = 'tokyo-trip-runtime-v1';
 
+// 安全緩存封裝，避免重複使用已消耗的 Response
+const tryCachePut = async (cacheName, request, response) => {
+  try {
+    if (!response || response.bodyUsed) return;
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response.clone());
+  } catch (err) {
+    // 低權限回應(opaqueredirect) 或 body 已被消耗時跳過
+    console.warn('Cache put skipped:', err);
+  }
+};
+
 // 安裝事件
 self.addEventListener('install', (event) => {
   // 不主動預緩存，讓首次訪問時動態緩存
@@ -45,9 +57,8 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           // 快取成功回應
-          if (response.ok) {
-            const cache = caches.open(RUNTIME_CACHE);
-            cache.then((c) => c.put(request, response.clone()));
+          if (response && response.ok) {
+            tryCachePut(RUNTIME_CACHE, request, response);
           }
           return response;
         })
@@ -85,10 +96,8 @@ self.addEventListener('fetch', (event) => {
         return (
           cached ||
           fetch(request).then((response) => {
-            if (response.ok) {
-              caches
-                .open(RUNTIME_CACHE)
-                .then((cache) => cache.put(request, response.clone()));
+            if (response && response.ok) {
+              tryCachePut(RUNTIME_CACHE, request, response);
             }
             return response;
           })
@@ -103,14 +112,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          caches
-            .open(RUNTIME_CACHE)
-            .then((cache) => cache.put(request, response.clone()));
+          tryCachePut(RUNTIME_CACHE, request, response);
           return response;
         })
         .catch(() => {
           return caches.match(request).then((cached) => {
-            return cached || caches.match('/');
+            const scopeRoot = new URL('./', self.registration.scope).pathname;
+            return cached || caches.match(scopeRoot);
           });
         }),
     );
