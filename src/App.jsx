@@ -171,7 +171,8 @@ const ENCRYPTED_MAPS_KEY_PAYLOAD = (
 ).trim();
 
 // 環境檢查和除錯工具
- const isDev = import.meta.env.DEV; // Vite 環境變量：開發環境為 true
+// const isDev = import.meta.env.DEV; // Vite 環境變量：開發環境為 true
+const isDev = true; // 固定為開發模式true，方便測試
 
 // 條件性日誌：僅在開發環境輸出
 const debugLog = (message, data = null) => {
