@@ -1,7 +1,7 @@
 // 概述：ItineraryApp 主介面與互動邏輯
 // 功能：狀態管理、定位/天氣、語音與朗讀、行程呈現、UI 控制
 // 說明：本次優化僅更新註解與排版，不更動核心流程。
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import {
   Sun,
   CloudSnow,
@@ -80,10 +80,11 @@ import {
 // 有時 ESLint 會誤判 JSX 中的 `motion` 為未使用，為避免噪音先在此行暫時抑制該檢查
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
-import ChatMessageList from "./components/ChatMessageList.jsx";
 import ChatInput from "./components/ChatInput.jsx";
-import DayMap from "./components/DayMap.jsx";
 import CurrencyWidget from "./components/CurrencyWidget.jsx";
+
+const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
+const DayMap = lazy(() => import("./components/DayMap.jsx"));
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
 const CryptoUtils = {
@@ -4062,11 +4063,21 @@ const ItineraryApp = () => {
                                   當日路線導航
                                 </h3>
                               </div>
-                              <DayMap 
-                                events={current.events} 
-                                userLocation={userWeather} 
-                                isDarkMode={isDarkMode}
-                              />
+                              <Suspense
+                                fallback={
+                                  <div
+                                    className={`h-64 rounded-xl border flex items-center justify-center text-xs font-semibold animate-pulse ${isDarkMode ? "bg-neutral-900/30 border-neutral-800 text-neutral-400" : "bg-white/60 border-stone-200 text-stone-500"}`}
+                                  >
+                                    地圖載入中…
+                                  </div>
+                                }
+                              >
+                                <DayMap 
+                                  events={current.events} 
+                                  userLocation={userWeather} 
+                                  isDarkMode={isDarkMode}
+                                />
+                              </Suspense>
                               <div className="flex flex-col gap-3">
                                 <div
                                   className={`text-xs p-3 rounded-xl border leading-relaxed ${isDarkMode ? "bg-black/20 border-neutral-700 text-neutral-300" : "bg-white/50 border-stone-200 text-stone-600"}`}
@@ -4586,17 +4597,27 @@ const ItineraryApp = () => {
               </div>
 
               {/* Chat Messages */}
-              <ChatMessageList
-                messages={messages}
-                isDarkMode={isDarkMode}
-                theme={theme}
-                renderMessage={renderMessage}
-                handleSpeak={handleSpeak}
-                isLoading={isLoading}
-                loadingText={loadingText}
-                chatEndRef={chatEndRef}
-                setFullPreviewImage={setFullPreviewImage}
-              />
+              <Suspense
+                fallback={
+                  <div
+                    className={`px-4 py-6 text-center text-xs font-semibold border rounded-2xl ${isDarkMode ? "bg-neutral-900/40 border-neutral-800 text-neutral-300" : "bg-white/80 border-stone-200 text-stone-500"}`}
+                  >
+                    聊天記錄載入中…
+                  </div>
+                }
+              >
+                <ChatMessageList
+                  messages={messages}
+                  isDarkMode={isDarkMode}
+                  theme={theme}
+                  renderMessage={renderMessage}
+                  handleSpeak={handleSpeak}
+                  isLoading={isLoading}
+                  loadingText={loadingText}
+                  chatEndRef={chatEndRef}
+                  setFullPreviewImage={setFullPreviewImage}
+                />
+              </Suspense>
 
               {/* Quick Suggestions */}
               <div

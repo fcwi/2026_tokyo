@@ -12,3 +12,17 @@ createRoot(document.getElementById("root")).render(
     <App />
   </StrictMode>,
 );
+
+// 註冊 Service Worker（離線支援與緩存）
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        console.log("✅ Service Worker 註冊成功:", reg.scope);
+      })
+      .catch((err) => {
+        console.warn("⚠️ Service Worker 註冊失敗:", err);
+      });
+  });
+}
