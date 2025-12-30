@@ -2369,7 +2369,7 @@ const ItineraryApp = () => {
   };
 
   // 2. 核心重試邏輯
-  // 第一跳：嘗試精準半徑 (預設 50m)
+  // 第一跳：嘗試精準半徑 (預設 150m)
   let placeName = await performSearch(initialRadius);
 
   // 第二跳：如果沒結果，且初次搜尋半徑小於 300m，則擴大範圍再試一次
@@ -2465,7 +2465,7 @@ const ItineraryApp = () => {
         `🗺️ [Google Maps] 開始查詢周邊 POI... (Lat: ${latitude}, Lng: ${longitude})`,
       );
       // 2. 直接呼叫 Maps API (使用上方修正後的函式)
-      // 設定半徑 50m，只抓最靠近的點
+      // 設定半徑 150m，只抓最靠近的點
       const places = await fetchGooglePlaces(latitude, longitude, 150);
       debugLog("🗺️ [Google Maps] API 回傳原始結果:", places);
 
