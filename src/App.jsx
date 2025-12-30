@@ -2054,6 +2054,25 @@ const ItineraryApp = () => {
     const controller = new AbortController();
     let cancelled = false;
 
+    // 先嘗試從 LocalStorage 載入舊資料 (讓畫面秒開)
+    const loadCachedForecast = () => {
+      try {
+        const cached = localStorage.getItem("trip_weather_forecast");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // 簡單檢查資料時效 (例如超過 12 小時就不顯示舊的，或者您可以選擇永遠顯示)
+          // 這裡我們先做永遠顯示，確保離線可用
+          setWeatherForecast({ ...parsed, loading: false });
+          debugLog("📦 已載入 Day1~6 天氣快取");
+        }
+      } catch (e) {
+        console.error("讀取天氣快取失敗", e);
+      }
+    };
+    
+    // 執行載入
+    loadCachedForecast();
+
     const fetchWeather = async () => {
       try {
         const params = `daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=14`;
@@ -2078,6 +2097,9 @@ const ItineraryApp = () => {
         results.forEach((item) => {
           newForecast[item.key] = item.data;
         });
+
+        // 將抓到的新資料存入 LocalStorage
+        localStorage.setItem("trip_weather_forecast", JSON.stringify(newForecast));
 
         setWeatherForecast({
           ...newForecast,

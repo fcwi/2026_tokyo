@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, ExternalLink } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, RefreshCw, WifiOff } from "lucide-react";
 import { tripConfig } from "../tripdata_2026_karuizawa.jsx";
 
 const CurrencyWidget = ({ isDarkMode }) => {
@@ -11,9 +11,28 @@ const CurrencyWidget = ({ isDarkMode }) => {
     error: false,
   });
 
+  // 1. 新增：網路狀態偵測
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const { code, target } = tripConfig.currency;
 
   useEffect(() => {
+    // 如果離線，就不執行 fetch，避免報錯 (雖然 fetch 本身也會 fail，但這樣比較乾淨)
+    if (!isOnline) return;
+
     const fetchRates = async () => {
       try {
         const nowRes = await fetch(
@@ -53,40 +72,43 @@ const CurrencyWidget = ({ isDarkMode }) => {
       }
     };
     fetchRates();
-  }, [code, target]);
+  }, [code, target, isOnline]); // 加入 isOnline 依賴，連上線時會自動重抓
 
-  if (rateData.error) return null;
-
-  const formatRate = (val) => val ? val.toFixed(3) : "--";
+  // 2. 修改：如果離線，回傳特定的 UI，而不是 null (error 狀態也可以考慮顯示這個，或者維持 null)
+  // 這裡我們讓 "離線" 的優先級最高
   
-  // 🟢 產生 Google 匯率搜尋連結
+  const formatRate = (val) => val ? val.toFixed(3) : "--";
   const queryUrl = `https://www.google.com/search?q=1+${code.toUpperCase()}+to+${target.toUpperCase()}`;
 
   return (
     <a
-      href={queryUrl}
-      target="_blank"
+      href={isOnline ? queryUrl : "#"} // 離線時點擊無效
+      target={isOnline ? "_blank" : "_self"}
       rel="noopener noreferrer"
-      title="點擊查看詳細匯率走勢"
-      // 🟢 修改 class:
-      // 1. cursor-pointer: 滑鼠變手型
-      // 2. hover:scale-105 active:scale-95: 增加按鈕互動感
-      // 3. hover:shadow-md: 懸浮時增加陰影
-      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border backdrop-blur-md shadow-sm transition-all duration-300 whitespace-nowrap cursor-pointer hover:scale-105 active:scale-95 hover:shadow-md
+      title={isOnline ? "點擊查看詳細匯率走勢" : "目前無法連線"}
+      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border backdrop-blur-md shadow-sm transition-all duration-300 whitespace-nowrap 
+      ${isOnline ? "cursor-pointer hover:scale-105 active:scale-95 hover:shadow-md" : "cursor-not-allowed opacity-80"}
       ${
         isDarkMode
           ? "bg-neutral-800/60 border-neutral-600 text-neutral-200 hover:bg-neutral-800/80"
           : "bg-white/60 border-stone-200 text-stone-700 hover:bg-white/90"
       }`}
     >
-      {rateData.loading ? (
+      {/* 3. 條件渲染：優先檢查是否離線 */}
+      {!isOnline ? (
+         <div className="flex items-center gap-2">
+            <WifiOff className={`w-3 h-3 ${isDarkMode ? "text-amber-400" : "text-amber-600"}`} />
+            <span className={`text-[10px] font-bold ${isDarkMode ? "text-amber-400" : "text-amber-600"}`}>
+              網路不穩定
+            </span>
+         </div>
+      ) : rateData.loading ? (
         <div className="flex items-center gap-2">
            <span className="text-[10px] opacity-60">匯率更新中</span>
            <RefreshCw className="w-3 h-3 animate-spin opacity-60" />
         </div>
       ) : (
         <>
-          {/* 幣別與匯率 */}
           <div className="flex items-baseline gap-1">
             <span className="text-[10px] font-bold opacity-60">1 {code.toUpperCase()}</span>
             <span className="text-xs font-bold tracking-wide font-mono">
@@ -95,10 +117,8 @@ const CurrencyWidget = ({ isDarkMode }) => {
             <span className="text-[10px] font-bold opacity-60">{target}</span>
           </div>
 
-          {/* 分隔線 */}
           <div className={`w-px h-2.5 ${isDarkMode ? "bg-white/20" : "bg-black/10"}`}></div>
 
-          {/* 趨勢箭頭 */}
           <div className="flex items-center" title={`與上週相比 ${rateData.diff > 0 ? "升值" : "貶值"} ${Math.abs(rateData.diff).toFixed(4)}`}>
             {rateData.trend === "up" && (
               <TrendingUp className="w-3 h-3 text-red-500" />
