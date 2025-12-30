@@ -1,4 +1,4 @@
-﻿// 概述：ItineraryApp 主介面與互動邏輯
+// 概述：ItineraryApp 主介面與互動邏輯
 // 功能：狀態管理、定位/天氣、語音與朗讀、行程呈現、UI 控制
 // 說明：本次優化僅更新註解與排版，不更動核心流程。
 import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
@@ -84,7 +84,7 @@ import ChatInput from "./components/ChatInput.jsx";
 import CurrencyWidget from "./components/CurrencyWidget.jsx";
 
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
-import DayMap from "./components/DayMap.jsx";
+const DayMap = lazy(() => import("./components/DayMap.jsx"));
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
 const CryptoUtils = {
@@ -5018,4 +5018,3 @@ const ItineraryApp = () => {
 };
 
 export default ItineraryApp;
-
