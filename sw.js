@@ -3,13 +3,13 @@ const CACHE_NAME = 'tokyo-trip-cache-v1';
 const RUNTIME_CACHE = 'tokyo-trip-runtime-v1';
 
 // 安全緩存封裝，避免重複使用已消耗的 Response
-const tryCachePut = async (cacheName, request, response) => {
+const tryCachePut = async (cacheName, request, responseClone) => {
   try {
-    if (!response || response.bodyUsed) return;
+    if (!responseClone) return;
     const cache = await caches.open(cacheName);
-    await cache.put(request, response.clone());
+    await cache.put(request, responseClone);
   } catch (err) {
-    // 低權限回應(opaqueredirect) 或 body 已被消耗時跳過
+    // 低權限回應(opaqueredirect) 時跳過
     console.warn('Cache put skipped:', err);
   }
 };
@@ -54,34 +54,29 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('api.open-meteo.com')
   ) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // 快取成功回應
+      (async () => {
+        try {
+          const response = await fetch(request);
           if (response && response.ok) {
-            tryCachePut(RUNTIME_CACHE, request, response);
+            const clone = response.clone();
+            tryCachePut(RUNTIME_CACHE, request, clone);
           }
           return response;
-        })
-        .catch(() => {
-          // 網路失敗，回傳緩存或離線頁面
-          return caches.match(request).then((cached) => {
-            return (
-              cached ||
-              new Response(
-                JSON.stringify({
-                  error: '網路不可用，請檢查連線',
-                }),
-                {
-                  status: 503,
-                  statusText: 'Service Unavailable',
-                  headers: new Headers({
-                    'Content-Type': 'application/json',
-                  }),
-                },
-              )
-            );
-          });
-        }),
+        } catch (err) {
+          const cached = await caches.match(request);
+          return (
+            cached ||
+            new Response(
+              JSON.stringify({ error: '網路不可用，請檢查連線' }),
+              {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: new Headers({ 'Content-Type': 'application/json' }),
+              },
+            )
+          );
+        }
+      })(),
     );
     return;
   }
@@ -92,17 +87,16 @@ self.addEventListener('fetch', (event) => {
     url.pathname.includes('/assets/')
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        return (
-          cached ||
-          fetch(request).then((response) => {
-            if (response && response.ok) {
-              tryCachePut(RUNTIME_CACHE, request, response);
-            }
-            return response;
-          })
-        );
-      }),
+      (async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response && response.ok) {
+          const clone = response.clone();
+          tryCachePut(RUNTIME_CACHE, request, clone);
+        }
+        return response;
+      })(),
     );
     return;
   }
@@ -110,17 +104,20 @@ self.addEventListener('fetch', (event) => {
   // HTML 頁面：Network First（網路優先以取得最新內容）
   if (request.mode === 'navigate' || url.pathname.endsWith('.html')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          tryCachePut(RUNTIME_CACHE, request, response);
+      (async () => {
+        try {
+          const response = await fetch(request);
+          if (response) {
+            const clone = response.clone();
+            tryCachePut(RUNTIME_CACHE, request, clone);
+          }
           return response;
-        })
-        .catch(() => {
-          return caches.match(request).then((cached) => {
-            const scopeRoot = new URL('./', self.registration.scope).pathname;
-            return cached || caches.match(scopeRoot);
-          });
-        }),
+        } catch (err) {
+          const cached = await caches.match(request);
+          const scopeRoot = new URL('./', self.registration.scope).pathname;
+          return cached || (await caches.match(scopeRoot));
+        }
+      })(),
     );
     return;
   }
