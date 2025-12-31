@@ -49,7 +49,9 @@ const ChatMessageList = ({
               <button
                 onClick={() => handleSpeak(msg.text)}
                 className={`p-1 rounded-full transition-all ${
-                  isDarkMode ? "text-sky-300 hover:bg-neutral-700" : "text-[#5D737E] hover:bg-stone-200"
+                  isDarkMode
+                    ? "text-sky-300 hover:bg-neutral-700"
+                    : "text-[#5D737E] hover:bg-stone-200"
                 }`}
                 title="朗讀訊息"
               >
@@ -59,7 +61,9 @@ const ChatMessageList = ({
           </div>
 
           {/* Message Bubble */}
-          <div className={`max-w-[75%] group relative transition-all duration-300`}>
+          <div
+            className={`max-w-[75%] group relative transition-all duration-300`}
+          >
             <div
               className={`p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm border
                 ${
@@ -93,18 +97,28 @@ const ChatMessageList = ({
         <div className="flex gap-3">
           <div
             className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm border ${
-              isDarkMode ? "bg-neutral-800 border-neutral-700" : "bg-white border-stone-200"
+              isDarkMode
+                ? "bg-neutral-800 border-neutral-700"
+                : "bg-white border-stone-200"
             }`}
           >
-            <Bot className={`w-5 h-5 ${isDarkMode ? "text-sky-300" : "text-[#5D737E]"}`} />
+            <Bot
+              className={`w-5 h-5 ${isDarkMode ? "text-sky-300" : "text-[#5D737E]"}`}
+            />
           </div>
           <div
             className={`p-3 rounded-2xl rounded-tl-none border shadow-sm flex items-center gap-2 ${
-              isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/80 border-stone-200"
+              isDarkMode
+                ? "bg-neutral-800/60 border-neutral-700"
+                : "bg-white/80 border-stone-200"
             }`}
           >
-            <Loader className={`w-4 h-4 animate-spin ${isDarkMode ? "text-sky-300" : "text-[#5D737E]"}`} />
-            <span className={`text-xs ${theme.textSec}`}>{loadingText || "正在翻閱您的行程表..."}</span>
+            <Loader
+              className={`w-4 h-4 animate-spin ${isDarkMode ? "text-sky-300" : "text-[#5D737E]"}`}
+            />
+            <span className={`text-xs ${theme.textSec}`}>
+              {loadingText || "正在翻閱您的行程表..."}
+            </span>
           </div>
         </div>
       )}

@@ -39,7 +39,13 @@ const ChatInput = ({
       )}
 
       {/* 隱藏的檔案上傳元件 */}
-      <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" />
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageSelect}
+        accept="image/*"
+        className="hidden"
+      />
 
       {/* 主要輸入區 */}
       <div className="flex items-end gap-2">
@@ -61,7 +67,9 @@ const ChatInput = ({
             {listeningLang === "zh-TW" ? (
               <MicOff className="w-5 h-5" />
             ) : (
-              <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">中</div>
+              <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
+                中
+              </div>
             )}
           </button>
 
@@ -82,7 +90,9 @@ const ChatInput = ({
               {listeningLang === tripConfig.language.code ? (
                 <MicOff className="w-5 h-5" />
               ) : (
-                <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">{tripConfig.language.label}</div>
+                <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
+                  {tripConfig.language.label}
+                </div>
               )}
             </button>
           )}

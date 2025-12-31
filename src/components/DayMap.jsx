@@ -89,7 +89,6 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
 
   return (
     <div className="relative w-full h-64 rounded-2xl overflow-hidden shadow-inner border border-stone-200/50 z-0 group">
-      
       {/* 🟢 新增：鎖定切換按鈕 */}
       <button
         onClick={(e) => {
@@ -120,17 +119,17 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
 
       {/* 🟢 新增：提示遮罩 (僅在鎖定且手指嘗試在上面滑動時顯示，這需要額外 CSS，這裡先做簡單版提示) */}
       {/* 這裡我們用一個簡單的視覺提示：當鎖定時，地圖稍微暗一點點，或不做任何事 */}
-      
+
       <MapContainer
         center={defaultCenter}
         zoom={10}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={false} // 初始值，會被 Controller 覆蓋
-        dragging={!isLocked}    // 初始值，會被 Controller 覆蓋
+        dragging={!isLocked} // 初始值，會被 Controller 覆蓋
       >
-        <TileLayer 
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>' 
-          url={tileLayerUrl} 
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+          url={tileLayerUrl}
         />
 
         {/* 控制器們 */}
@@ -154,16 +153,18 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
 
         {/* 使用者位置 */}
         {userLocation && userLocation.lat && userLocation.lon && (
-          <Marker 
-            position={[userLocation.lat, userLocation.lon]} 
-            icon={userLocationIcon} 
+          <Marker
+            position={[userLocation.lat, userLocation.lon]}
+            icon={userLocationIcon}
             zIndexOffset={1000}
           >
-            <Popup><div className="font-bold text-blue-600">您的位置</div></Popup>
+            <Popup>
+              <div className="font-bold text-blue-600">您的位置</div>
+            </Popup>
           </Marker>
         )}
       </MapContainer>
-      
+
       {/* 🟢 (選用) 鎖定狀態下的覆蓋層：如果您希望鎖定時「完全」不干擾，甚至連點擊 Marker 都不行，可以把下面這行註解打開 */}
       {/* {isLocked && <div className="absolute inset-0 z-[400] bg-transparent pointer-events-auto" />} */}
     </div>
