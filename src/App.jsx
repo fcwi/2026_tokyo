@@ -1,7 +1,7 @@
 ﻿// 概述：ItineraryApp 主介面與互動邏輯
 // 功能：狀態管理、定位/天氣、語音與朗讀、行程呈現、UI 控制
 // 說明：本次優化僅更新註解與排版，不更動核心流程。
-import React, { useState, useRef, useEffect, useMemo, lazy, Suspense, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import {
   Sun,
   CloudSnow,
@@ -82,10 +82,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import ChatInput from "./components/ChatInput.jsx";
 import CurrencyWidget from "./components/CurrencyWidget.jsx";
-// 1. 新增 Import (請確認放在檔案最上方 import 區域)
-// import { useCallback } from "react";
-import Particles from "react-tsparticles";
-import { loadSlim } from "tsparticles-slim";
 
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
@@ -202,484 +198,245 @@ const debugGroupEnd = () => {
 // 簡單的延遲函式
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// 新的 WeatherBackground 元件 (優化視覺版)
-// const WeatherBackground = ({ weatherCode, isDarkMode }) => {
-//   // 初始化引擎
-//   const particlesInit = useCallback(async (engine) => {
-//     await loadSlim(engine);
-//   }, []);
-
-//   // 根據天氣代碼判斷類型
-//   const type = useMemo(() => {
-//     if (weatherCode === null || weatherCode === undefined) return null;
-//     if (weatherCode === 0) return 'clear';
-//     if ([1, 2, 3, 45, 48].includes(weatherCode)) return 'cloud'; 
-//     if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(weatherCode)) return 'rain';
-//     if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) return 'snow';
-//     return 'clear'; // 預設
-//   }, [weatherCode]);
-
-//   // 設定粒子參數
-//   const options = useMemo(() => {
-//     const baseConfig = {
-//       fullScreen: { enable: false },
-//       background: { color: { value: "transparent" } },
-//       fpsLimit: 120,
-//       detectRetina: true,
-//       interactivity: { events: { onHover: { enable: false }, onClick: { enable: false } } },
-//     };
-
-//     // 🌧️ 雨天 (修正：灰白色、拉長成雨絲)
-//     if (type === 'rain') {
-//       return {
-//         ...baseConfig,
-//         particles: {
-//           // 白天：冷灰白(#94a3b8) / 晚上：白(#ffffff)
-//           color: { value: isDarkMode ? "#ffffff" : "#94a3b8" },
-//           move: {
-//             enable: true,
-//             direction: "bottom",
-//             speed: 40, // 🚀 速度極快，加強下墜感
-//             straight: true,
-//           },
-//           number: { value: 160, density: { enable: true, area: 800 } },
-//           opacity: { value: isDarkMode ? 0.5 : 0.8 },
-//           shape: { type: "line" }, // 形狀：線條
-//           // 🔧 關鍵修改：size 在 line 形狀下代表「長度」
-//           size: { value: { min: 10, max: 20 } }, 
-//           // 🔧 關鍵修改：stroke 代表「粗細」與顏色
-//           stroke: {
-//             width: 1.5, // 稍微加粗一點點增加可視度
-//             color: isDarkMode ? "#ffffff" : "#94a3b8" // 顏色需與粒子本體一致
-//           },
-//           rotate: {
-//             path: true, // 讓線條順著落下方向（雖然是 straight，但習慣上加上）
-//           }
-//         },
-//       };
-//     }
-
-//     // ❄️ 下雪 (維持完美狀態)
-//     if (type === 'snow') {
-//       return {
-//         ...baseConfig,
-//         particles: {
-//           color: { value: isDarkMode ? "#ffffff" : "#94a3b8" },
-//           move: { 
-//             enable: true, 
-//             direction: "bottom", 
-//             speed: 2, 
-//             random: false, 
-//             straight: false 
-//           },
-//           wobble: { enable: true, distance: 10, speed: 10 },
-//           number: { value: 80, density: { enable: true, area: 800 } },
-//           opacity: { value: { min: 0.4, max: 0.9 } },
-//           shape: { type: "circle" },
-//           size: { value: { min: 2, max: 5 } },
-//         },
-//       };
-//     }
-
-//     // ☁️ 多雲/霧 (修正：形狀不規則化)
-//     if (type === 'cloud') {
-//       return {
-//         ...baseConfig,
-//         particles: {
-//           // 白天：淺灰白(#cbd5e1) / 晚上：白(#ffffff) - (維持您滿意的顏色)
-//           color: { value: isDarkMode ? "#ffffff" : "#cbd5e1" },
-//           // 讓雲朵飄動得更慢、更隨意
-//           move: { 
-//             enable: true, 
-//             speed: 0.3, // 速度調慢
-//             direction: "right", 
-//             random: true, 
-//             straight: false,
-//             outModes: { default: "out" } // 移出畫面後重置
-//           },
-//           // 稍微增加數量，製造層次感
-//           number: { value: 30, density: { enable: true, area: 800 } },
-//           // 透明度降低，避免太厚重
-//           opacity: { value: { min: 0.1, max: 0.3 } }, 
-          
-//           // 🔧 關鍵修改：形狀與模糊
-//           shape: { 
-//             type: "polygon", // 改用多邊形
-//             options: {
-//               polygon: {
-//                 // 隨機產生 5 到 8 邊形，讓每個雲朵形狀都不太一樣
-//                 sides: { min: 5, max: 8 } 
-//               }
-//             }
-//           },
-//           // 尺寸加大，讓形狀更明顯
-//           size: { value: { min: 100, max: 180 } },
-//           // 🔧 關鍵修改：強力模糊濾鏡
-//           // 把多邊形的稜角完全磨平，變成不規則的團塊
-//           filter: { blur: { value: 40 } } 
-//         },
-//       };
-//     }
-
-//     // ☀️/🌙 晴朗 (維持銀河與光斑設定)
-//     if (type === 'clear') {
-//       if (isDarkMode) {
-//         // 🌌 夜晚：銀河感
-//         return {
-//           ...baseConfig,
-//           particles: {
-//             color: { value: "#ffffff" },
-//             move: { enable: true, speed: 0.1, direction: "none", random: true },
-//             number: { value: 250, density: { enable: true, area: 800 } },
-//             opacity: { 
-//               value: { min: 0.1, max: 1 }, 
-//               animation: { enable: true, speed: 1, sync: false, mode: "random" } 
-//             },
-//             shape: { type: "circle" },
-//             size: { value: { min: 0.5, max: 2.5 } },
-//           },
-//         };
-//       } else {
-//         // ☀️ 白天：強烈光斑
-//         return {
-//           ...baseConfig,
-//           particles: {
-//             color: { value: ["#FDB813", "#FFFFFF"] },
-//             move: { enable: true, speed: 0.8, direction: "top", random: true },
-//             number: { value: 25, density: { enable: true, area: 800 } },
-//             opacity: { value: { min: 0.3, max: 0.6 } },
-//             shape: { type: "circle" },
-//             size: { value: { min: 10, max: 40 } },
-//             filter: { blur: { value: 5 } } 
-//           },
-//         };
-//       }
-//     }
-
-//     return baseConfig;
-//   }, [type, isDarkMode]);
-
-//   if (!type) return null;
-
-//   // 額外邏輯：如果是「白天」且「下雨」，加上一層深色遮罩，讓雨滴更明顯
-//   const overlayClass = (!isDarkMode && type === 'rain') 
-//     ? "bg-slate-900/10" // 白天下雨加深背景 10%
-//     : "";
-
-//   return (
-//     <div className={`absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden transition-colors duration-500 ${overlayClass}`}>
-//       <Particles
-//         id="weather-particles"
-//         init={particlesInit}
-//         options={options}
-//         className="w-full h-full"
-//       />
-//     </div>
-//   );
-// };
-// const WeatherBackground = ({ weatherCode, isDarkMode }) => {
-//   const particlesInit = useCallback(async (engine) => {
-//     await loadSlim(engine);
-//   }, []);
-
-//   const type = useMemo(() => {
-//     if (weatherCode === null || weatherCode === undefined) return null;
-//     if (weatherCode === 0) return 'clear';
-//     if ([1, 2, 3, 45, 48].includes(weatherCode)) return 'cloud'; 
-//     if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(weatherCode)) return 'rain';
-//     if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) return 'snow';
-//     return 'clear';
-//   }, [weatherCode]);
-
-//   const options = useMemo(() => {
-//     const baseConfig = {
-//       fullScreen: { enable: false },
-//       background: { color: { value: "transparent" } },
-//       fpsLimit: 120,
-//       detectRetina: true,
-//       interactivity: { events: { onHover: { enable: false }, onClick: { enable: false } } },
-//     };
-
-//     if (type === 'rain') {
-//       return {
-//         ...baseConfig,
-//         particles: {
-//           color: { value: isDarkMode ? "#ffffff" : "#94a3b8" },
-//           move: {
-//             enable: true,
-//             direction: "bottom",
-//             speed: 40,
-//             straight: true,
-//           },
-//           number: { value: 160, density: { enable: true, area: 800 } },
-//           opacity: { value: isDarkMode ? 0.5 : 0.8 },
-//           shape: { type: "line" },
-//           size: { value: { min: 10, max: 20 } },
-//           stroke: {
-//             width: 1.5,
-//             color: isDarkMode ? "#ffffff" : "#94a3b8"
-//           },
-//           rotate: { path: true }
-//         },
-//       };
-//     }
-
-//     if (type === 'snow') {
-//       return {
-//         ...baseConfig,
-//         particles: {
-//           color: { value: isDarkMode ? "#ffffff" : "#94a3b8" },
-//           move: { enable: true, direction: "bottom", speed: 2, random: false, straight: false },
-//           wobble: { enable: true, distance: 10, speed: 10 },
-//           number: { value: 80, density: { enable: true, area: 800 } },
-//           opacity: { value: { min: 0.4, max: 0.9 } },
-//           shape: { type: "circle" },
-//           size: { value: { min: 2, max: 5 } },
-//         },
-//       };
-//     }
-
-//     if (type === 'cloud') {
-//       return {
-//         ...baseConfig,
-//         particles: {
-//           color: { value: isDarkMode ? "#ffffff" : "#cbd5e1" },
-//           move: { enable: true, speed: 0.3, direction: "right", random: true, straight: false, outModes: { default: "out" } },
-//           number: { value: 30, density: { enable: true, area: 800 } },
-//           opacity: { value: { min: 0.1, max: 0.3 } },
-//           shape: { 
-//             type: "polygon", 
-//             options: { polygon: { sides: { min: 5, max: 8 } } }
-//           },
-//           size: { value: { min: 100, max: 180 } },
-//           filter: { blur: { value: 40 } } 
-//         },
-//       };
-//     }
-
-//     if (type === 'clear') {
-//       if (isDarkMode) {
-//         return {
-//           ...baseConfig,
-//           particles: {
-//             color: { value: "#ffffff" },
-//             move: { enable: true, speed: 0.1, direction: "none", random: true },
-//             number: { value: 250, density: { enable: true, area: 800 } },
-//             opacity: { value: { min: 0.1, max: 1 }, animation: { enable: true, speed: 1, sync: false, mode: "random" } },
-//             shape: { type: "circle" },
-//             size: { value: { min: 0.5, max: 2.5 } },
-//           },
-//         };
-//       } else {
-//         return {
-//           ...baseConfig,
-//           particles: {
-//             color: { value: ["#FDB813", "#FFFFFF"] },
-//             move: { enable: true, speed: 0.8, direction: "top", random: true },
-//             number: { value: 25, density: { enable: true, area: 800 } },
-//             opacity: { value: { min: 0.3, max: 0.6 } },
-//             shape: { type: "circle" },
-//             size: { value: { min: 10, max: 40 } },
-//             filter: { blur: { value: 5 } } 
-//           },
-//         };
-//       }
-//     }
-
-//     return baseConfig;
-//   }, [type, isDarkMode]);
-
-//   // 白天下雨時的背景遮罩 (使用 CSS transition 讓背景色也漸變)
-//   const overlayClass = (!isDarkMode && type === 'rain') ? "bg-slate-900/10" : "bg-transparent";
-
-//   return (
-//     // 外層容器負責處理背景色遮罩的漸變
-//     <div className={`absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden transition-colors duration-1000 ${overlayClass}`}>
-      
-//       {/* AnimatePresence 負責處理 Canvas 的淡入淡出 */}
-//       <AnimatePresence>
-//         {type && (
-//           <motion.div
-//             key={type} // 🔑 關鍵：當 type 改變時，React 視為不同元件，觸發 exit/enter 動畫
-//             initial={{ opacity: 0 }} // 進場前透明
-//             animate={{ opacity: 1 }} // 進場後顯示
-//             exit={{ opacity: 0 }}    // 退場時變透明
-//             transition={{ duration: 1.5, ease: "easeInOut" }} // ⏳ 過渡時間設為 1.5 秒，極致滑順
-//             className="absolute inset-0 w-full h-full" // 確保新舊 Canvas 重疊在一起
-//           >
-//             <Particles
-//               id={`weather-particles-${type}`} // 🔑 關鍵：給予不同 ID，避免兩個 Canvas 重疊時打架
-//               init={particlesInit}
-//               options={options}
-//               className="w-full h-full"
-//             />
-//           </motion.div>
-//         )}
-//       </AnimatePresence>
-//     </div>
-//   );
-// };
-const WeatherBackground = ({ weatherCode, isDarkMode }) => {
-  // 1. 原有的 State
-  const [isReady, setIsReady] = useState(false);
-  
-  // ✅ 修改步驟 1：新增這個 State 來記錄上一次的天氣
-  const [prevType, setPrevType] = useState(null);
-
-  const particlesInit = useCallback(async (engine) => {
-    await loadSlim(engine);
-  }, []);
-
-  // ✅ 修改步驟 2：這裡原本是 (container)，請改成 ()
-  const particlesLoaded = useCallback(async () => {
-    await new Promise(resolve => setTimeout(resolve, 50)); 
-    setIsReady(true);
-  }, []);
-
-  const type = useMemo(() => {
-    if (weatherCode === null || weatherCode === undefined) return null;
-    if (weatherCode === 0) return 'clear';
-    if ([1, 2, 3, 45, 48].includes(weatherCode)) return 'cloud'; 
-    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(weatherCode)) return 'rain';
-    if ([71, 73, 75, 77, 85, 86].includes(weatherCode)) return 'snow';
-    return 'clear';
-  }, [weatherCode]);
-
-  // ✅ 修改步驟 3：刪除原本的 useEffect，改用這段邏輯
-  // 這段程式碼會在渲染當下直接執行，不會有時間差，也不會報錯
-  if (type !== prevType) {
-    setPrevType(type);   // 更新紀錄
-    setIsReady(false);   // 馬上重置為未準備好
-  }
-
-  // 設定參數 (這裡維持您剛剛調好的完美參數，為了版面簡潔我省略內容，請保留您原本的 options 內容！)
-  const options = useMemo(() => {
-    // ... 請將您上一步驟調整好的 options 完整代碼保留在這裡 ...
-    // (包含 baseConfig, rain, snow, cloud, clear 的所有設定)
+// --- 🆕 Weather Background Effect Component ---
+// 定義 CSS 動畫樣式 (注入到頁面中) - 保持不變
+const WeatherStyles = React.memo(() => (
+  <style>{`
+    @keyframes fall {
+      0% { transform: translateY(-10vh) translateX(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(110vh) translateX(20px); opacity: 0; }
+    }
+    @keyframes drift {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(100vw); }
+    }
+    /* 🌟 新增：光斑浮動動畫 (緩慢、隨機感) */
+    @keyframes bokeh-float {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+      33% { transform: translate(30px, -50px) scale(1.1); opacity: 0.6; }
+      66% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.3; }
+      100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
     
-    // 👇 為了方便您複製，我把最外層結構寫出來，請填入內容
-    const baseConfig = {
-      fullScreen: { enable: false },
-      background: { color: { value: "transparent" } },
-      fpsLimit: 120,
-      detectRetina: true,
-      interactivity: { events: { onHover: { enable: false }, onClick: { enable: false } } },
+    .weather-particle { position: absolute; pointer-events: none; }
+    
+    .rain-drop {
+      width: 2px;
+      height: 20px;
+      animation: fall 0.8s linear infinite;
+    }
+    
+    .snow-flake {
+      width: 8px;
+      height: 8px; 
+      border-radius: 50%;
+      filter: blur(1px);
+      animation: fall 3s linear infinite;
+    }
+    
+    .cloud-shape {
+      border-radius: 50%;
+      animation: drift 60s linear infinite;
+    }
+    
+    /* ☀️ 光斑樣式 */
+    .bokeh-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px); /* 高度模糊 */
+      animation: bokeh-float 20s infinite ease-in-out;
+      mix-blend-mode: overlay; /* 讓光斑與背景融合 */
+    }
+    
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      filter: blur(0.5px);
+      animation: twinkle 3s infinite ease-in-out;
+    }
+  `}</style>
+));
+
+WeatherStyles.displayName = 'WeatherStyles';
+
+  const generateWeatherParticles = () => {
+    const newStars = Array.from({ length: 20 }).map((_, i) => ({
+      id: i,
+      width: Math.random() > 0.5 ? '2px' : '3px',
+      height: Math.random() > 0.5 ? '2px' : '3px',
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 50}%`,
+      delay: `${Math.random() * 3}s`,
+      opacity: Math.random() * 0.7 + 0.3
+    }));
+  
+    const newRainDrops = Array.from({ length: 40 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * -20}%`,
+      duration: `${0.5 + Math.random() * 0.3}s`,
+      delay: `${Math.random() * 2}s`
+    }));
+  
+    const newSnowFlakes = Array.from({ length: 30 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * -20}%`,
+      duration: `${3 + Math.random() * 4}s`,
+      delay: `${Math.random() * 5}s`,
+      opacityBase: Math.random() * 0.4 + 0.6, 
+      opacityLight: Math.random() * 0.5 + 0.5 
+    }));
+  
+    const newBokehOrbs = Array.from({ length: 4 }).map((_, i) => ({
+      id: i,
+      width: `${30 + Math.random() * 40}vw`,
+      height: `${30 + Math.random() * 40}vw`,
+      left: `${Math.random() * 80}%`,
+      top: `${Math.random() * 60}%`,
+      animationDelay: `${Math.random() * -10}s`,
+      duration: `${15 + Math.random() * 10}s`
+    }));
+  
+    return {
+      stars: newStars,
+      rainDrops: newRainDrops,
+      snowFlakes: newSnowFlakes,
+      bokehOrbs: newBokehOrbs
     };
+  };
+  
+  const WeatherBackground = ({ weatherCode, isDarkMode }) => {
+    // 優化：使用 useMemo 快取粒子陣列生成邏輯，只在組件初始時計算一次
+    // 避免每次重新渲染都重新生成新的粒子陣列（影響性能）
+    const particles = useMemo(() => {
+      return generateWeatherParticles();
+    }, []); // 空依賴陣列：粒子陣列只生成一次
 
-    // 🌧️ 雨天
-    if (type === 'rain') {
-      return {
-        ...baseConfig,
-        particles: {
-          color: { value: isDarkMode ? "#ffffff" : "#94a3b8" },
-          move: { enable: true, direction: "bottom", speed: 40, straight: true },
-          number: { value: 160, density: { enable: true, area: 800 } },
-          opacity: { value: isDarkMode ? 0.5 : 0.8 },
-          shape: { type: "line" },
-          size: { value: { min: 10, max: 20 } }, 
-          stroke: { width: 1.5, color: isDarkMode ? "#ffffff" : "#94a3b8" },
-          rotate: { path: true }
-        },
-      };
-    }
+  const getType = (code) => {
+    if (code === null || code === undefined) return null;
+    if (code === 0) return 'clear';
+    if ([1, 2, 3, 45, 48].includes(code)) return 'cloud';
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) return 'rain';
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
+    return null;
+  };
 
-    // ❄️ 下雪
-    if (type === 'snow') {
-      return {
-        ...baseConfig,
-        particles: {
-          color: { value: isDarkMode ? "#ffffff" : "#94a3b8" },
-          move: { enable: true, direction: "bottom", speed: 2, random: false, straight: false },
-          wobble: { enable: true, distance: 10, speed: 10 },
-          number: { value: 80, density: { enable: true, area: 800 } },
-          opacity: { value: { min: 0.4, max: 0.9 } },
-          shape: { type: "circle" },
-          size: { value: { min: 2, max: 5 } },
-        },
-      };
-    }
-
-    // ☁️ 多雲
-    if (type === 'cloud') {
-      return {
-        ...baseConfig,
-        particles: {
-          color: { value: isDarkMode ? "#ffffff" : "#cbd5e1" },
-          move: { enable: true, speed: 0.3, direction: "right", random: true, straight: false, outModes: { default: "out" } },
-          number: { value: 30, density: { enable: true, area: 800 } },
-          opacity: { value: { min: 0.1, max: 0.3 } }, 
-          shape: { type: "polygon", options: { polygon: { sides: { min: 5, max: 8 } } } },
-          size: { value: { min: 100, max: 180 } },
-          filter: { blur: { value: 40 } } 
-        },
-      };
-    }
-
-    // ☀️/🌙 晴朗
-    if (type === 'clear') {
-      if (isDarkMode) {
-        return {
-          ...baseConfig,
-          particles: {
-            color: { value: "#ffffff" },
-            move: { enable: true, speed: 0.1, direction: "none", random: true },
-            number: { value: 250, density: { enable: true, area: 800 } },
-            opacity: { value: { min: 0.1, max: 1 }, animation: { enable: true, speed: 1, sync: false, mode: "random" } },
-            shape: { type: "circle" },
-            size: { value: { min: 0.5, max: 2.5 } },
-          },
-        };
-      } else {
-        return {
-          ...baseConfig,
-          particles: {
-            color: { value: ["#FDB813", "#FFFFFF"] },
-            move: { enable: true, speed: 0.8, direction: "top", random: true },
-            number: { value: 25, density: { enable: true, area: 800 } },
-            opacity: { value: { min: 0.3, max: 0.6 } },
-            shape: { type: "circle" },
-            size: { value: { min: 10, max: 40 } },
-            filter: { blur: { value: 5 } } 
-          },
-        };
-      }
-    }
-
-    return baseConfig;
-  }, [type, isDarkMode]);
-
-  const overlayClass = (!isDarkMode && type === 'rain') ? "bg-slate-900/10" : "bg-transparent";
+  const type = getType(weatherCode);
+  if (!type) return null;
 
   return (
-    <div className={`absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden transition-colors duration-1000 ${overlayClass}`}>
-      <AnimatePresence mode="popLayout"> 
-        {type && (
-          <motion.div
-            key={type}
-            // 4. 修改：加入 delay，給 Canvas 一點點初始化的時間
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            // delay: 0.1 (100毫秒) 讓舊的先淡出，新的等初始化好再淡入，完美解決閃爍
-            transition={{ duration: 1.5, ease: "easeInOut", delay: 0.1 }}
-            className="absolute inset-0 w-full h-full"
-          >
-            {/* 5. 修改：透過 CSS opacity 控制 Canvas 本體的顯示
-                只有當 isReady 為 true 時，Canvas 才從 opacity-0 變成 opacity-100
-                這確保了使用者永遠不會看到「還沒畫好的空 Canvas」
-            */}
-            <div className={`w-full h-full transition-opacity duration-700 ${isReady ? 'opacity-100' : 'opacity-0'}`}>
-              <Particles
-                id={`weather-particles-${type}`}
-                init={particlesInit}
-                loaded={particlesLoaded} // 綁定載入完成事件
-                options={options}
-                className="w-full h-full"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className={`absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0 ${isDarkMode ? 'dark-mode' : ''}`}>
+      <WeatherStyles />
+      
+      {/* === ☀️/🌙 晴朗特效：改用光斑 (Bokeh) === */}
+      {type === 'clear' && (
+        <>
+          {/* 光斑層：日夜皆有，顏色不同 */}
+          {particles.bokehOrbs.map((orb) => (
+            <div
+              key={orb.id}
+              className="bokeh-orb"
+              style={{
+                width: orb.width,
+                height: orb.height,
+                left: orb.left,
+                top: orb.top,
+                animationDelay: orb.animationDelay,
+                animationDuration: orb.duration,
+                // 日間：暖金/橙色 | 夜間：冷銀/藍色
+                background: isDarkMode 
+                  ? 'radial-gradient(circle, rgba(180, 200, 255, 0.15) 0%, rgba(255,255,255,0) 70%)' 
+                  : 'radial-gradient(circle, rgba(255, 200, 100, 0.4) 0%, rgba(255, 150, 50, 0.1) 60%, rgba(255,255,255,0) 70%)'
+              }}
+            />
+          ))}
+
+          {/* 夜間專屬：星星 (疊加在光斑之上) */}
+          {isDarkMode && particles.stars.map((s) => (
+            <div
+              key={s.id}
+              className="star"
+              style={{
+                width: s.width,
+                height: s.height,
+                left: s.left,
+                top: s.top,
+                animationDelay: s.delay,
+                opacity: s.opacity
+              }}
+            />
+          ))}
+        </>
+      )}
+
+      {/* === ☁️ 多雲特效 === */}
+      {type === 'cloud' && (
+        <>
+           <div 
+             className="cloud-shape w-[70vw] h-[70vw] top-[5%]" 
+             style={{ 
+               animationDuration: '55s', 
+               animationDelay: '-5s',
+               background: isDarkMode 
+                 ? 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)' 
+                 : 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%)',
+               filter: isDarkMode ? 'none' : 'drop-shadow(0 10px 15px rgba(0,0,0,0.05))'
+             }} 
+           />
+           <div 
+             className="cloud-shape w-[90vw] h-[90vw] top-[25%]" 
+             style={{ 
+               animationDuration: '70s', 
+               animationDelay: '-25s',
+               background: isDarkMode 
+                 ? 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%)' 
+                 : 'radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%)'
+             }} 
+           />
+        </>
+      )}
+
+      {/* === 🌧️ 下雨特效 === */}
+      {type === 'rain' && particles.rainDrops.map((r) => (
+        <div
+          key={r.id}
+          className="weather-particle rain-drop"
+          style={{
+            left: r.left,
+            top: r.top,
+            animationDuration: r.duration,
+            animationDelay: r.delay,
+            background: isDarkMode 
+               ? 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.8))' 
+               : 'linear-gradient(to bottom, transparent, #3B82F6)' 
+          }}
+        />
+      ))}
+
+      {/* === ❄️ 下雪特效 === */}
+      {type === 'snow' && particles.snowFlakes.map((s) => (
+        <div
+          key={s.id}
+          className="weather-particle snow-flake"
+          style={{
+            left: s.left,
+            top: s.top,
+            animationDuration: s.duration,
+            animationDelay: s.delay,
+            opacity: isDarkMode ? s.opacityBase : s.opacityLight,
+            background: isDarkMode ? 'rgba(255,255,255,0.9)' : '#CBD5E1', 
+            boxShadow: isDarkMode ? '0 0 4px rgba(255,255,255,0.5)' : 'none'
+          }}
+        />
+      ))}
     </div>
   );
 };
@@ -1389,22 +1146,22 @@ const ItineraryApp = () => {
   });
 
   // --- 🔧 DEBUG TOOL: 讓 Chrome Console 可以控制天氣 ---
-  useEffect(() => {
-    window.setTestWeather = (code, isDark) => {
-      // 1. 強制修改天氣代碼 (影響總覽頁特效)
-      if (code !== undefined) {
-        setUserWeather(prev => ({ ...prev, weatherCode: code }));
-      }
-      // 2. 強制修改日夜模式 (true=黑夜, false=白天)
-      if (isDark !== undefined) {
-        setIsDarkMode(isDark);
-      }
-      console.log(`🧪 測試模式啟動: Code=${code}, DarkMode=${isDark}`);
-    };
+  // useEffect(() => {
+  //   window.setTestWeather = (code, isDark) => {
+  //     // 1. 強制修改天氣代碼 (影響總覽頁特效)
+  //     if (code !== undefined) {
+  //       setUserWeather(prev => ({ ...prev, weatherCode: code }));
+  //     }
+  //     // 2. 強制修改日夜模式 (true=黑夜, false=白天)
+  //     if (isDark !== undefined) {
+  //       setIsDarkMode(isDark);
+  //     }
+  //     console.log(`🧪 測試模式啟動: Code=${code}, DarkMode=${isDark}`);
+  //   };
     
-    // 清理函式
-    return () => { delete window.setTestWeather; };
-  }, []);
+  //   // 清理函式
+  //   return () => { delete window.setTestWeather; };
+  // }, []);
 
   // 位置來源狀態：'cache' | 'low' | 'high' | null
   const [locationSource, setLocationSource] = useState(() => {
