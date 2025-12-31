@@ -1259,6 +1259,12 @@ export const tripConfig = {
       light: ["bg-orange-200/30", "bg-stone-200/30", "bg-amber-100/40"],
       dark: ["bg-amber-500/10", "bg-purple-500/10", "bg-blue-500/10"],
     },
+    // 天氣底色覆蓋 (若不設定則預設為程式碼中的灰色)
+    weatherColors: {
+      rain: "#94a3b8",  // 自訂雨天底色
+      cloud: "#cbd5e1", // 自訂多雲底色
+      snow: "#94a3b8",  // 自訂雪天底色
+    }
   },
 
   // ========== 語言與語音設定 ==========

@@ -1,7 +1,7 @@
 ﻿// 概述：ItineraryApp 主介面與互動邏輯
 // 功能：狀態管理、定位/天氣、語音與朗讀、行程呈現、UI 控制
 // 說明：本次優化僅更新註解與排版，不更動核心流程。
-import React, { useState, useRef, useEffect, useMemo, lazy, Suspense } from "react";
+import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
 import {
   Sun,
   CloudSnow,
@@ -85,6 +85,177 @@ import CurrencyWidget from "./components/CurrencyWidget.jsx";
 
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
+
+// --- 新增：來自 ios_weather 的視覺特效組件 ---
+
+// 1. Canvas 粒子系統
+// --- 修正：將 Particle 類別移至組件外部 ---
+class Particle {
+    constructor(canvas, ctx, type, isDay) {
+        this.canvas = canvas;
+        this.ctx = ctx;
+        this.type = type;
+        this.isDay = isDay;
+        this.reset();
+    }
+
+    reset() {
+        if (!this.canvas) return;
+        this.x = Math.random() * this.canvas.width;
+        this.y = Math.random() * this.canvas.height;
+        if (this.type === 'rain') {
+            this.vy = Math.random() * 5 + 10;
+            this.vx = 0.5;
+            this.len = Math.random() * 20 + 10;
+        } else if (this.type === 'snow') {
+            this.vy = Math.random() * 2 + 1;
+            this.vx = Math.random() * 2 - 1;
+            this.size = Math.random() * 3 + 2;
+        } else if (this.type === 'stars') {
+            this.size = Math.random() * 2;
+            this.alpha = Math.random();
+            this.fade = Math.random() * 0.02;
+        }
+    }
+
+    update() {
+        if (!this.canvas) return;
+        if (this.type === 'stars') {
+            this.alpha += this.fade;
+            if (this.alpha <= 0 || this.alpha >= 1) this.fade = -this.fade;
+            return;
+        }
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.y > this.canvas.height) {
+            this.y = -10;
+            this.x = Math.random() * this.canvas.width;
+        }
+    }
+
+    draw() {
+        if (!this.ctx) return;
+        this.ctx.beginPath();
+        if (this.type === 'rain') {
+            // 2. 修改雨滴顏色邏輯
+            if (this.isDay) {
+                // 白天雨滴：使用藍色，稍微透明
+                this.ctx.strokeStyle = 'rgba(100, 149, 237, 0.6)'; 
+            } else {
+                // 晚上雨滴：維持原來的白色半透明
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            }
+            this.ctx.lineWidth = 1;
+            this.ctx.moveTo(this.x, this.y);
+            this.ctx.lineTo(this.x + this.vx, this.y + this.len);
+            this.ctx.stroke();
+        } else if (this.type === 'snow') {
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            this.ctx.fill();
+        } else if (this.type === 'stars') {
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+            this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+    }
+}
+const WeatherParticles = ({ type, isDay }) => {
+    const canvasRef = useRef(null);
+
+    useEffect(() => {
+        if (!type || type === 'clouds') return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        let animationFrameId;
+        let particles = [];
+
+        const resize = () => {
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        };
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 修正：直接實例化外部的 Particle 類別，並傳入參數
+        const count = type === 'rain' ? 150 : type === 'snow' ? 80 : 100;
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle(canvas, ctx, type, isDay));
+        }
+
+        const animate = () => {
+            if (!canvas) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            animationFrameId = requestAnimationFrame(animate);
+        };
+        animate();
+
+        return () => {
+            window.removeEventListener('resize', resize);
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [type, isDay]);
+
+    if (!type || type === 'clouds') return null;
+    return <canvas ref={canvasRef} className="fixed top-0 left-0 w-full h-full pointer-events-none z-0" />;
+};
+// 2. 雲層 SVG
+const CloudSVG = ({ style, color }) => (
+    <svg viewBox="0 0 24 24" fill={color} style={{ ...style, position: 'absolute', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1)) blur(3px)' }}>
+        <path d="M18.5,12c-0.3,0-0.6,0.1-0.9,0.1C17.2,9.1,14.4,7,11,7c-4.4,0-8,3.6-8,8s3.6,8,8,8c0.6,0,1.2-0.1,1.7-0.2C13.5,23.5,14.7,24,16,24c3.3,0,6-2.7,6-6S19.3,12,18.5,12z" />
+    </svg>
+);
+
+// 3. 天體與雲層控制
+const SkyObjects = ({ isDay, condition }) => {
+    const showCelestial = condition === 'clear';
+    const isCloudy = condition !== 'clear';
+    // 根據天氣狀況決定雲的顏色
+    let cloudColor;
+    if (condition === 'rain' || condition === 'snow') {
+        cloudColor = '#bdc3c7'; // 原本的雨雪天灰色
+    } else if (condition === 'cloudy' && isDay) {
+        cloudColor = '#d1d5db'; // 新增：白天多雲時使用淺灰色
+    } else {
+        cloudColor = '#ecf0f1'; // 預設白色 (夜晚或晴天)
+    }
+    
+    // 天體樣式
+    const celestialStyle = {
+        top: '10%', 
+        right: '10%',
+        width: '120px', 
+        height: '120px',
+        borderRadius: '50%',
+        background: isDay ? '#f1c40f' : 'transparent',
+        boxShadow: isDay ? '0 0 60px #f39c12' : '-30px 10px 0 0 #f5f6fa',
+        transform: showCelestial 
+            ? (isDay ? 'scale(1)' : 'rotate(-15deg) scale(0.8)') 
+            : 'scale(0) translateY(50px)',
+        opacity: showCelestial ? 1 : 0,
+        zIndex: 0,
+        position: 'absolute'
+    };
+
+    return (
+        <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+            {/* 太陽/月亮 */}
+            <div className="transition-all duration-1000 ease-in-out" style={celestialStyle} />
+
+            {/* 雲層 (CSS 動畫需在全域樣式定義) */}
+            {isCloudy && (
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-20 overflow-hidden opacity-60">
+                    <CloudSVG color={cloudColor} style={{ width: '200px', top: '15%', opacity: 0.8, animation: 'cloudFloat 30s linear infinite' }} />
+                    <CloudSVG color={cloudColor} style={{ width: '150px', top: '35%', opacity: 0.6, animation: 'cloudFloat 45s linear infinite reverse' }} />
+                    <CloudSVG color={cloudColor} style={{ width: '250px', top: '5%', opacity: 0.4, animation: 'cloudFloat 60s linear infinite' }} />
+                </div>
+            )}
+        </div>
+    );
+};
 
 // --- Native Web Crypto API Utilities (取代 crypto-js) ---
 const CryptoUtils = {
@@ -197,258 +368,6 @@ const debugGroupEnd = () => {
 
 // 簡單的延遲函式
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// --- 🆕 Weather Background Effect Component ---
-// 定義 CSS 動畫樣式 (注入到頁面中) - 保持不變
-const WeatherStyles = React.memo(() => (
-  <style>{`
-    @keyframes fall {
-      0% { transform: translateY(-10vh) translateX(0); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(110vh) translateX(20px); opacity: 0; }
-    }
-    @keyframes drift {
-      from { transform: translateX(-100%); }
-      to { transform: translateX(100vw); }
-    }
-    /* 🌟 新增：光斑浮動動畫 (緩慢、隨機感) */
-    @keyframes bokeh-float {
-      0% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-      33% { transform: translate(30px, -50px) scale(1.1); opacity: 0.6; }
-      66% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.3; }
-      100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-    }
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.3; transform: scale(0.8); }
-      50% { opacity: 1; transform: scale(1.2); }
-    }
-    
-    .weather-particle { position: absolute; pointer-events: none; }
-    
-    .rain-drop {
-      width: 2px;
-      height: 20px;
-      animation: fall 0.8s linear infinite;
-    }
-    
-    .snow-flake {
-      width: 8px;
-      height: 8px; 
-      border-radius: 50%;
-      filter: blur(1px);
-      animation: fall 3s linear infinite;
-    }
-    
-    .cloud-shape {
-      border-radius: 50%;
-      animation: drift 60s linear infinite;
-    }
-    
-    /* ☀️ 光斑樣式 */
-    .bokeh-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(40px); /* 高度模糊 */
-      animation: bokeh-float 20s infinite ease-in-out;
-      mix-blend-mode: overlay; /* 讓光斑與背景融合 */
-    }
-    
-    .star {
-      position: absolute;
-      background: white;
-      border-radius: 50%;
-      filter: blur(0.5px);
-      animation: twinkle 3s infinite ease-in-out;
-    }
-  `}</style>
-));
-
-WeatherStyles.displayName = 'WeatherStyles';
-
-  const generateWeatherParticles = () => {
-    const newStars = Array.from({ length: 20 }).map((_, i) => ({
-      id: i,
-      width: Math.random() > 0.5 ? '2px' : '3px',
-      height: Math.random() > 0.5 ? '2px' : '3px',
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 50}%`,
-      delay: `${Math.random() * 3}s`,
-      opacity: Math.random() * 0.7 + 0.3
-    }));
-  
-    const newRainDrops = Array.from({ length: 40 }).map((_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * -20}%`,
-      duration: `${0.5 + Math.random() * 0.3}s`,
-      delay: `${Math.random() * 2}s`
-    }));
-  
-    const newSnowFlakes = Array.from({ length: 30 }).map((_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * -20}%`,
-      duration: `${3 + Math.random() * 4}s`,
-      delay: `${Math.random() * 5}s`,
-      opacityBase: Math.random() * 0.4 + 0.6, 
-      opacityLight: Math.random() * 0.5 + 0.5 
-    }));
-  
-    const newBokehOrbs = Array.from({ length: 4 }).map((_, i) => ({
-      id: i,
-      width: `${30 + Math.random() * 40}vw`,
-      height: `${30 + Math.random() * 40}vw`,
-      left: `${Math.random() * 80}%`,
-      top: `${Math.random() * 60}%`,
-      animationDelay: `${Math.random() * -10}s`,
-      duration: `${15 + Math.random() * 10}s`
-    }));
-  
-    return {
-      stars: newStars,
-      rainDrops: newRainDrops,
-      snowFlakes: newSnowFlakes,
-      bokehOrbs: newBokehOrbs
-    };
-  };
-  
-  const WeatherBackground = ({ weatherCode, isDarkMode }) => {
-    // 優化：使用 useMemo 快取粒子陣列生成邏輯，只在組件初始時計算一次
-    // 避免每次重新渲染都重新生成新的粒子陣列（影響性能）
-    const particles = useMemo(() => {
-      return generateWeatherParticles();
-    }, []); // 空依賴陣列：粒子陣列只生成一次
-
-  const getType = (code) => {
-    if (code === null || code === undefined) return null;
-    if (code === 0) return 'clear';
-    if ([1, 2, 3, 45, 48].includes(code)) return 'cloud';
-    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) return 'rain';
-    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
-    return null;
-  };
-
-  const type = getType(weatherCode);
-  if (!type) return null;
-
-  return (
-    <div className={`absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0 ${isDarkMode ? 'dark-mode' : ''}`}>
-      <WeatherStyles />
-      
-      {/* === ☀️/🌙 晴朗特效：改用光斑 (Bokeh) === */}
-      {type === 'clear' && (
-        <>
-          {/* 光斑層：日夜皆有，顏色不同 */}
-          {particles.bokehOrbs.map((orb) => (
-            <div
-              key={orb.id}
-              className="bokeh-orb"
-              style={{
-                width: orb.width,
-                height: orb.height,
-                left: orb.left,
-                top: orb.top,
-                animationDelay: orb.animationDelay,
-                animationDuration: orb.duration,
-                // 日間：暖金/橙色 | 夜間：冷銀/藍色
-                background: isDarkMode 
-                  ? 'radial-gradient(circle, rgba(180, 200, 255, 0.15) 0%, rgba(255,255,255,0) 70%)' 
-                  : 'radial-gradient(circle, rgba(255, 200, 100, 0.4) 0%, rgba(255, 150, 50, 0.1) 60%, rgba(255,255,255,0) 70%)'
-              }}
-            />
-          ))}
-
-          {/* 夜間專屬：星星 (疊加在光斑之上) */}
-          {isDarkMode && particles.stars.map((s) => (
-            <div
-              key={s.id}
-              className="star"
-              style={{
-                width: s.width,
-                height: s.height,
-                left: s.left,
-                top: s.top,
-                animationDelay: s.delay,
-                opacity: s.opacity
-              }}
-            />
-          ))}
-        </>
-      )}
-
-      {/* === ☁️ 多雲特效 === */}
-      {type === 'cloud' && (
-        <>
-           <div 
-             className="cloud-shape w-[70vw] h-[70vw] top-[5%]" 
-             style={{ 
-               animationDuration: '55s', 
-               animationDelay: '-5s',
-               background: isDarkMode 
-                 ? 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%)' 
-                 : 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%)',
-               filter: isDarkMode ? 'none' : 'drop-shadow(0 10px 15px rgba(0,0,0,0.05))'
-             }} 
-           />
-           <div 
-             className="cloud-shape w-[90vw] h-[90vw] top-[25%]" 
-             style={{ 
-               animationDuration: '70s', 
-               animationDelay: '-25s',
-               background: isDarkMode 
-                 ? 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%)' 
-                 : 'radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%)'
-             }} 
-           />
-        </>
-      )}
-
-      {/* === 🌧️ 下雨特效 === */}
-      {type === 'rain' && particles.rainDrops.map((r) => (
-        <div
-          key={r.id}
-          className="weather-particle rain-drop"
-          style={{
-            left: r.left,
-            top: r.top,
-            animationDuration: r.duration,
-            animationDelay: r.delay,
-            background: isDarkMode 
-               ? 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.8))' 
-               : 'linear-gradient(to bottom, transparent, #3B82F6)' 
-          }}
-        />
-      ))}
-
-      {/* === ❄️ 下雪特效 === */}
-      {type === 'snow' && particles.snowFlakes.map((s) => (
-        <div
-          key={s.id}
-          className="weather-particle snow-flake"
-          style={{
-            left: s.left,
-            top: s.top,
-            animationDuration: s.duration,
-            animationDelay: s.delay,
-            opacity: isDarkMode ? s.opacityBase : s.opacityLight,
-            background: isDarkMode ? 'rgba(255,255,255,0.9)' : '#CBD5E1', 
-            boxShadow: isDarkMode ? '0 0 4px rgba(255,255,255,0.5)' : 'none'
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// 使用 React.memo 優化 WeatherBackground，避免不必要的重新渲染
-const MemoizedWeatherBackground = React.memo(WeatherBackground, (prevProps, nextProps) => {
-  // 只在 weatherCode 或 isDarkMode 改變時才重新渲染
-  return prevProps.weatherCode === nextProps.weatherCode && 
-         prevProps.isDarkMode === nextProps.isDarkMode;
-});
-
-MemoizedWeatherBackground.displayName = 'WeatherBackground';
 
 const ItineraryApp = () => {
   // --- Security State ---
@@ -1146,22 +1065,22 @@ const ItineraryApp = () => {
   });
 
   // --- 🔧 DEBUG TOOL: 讓 Chrome Console 可以控制天氣 ---
-  // useEffect(() => {
-  //   window.setTestWeather = (code, isDark) => {
-  //     // 1. 強制修改天氣代碼 (影響總覽頁特效)
-  //     if (code !== undefined) {
-  //       setUserWeather(prev => ({ ...prev, weatherCode: code }));
-  //     }
-  //     // 2. 強制修改日夜模式 (true=黑夜, false=白天)
-  //     if (isDark !== undefined) {
-  //       setIsDarkMode(isDark);
-  //     }
-  //     console.log(`🧪 測試模式啟動: Code=${code}, DarkMode=${isDark}`);
-  //   };
+  useEffect(() => {
+    window.setTestWeather = (code, isDark) => {
+      // 1. 強制修改天氣代碼 (影響總覽頁特效)
+      if (code !== undefined) {
+        setUserWeather(prev => ({ ...prev, weatherCode: code }));
+      }
+      // 2. 強制修改日夜模式 (true=黑夜, false=白天)
+      if (isDark !== undefined) {
+        setIsDarkMode(isDark);
+      }
+      console.log(`🧪 測試模式啟動: Code=${code}, DarkMode=${isDark}`);
+    };
     
-  //   // 清理函式
-  //   return () => { delete window.setTestWeather; };
-  // }, []);
+    // 清理函式
+    return () => { delete window.setTestWeather; };
+  }, []);
 
   // 位置來源狀態：'cache' | 'low' | 'high' | null
   const [locationSource, setLocationSource] = useState(() => {
@@ -1486,7 +1405,7 @@ const ItineraryApp = () => {
         customName = null,
       ) => {
         try {
-          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&weathercode=true&timezone=auto`;
+          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,weathercode&forecast_days=2&timezone=auto`;
           const weatherRes = await fetch(weatherUrl);
           const weatherData = await weatherRes.json();
 
@@ -1552,6 +1471,7 @@ const ItineraryApp = () => {
             temp: Math.round(weatherData.current_weather.temperature),
             desc: info.text,
             weatherCode: weatherData.current_weather.weathercode,
+            hourly: weatherData.hourly,
             locationName: city || "未知地點",
             landmark: landmark,
             isGeneric: isGeneric, // ✅ 將判斷結果存入 State
@@ -3043,11 +2963,62 @@ const ItineraryApp = () => {
   }
 
   // --- Main App Render (Authenticated) ---
+  const getParticleType = (code, isDark) => {
+    if (code === null || code === undefined) return null;
+    // 晴朗且是晚上 -> 星星
+    if (code === 0 && isDark) return 'stars';
+    // 下雨
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) return 'rain';
+    // 下雪
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
+    return null; // 多雲或白天晴朗不顯示粒子
+  };
+
+  const getSkyCondition = (code) => {
+      if (code === null || code === undefined) return 'clear';
+      if (code === 0) return 'clear';
+      if ([1, 2, 3, 45, 48].includes(code)) return 'cloudy';
+      if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
+      return 'rain'; // 其他視為有雨或陰天
+  };
+
+// 取得當前應該顯示的天氣代碼 (總覽用 userWeather，行程用 displayWeather)
+  const currentEffectCode = activeDay === -1 ? userWeather.weatherCode : displayWeather.code;
+  const particleType = getParticleType(currentEffectCode, isDarkMode);
+  const skyCondition = getSkyCondition(currentEffectCode);
+  const isDayTime = !isDarkMode;
+let dynamicBgStyle = {};
+
+const weatherColors = tripConfig.theme.weatherColors || {
+    rain: '#94a3b8',
+    cloud: '#cbd5e1',
+    snow: '#94a3b8'
+};
+
+if (isDayTime) {
+    // 判斷是否在下雨
+    const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(currentEffectCode);
+    // 判斷是否下雪 (新增這行)
+    const isSnowing = [71, 73, 75, 77, 85, 86].includes(currentEffectCode);
+    // 判斷是否多雲
+    const isCloudy = [1, 2, 3, 45, 48].includes(currentEffectCode);
+
+    if (isRaining) {
+        // 白天且下雨：背景顯著變暗 (深藍灰色)
+        dynamicBgStyle = { backgroundColor: weatherColors.rain };
+    } else if (isSnowing) {
+        // [新增] 白天且下雪：背景變暗以突顯白色雪花 (使用與下雨相同的深色，或可選更冷的色調)
+        dynamicBgStyle = { backgroundColor: weatherColors.snow };
+    } else if (isCloudy) {
+        // 白天且多雲：背景稍微變暗 (淺灰色)
+        dynamicBgStyle = { backgroundColor: '#cbd5e1' };
+    }
+}
   return (
-    <div
-      style={containerStyle}
-      className={`min-h-screen font-sans pb-24 overflow-x-hidden transition-colors duration-500 ease-in-out ${theme.bg} ${theme.text}`}
-    >
+      <div
+        style={{ ...containerStyle, ...dynamicBgStyle }}
+        className={`min-h-screen transition-colors duration-500 ${theme.bg} ${theme.text} relative overflow-hidden font-sans`}
+      >
       {/* Decorative Blobs - Subtle & Natural */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div
@@ -3060,12 +3031,15 @@ const ItineraryApp = () => {
           className={`absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] rounded-full blur-3xl animate-blob animation-delay-4000 transition-colors duration-700 ${theme.blob3}`}
         ></div>
       </div>
-
-    {/* 🆕 Weather Effects Layer (放在 Blob 之後，內容之前) */}
-      <MemoizedWeatherBackground 
-        weatherCode={activeDay === -1 ? userWeather.weatherCode : displayWeather.code} 
-        isDarkMode={isDarkMode} 
-      />
+      
+      <style>{`
+      @keyframes cloudFloat {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(100vw); }
+      }
+      `}</style>
+      <SkyObjects isDay={!isDarkMode} condition={skyCondition} />
+      <WeatherParticles type={particleType} isDay={!isDarkMode} />
 
       <div className="max-w-md mx-auto relative min-h-screen flex flex-col z-10">
         {/* Header Title with Material Glass */}
@@ -3190,152 +3164,104 @@ const ItineraryApp = () => {
                     exit="exit"
                     className="space-y-4"
                   >
-                    {/* 1. User Location Weather Card (Compact Layout) */}
-                    <div
-                      className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-                    >
-                      {/* Left: Location & Temp */}
-                      <div className="relative z-10 flex flex-col justify-center">
-                        <div
-                          className={`flex items-center gap-1.5 text-xs font-bold mb-1 uppercase tracking-wide ${theme.textSec}`}
-                        >
-                          <LocateFixed className={`w-4 h-4 ${theme.accent}`} />{" "}
-                          {userWeather.locationName}
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`p-2.5 rounded-2xl shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/60"}`}
-                          >
-                            {userWeather.loading ? (
-                              <Loader
-                                className={`w-7 h-7 animate-spin ${theme.textSec}`}
-                              />
-                            ) : userWeather.weatherCode !== null ? (
-                              getWeatherInfo(userWeather.weatherCode).icon
-                            ) : (
-                              <Loader
-                                className={`w-7 h-7 animate-spin ${theme.textSec}`}
-                              />
-                            )}
-                          </div>
-                          <div>
-                            {userWeather.temp !== null ? (
-                              <div
-                                className={`text-3xl font-bold ${theme.text}`}
-                              >
-                                {userWeather.temp}
-                                <span
-                                  className={`text-sm ml-1 ${theme.textSec}`}
-                                >
-                                  °C
-                                </span>
-                              </div>
-                            ) : (
-                              <div className={`text-xs ${theme.textSec}`}>
-                                --
-                              </div>
-                            )}
-                            <div className={`text-xs mt-0.5 ${theme.textSec}`}>
-                              {userWeather.desc || "載入中"}
+                    {/* === 總覽頁面：天氣與預報卡片 === */}
+                    <div className={`backdrop-blur-xl border rounded-[2rem] p-5 ${theme.cardShadow} transition-colors duration-300 relative overflow-hidden ${theme.cardBg} ${theme.cardBorder}`}>
+                        
+                        {/* 上半部：目前天氣與地點 */}
+                        <div className="flex justify-between items-start mb-6">
+                            {/* 左側：大溫度與地點 */}
+                            <div>
+                                <div className={`flex items-center gap-1.5 text-xs font-bold mb-1 uppercase tracking-wide ${theme.textSec}`}>
+                                    <LocateFixed className={`w-3.5 h-3.5 ${theme.accent}`} /> {userWeather.locationName}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className={`text-6xl font-thin tracking-tighter ${theme.text}`}>
+                                        {userWeather.temp !== null ? userWeather.temp : '--'}°
+                                    </div>
+                                    <div className="flex flex-col justify-center">
+                                        <div className={`text-lg font-medium ${theme.text}`}>
+                                            {userWeather.desc || "載入中"}
+                                        </div>
+                                        <div className={`text-xs ${theme.textSec}`}>
+                                            {userWeather.temp !== null ? `最高: ${userWeather.temp + 4}° 最低: ${userWeather.temp - 2}°` : ''}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                          </div>
+
+                            {/* 右側：更新按鈕 (縮小並置頂) */}
+                            <button
+                                onClick={() => getUserLocationWeather({ isSilent: false, highAccuracy: false })}
+                                disabled={isUpdatingLocation}
+                                className={`p-2 rounded-full border transition-all active:scale-95 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
+                            >
+                                {isUpdatingLocation ? <Loader className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                            </button>
                         </div>
-                      </div>
 
-                      {/* Right: Advice & Update Button */}
-                      <div className="relative z-10 text-right max-w-[50%] flex flex-col items-end">
-                        <button
-                          onClick={() =>
-                            getUserLocationWeather({
-                              isSilent: false,
-                              highAccuracy: false,
-                            })
-                          }
-                          disabled={isUpdatingLocation}
-                          aria-busy={isUpdatingLocation}
-                          aria-disabled={isUpdatingLocation}
-                          className={`mb-2 text-xs px-3 py-1.5 rounded-full border transition-all shadow-sm flex items-center gap-1.5 active:scale-95 ${isUpdatingLocation ? "opacity-80 pointer-events-none" : ""} ${theme.accent} ${isDarkMode ? "bg-neutral-800 border-neutral-700 hover:bg-neutral-700" : "bg-white border-stone-200 hover:bg-stone-50"}`}
-                        >
-                          {isUpdatingLocation ? (
-                            <>
-                              <Loader className="w-3 h-3 animate-spin" />
-                              <span className="ml-2">更新中</span>
-                            </>
-                          ) : (
-                            <>
-                              更新位置 <Share2 className="w-3 h-3" />
-                            </>
-                          )}
-                        </button>
+                        {/* 中間：每 3 小時預報 (Glass Strip) */}
+                        {/* 邏輯：從現在開始，每 3 小時取一筆，共 5 筆 */}
+                        <div className={`w-full overflow-x-auto pb-2 mb-4 scrollbar-hide`}>
+                            <div className="flex justify-between min-w-[300px] gap-2">
+                                {[0, 3, 6, 9, 12].map((offset, i) => {
+                                    const currentHour = new Date().getHours();
+                                    const targetIndex = currentHour + offset;
+                                    
+                                    // 取得對應時間的資料 (若無 hourly 資料則顯示 --)
+                                    const hourDataTemp = userWeather.hourly?.temperature_2m?.[targetIndex];
+                                    const hourDataCode = userWeather.hourly?.weathercode?.[targetIndex];
+                                    
+                                    // 時間標籤
+                                    let timeLabel = i === 0 ? "現在" : `${(currentHour + offset) % 24}時`;
+                                    
+                                    // 圖示
+                                    const icon = hourDataCode !== undefined ? getWeatherInfo(hourDataCode).icon : <Loader className="w-4 h-4 animate-spin opacity-50"/>;
 
-                        {userWeather.temp !== null &&
-                          (() => {
-                            // 1. 決定要比對哪一天的預報：旅程中比對「明天」，還沒出發比對 Day 1
-                            const targetDayIndex =
-                              tripStatus === "during"
-                                ? currentTripDayIndex + 1
-                                : 0;
+                                    return (
+                                        <div key={i} className="flex flex-col items-center gap-2 min-w-[50px]">
+                                            <span className={`text-[10px] font-medium opacity-70 ${theme.textSec}`}>{timeLabel}</span>
+                                            <div className="scale-90">{icon}</div>
+                                            <span className={`text-sm font-bold ${theme.text}`}>
+                                                {hourDataTemp !== undefined ? `${Math.round(hourDataTemp)}°` : '--'}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
-                            // 安全檢查：確保索引在行程範圍內
-                            if (
-                              targetDayIndex < 0 ||
-                              targetDayIndex >= itineraryData.length
-                            )
-                              return null;
+                        {/* 下半部：穿衣提醒與溫差比較 (整合) */}
+                        <div className={`mt-2 pt-3 border-t flex flex-col gap-2 ${isDarkMode ? "border-white/10" : "border-black/5"}`}>
+                            {/* 溫差比較邏輯 (保持原有邏輯) */}
+                            {userWeather.temp !== null && (() => {
+                                const targetDayIndex = tripStatus === "during" ? currentTripDayIndex + 1 : 0;
+                                if (targetDayIndex < 0 || targetDayIndex >= itineraryData.length) return null;
+                                const targetLoc = getDailyLocation(targetDayIndex);
+                                const forecast = weatherForecast[targetLoc];
+                                if (!forecast || !forecast.temperature_2m_max) return null;
+                                
+                                const destMax = forecast.temperature_2m_max[targetDayIndex];
+                                const destMin = forecast.temperature_2m_min[targetDayIndex];
+                                const destAvg = (destMax + destMin) / 2;
+                                const tempDiff = Math.abs(destAvg - userWeather.temp);
+                                const isColder = destAvg < userWeather.temp;
 
-                            const targetLoc = getDailyLocation(targetDayIndex);
-                            const forecast = weatherForecast[targetLoc];
+                                if (tempDiff >= 5) { // 稍微降低門檻，讓它更容易顯示
+                                    return (
+                                        <div className={`text-xs flex items-center gap-2 ${isColder ? "text-sky-400" : "text-orange-400"}`}>
+                                            <AlertCircle className="w-3.5 h-3.5" />
+                                            <span>{tripStatus === "during" ? "明天" : "目的地"}比現在{isColder ? "冷" : "熱"} {tempDiff.toFixed(0)}°C</span>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
 
-                            // 2. 取得目標日期的平均溫 (需確認 forecast 資料已載入)
-                            if (!forecast || !forecast.temperature_2m_max)
-                              return null;
-
-                            const destMax =
-                              forecast.temperature_2m_max[targetDayIndex];
-                            const destMin =
-                              forecast.temperature_2m_min[targetDayIndex];
-                            const destAvg = (destMax + destMin) / 2;
-
-                            const tempDiff = Math.abs(
-                              destAvg - userWeather.temp,
-                            );
-
-                            // 3. 溫差門檻 10 度則顯示
-                            if (tempDiff >= 10) {
-                              const isColder = destAvg < userWeather.temp;
-                              return (
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.9 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  className={`mb-2 px-3 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-2 shadow-sm ${
-                                    isDarkMode
-                                      ? "bg-orange-500/20 border-orange-500/40 text-orange-200"
-                                      : "bg-orange-50 border-orange-200 text-orange-700"
-                                  }`}
-                                >
-                                  <div className="bg-orange-500 rounded-full p-1">
-                                    <AlertCircle className="w-3 h-3 text-white animate-pulse" />
-                                  </div>
-                                  <span>
-                                    {tripStatus === "during"
-                                      ? "明天"
-                                      : "目的地"}
-                                    比當前{isColder ? "冷" : "熱"}{" "}
-                                    {tempDiff.toFixed(0)}°C
-                                  </span>
-                                </motion.div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        <p
-                          className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
-                        >
-                          {userWeather.error
-                            ? "無法獲取天氣"
-                            : "比較溫差，方便預先準備。"}
-                        </p>
-                      </div>
+                            {/* 靜態建議 */}
+                            <p className={`text-xs leading-relaxed opacity-80 ${theme.textSec}`}>
+                                {userWeather.error ? "無法獲取天氣資訊" : "建議洋蔥式穿搭，並隨身攜帶雨具以備不時之需。"}
+                            </p>
+                        </div>
                     </div>
 
                     {/* 2. Flight & Emergency Info */}
