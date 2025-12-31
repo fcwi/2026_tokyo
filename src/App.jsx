@@ -936,6 +936,7 @@ const ItineraryApp = () => {
   const [[, direction], setPage] = useState([activeDay, 0]);
   // 新增：定義 Framer Motion 動畫變數
   // 這裡決定了畫面要怎麼進場 (enter) 和退場 (exit)
+  // 🆕 優化：添加 willChange + backdropFilter 優化，解決毛玻璃閃爍
   const slideVariants = {
     enter: (direction) => ({
       x: direction > 0 ? "100%" : "-100%",
@@ -944,7 +945,10 @@ const ItineraryApp = () => {
       width: "100%",
       // 強制啟用硬體加速，減少閃爍與延遲
       z: 0,
-      // willChange: "transform, opacity",
+      willChange: "transform, opacity",
+      // 預先啟用 GPU：某些裝置需要這個提示
+      backfaceVisibility: "hidden",
+      WebkitFontSmoothing: "antialiased",
     }),
     center: {
       x: 0,
@@ -952,9 +956,12 @@ const ItineraryApp = () => {
       position: "relative",
       z: 0,
       zIndex: 1,
+      willChange: "auto",
       transition: {
         duration: 0.35, // 稍微增加一點點時間，讓動畫更滑順
         ease: [0.23, 1, 0.32, 1], // 使用自訂 bezier 曲線（更具回彈感的減速）
+        // 🆕 分離 opacity 動畫，讓毛玻璃效果更平滑
+        opacity: { duration: 0.3, ease: "easeOut" },
       },
     },
     exit: (direction) => ({
@@ -962,7 +969,14 @@ const ItineraryApp = () => {
       opacity: 0,
       position: "absolute",
       width: "100%",
-      transition: { duration: 0.2, ease: "easeIn" },
+      willChange: "transform, opacity",
+      backfaceVisibility: "hidden",
+      transition: { 
+        duration: 0.2, 
+        ease: "easeIn",
+        // 🆕 優化：exit 動畫也分離 opacity
+        opacity: { duration: 0.15 },
+      },
     }),
   };
 
@@ -3206,6 +3220,13 @@ const ItineraryApp = () => {
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             ref={scrollContainerRef}
+            // 🆕 優化：應用 GPU 加速容器類名
+            style={{
+              willChange: "scroll-position",
+              transform: "translateZ(0)",
+              WebkitPerspective: "1000px",
+              perspective: "1000px",
+            }}
           >
             {/* Navigation Buttons */}
             <div
@@ -3247,7 +3268,17 @@ const ItineraryApp = () => {
             </div>
 
             {/* Animation Wrapper */}
-            <div className="relative w-full h-full">
+            {/* 🆕 優化：添加 GPU 加速容器用於毛玻璃過渡 */}
+            <div 
+              className="relative w-full h-full"
+              style={{
+                // 強制 GPU 加速，確保 backdrop-filter 在動畫中穩定
+                WebkitTransform: "translateZ(0)",
+                transform: "translateZ(0)",
+                // 建立新的堆疊上下文，避免毛玻璃效果與其他元素衝突
+                isolation: "isolate",
+              }}
+            >
               <AnimatePresence initial={false} custom={direction} mode="wait">
                 {/* === 分支 1: 總覽頁面 (activeDay === -1) === */}
                 {activeDay === -1 ? (

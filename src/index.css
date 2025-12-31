@@ -1,3 +1,67 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 🆕 毛玻璃效果優化 - 解決滑動/切換時的視覺閃爍 */
+
+/* 全局 backdrop-filter 優化 */
+[class*="backdrop-blur"] {
+  /* 強制啟用硬體加速，避免重繪閃爍 */
+  -webkit-font-smoothing: antialiased;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* 確保 GPU 合成層的穩定性 */
+  will-change: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+/* 優化動畫過渡中的毛玻璃卡片 */
+[class*="backdrop-blur-md"],
+[class*="backdrop-blur-lg"],
+[class*="backdrop-blur-xl"],
+[class*="backdrop-blur-2xl"] {
+  /* 減少重繪：使用 transition 而不是複雜的 animation */
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 確保 GPU 層穩定 */
+  contain: layout style paint;
+}
+
+/* 頁面切換時的容器優化 */
+[class*="motion-div"],
+.motion-div {
+  /* 在頁面轉場時保持 GPU 層穩定 */
+  will-change: transform, opacity;
+}
+
+/* Framer Motion 動畫容器優化 */
+[style*="position: relative"],
+[style*="position: absolute"] {
+  /* 確保定位不影響硬體加速 */
+  contain: layout;
+}
+
+/* 毛玻璃卡片在淺色/深色模式的優化過渡 */
+.dark [class*="backdrop-blur"],
+[class*="backdrop-blur"] {
+  /* 防止背景色變化時的閃爍 */
+  background-clip: padding-box;
+}
+
+/* 優化 fadeIn 動畫 */
+@keyframes optimizedFadeIn {
+  from {
+    opacity: 0;
+    /* 避免縮放導致的卡頓 */
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-fadeIn {
+  animation: optimizedFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}

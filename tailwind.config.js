@@ -18,7 +18,19 @@ export default {
     { pattern: /bg-(blue|purple|emerald)-(300|400|500)(\/\d+)?/ },
   ],
   theme: {
-    extend: {},
+    extend: {
+      // 🆕 毛玻璃效果優化配置
+      animation: {
+        // 改進 fadeIn 動畫，使用更平滑的 ease-out 曲線
+        fadeIn: 'fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+    },
   },
   plugins: [],
 };
