@@ -53,7 +53,7 @@ const CurrencyWidget = ({ isDarkMode, rateData, isOnline }) => {
       ) : safeRateData.error ? (
         <div className="flex items-center gap-2 text-[10px] font-bold">
           <RefreshCw className="w-3 h-3" />
-          <span>匯率暫時無法取得</span>
+          <span>網路不穩，請稍後再試</span>
         </div>
       ) : (
         <>
