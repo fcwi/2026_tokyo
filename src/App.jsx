@@ -787,8 +787,8 @@ const ItineraryApp = () => {
         : currentTheme.textColors?.light || `text-${cBase}-800`,
 
       textSec: isDarkMode
-        ? currentTheme.textColors?.secDark || `text-${cBase}-400`
-        : currentTheme.textColors?.secLight || `text-${cBase}-500`,
+        ? currentTheme.textColors?.secDark || `text-${cBase}-300`
+        : currentTheme.textColors?.secLight || `text-${cBase}-600`,
 
       // 🌟 卡片質感：夜間改為較亮的深灰玻璃
       cardBg: isDarkMode
@@ -798,10 +798,16 @@ const ItineraryApp = () => {
       // 邊框
       cardBorder: isDarkMode ? `border-white/10` : `border-${cBase}-200/50`,
 
-      // 陰影
+      // 陰影系統（分層次）
       cardShadow: isDarkMode
         ? "shadow-2xl shadow-black/40"
         : `shadow-xl shadow-${cBase}-500/5`,
+      
+      // 額外陰影層級
+      shadowSm: isDarkMode ? "shadow-sm shadow-black/30" : "shadow-sm shadow-stone-200/50",
+      shadowMd: isDarkMode ? "shadow-lg shadow-black/35" : `shadow-md shadow-${cBase}-300/30`,
+      shadowLg: isDarkMode ? "shadow-2xl shadow-black/40" : `shadow-lg shadow-${cBase}-400/20`,
+      shadowXl: isDarkMode ? "shadow-2xl shadow-black/50" : `shadow-xl shadow-${cBase}-500/25`,
 
       // 強調色
       accent: isDarkMode ? `text-${cAccent}-300` : `text-${cAccent}-600`,
@@ -3177,6 +3183,26 @@ const ItineraryApp = () => {
           from { transform: translateX(-100%); }
           to { transform: translateX(100vw); }
       }
+      @keyframes slideUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+      }
+      @keyframes shimmer {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+      }
+      .animate-slide-up { animation: slideUp 0.3s ease-out; }
+      .animate-slide-down { animation: slideDown 0.3s ease-out; }
+      .animate-scale-in { animation: scaleIn 0.25s ease-out; }
+      .animate-shimmer { animation: shimmer 2s ease-in-out infinite; }
       `}</style>
       <SkyObjects isDay={!isDarkMode} condition={skyCondition} />
       <WeatherParticles type={particleType} isDay={!isDarkMode} />
@@ -3217,6 +3243,7 @@ const ItineraryApp = () => {
                 }}
                 className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
                 title="鎖定行程"
+                aria-label="鎖定或解鎖行程"
               >
                 <Lock className="w-4 h-4 fill-current" />
               </button>
@@ -3224,6 +3251,8 @@ const ItineraryApp = () => {
               <button
                 onClick={toggleTheme}
                 className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
+                aria-label={`切換到${isDarkMode ? "亮色" : "深色"}模式`}
+                title={isDarkMode ? "切換為亮色模式" : "切換為深色模式"}
               >
                 {isDarkMode ? (
                   <Moon className="w-4 h-4 fill-current" />
@@ -3248,7 +3277,7 @@ const ItineraryApp = () => {
         {/* 1. 行程分頁 (Itinerary Tab) - 完整動畫版 */}
         {activeTab === "itinerary" && (
           <div
-            className="flex-1 space-y-4 px-4 pb-4 overflow-x-hidden relative"
+            className="flex-1 space-y-5 px-4 pb-4 overflow-x-hidden relative"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             ref={scrollContainerRef}
@@ -3271,11 +3300,12 @@ const ItineraryApp = () => {
                 // ✅ 2. 綁定按鈕 Ref (Key 為 -1)
                 ref={(el) => (navItemsRef.current[-1] = el)}
                 onClick={() => changeDay(-1)}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm flex items-center gap-1.5 shadow-sm
+                aria-label="查看行程總覽"
+                className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm flex items-center gap-1.5 shadow-sm active:scale-95 hover:scale-105
                   ${
                     activeDay === -1
                       ? `${theme.accentBg} ${theme.accent} ${isDarkMode ? "border-neutral-600" : "border-stone-300"} scale-105 shadow-md`
-                      : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5`
+                      : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5 hover:shadow-md`
                   }`}
               >
                 <LayoutDashboard className="w-4 h-4" /> 總覽
@@ -3284,14 +3314,14 @@ const ItineraryApp = () => {
               {itineraryData.map((data, index) => (
                 <button
                   key={index}
-                  // ✅ 3. 綁定按鈕 Ref (Key 為 index 0, 1, 2...)
                   ref={(el) => (navItemsRef.current[index] = el)}
                   onClick={() => changeDay(index)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm shadow-sm
+                  aria-label={`查看${data.day}`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm shadow-sm active:scale-95 hover:scale-105
                     ${
                       activeDay === index
                         ? `${theme.accentBg} ${theme.text} ${isDarkMode ? "border-neutral-600" : "border-stone-300"} scale-105 shadow-md`
-                        : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5`
+                        : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5 hover:shadow-md`
                     }`}
                 >
                   {data.day}
@@ -3321,7 +3351,7 @@ const ItineraryApp = () => {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    className="space-y-4"
+                    className="space-y-5"
                   >
                     {/* === 總覽頁面：天氣與預報卡片 (放大字體與緊湊版) === */}
                     <div
@@ -3587,6 +3617,16 @@ const ItineraryApp = () => {
                           setIsFlightInfoExpanded(!isFlightInfoExpanded)
                         }
                         className={`flex items-center justify-between cursor-pointer group ${isFlightInfoExpanded ? "mb-4 border-b pb-2" : ""} ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isFlightInfoExpanded}
+                        aria-controls="flight-info-content"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setIsFlightInfoExpanded(!isFlightInfoExpanded);
+                          }
+                        }}
                       >
                         <h3
                           className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}
@@ -3609,7 +3649,7 @@ const ItineraryApp = () => {
 
                       {/* Content：只在展開時顯示 */}
                       {isFlightInfoExpanded && (
-                        <div className="animate-fadeIn">
+                        <div id="flight-info-content" className="animate-fadeIn">
                           <div className="grid grid-cols-2 gap-4 mb-4">
                             {/* Flight Info */}
                             <div
@@ -3976,7 +4016,7 @@ const ItineraryApp = () => {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    className="space-y-4"
+                    className="space-y-5"
                   >
                     {current && (
                       <>
@@ -4388,7 +4428,7 @@ const ItineraryApp = () => {
 
         {/* 2. 參考指南 (Guides Tab) */}
         {activeTab === "guides" && (
-          <div className="flex-1 px-4 pb-4 space-y-4 animate-fadeIn">
+          <div className="flex-1 px-4 pb-4 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
@@ -4405,17 +4445,28 @@ const ItineraryApp = () => {
                 實用參考指南
               </h2>
               <div className="space-y-3">
-                {guidesData.map((guide, idx) => {
+                {guidesData && guidesData.length > 0 ? (
+                  guidesData.map((guide, idx) => {
                   const isGuideOpen = expandedGuides[idx];
                   return (
                     <div
                       key={idx}
-                      className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/70 border-white/60"}`}
+                      className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/70 border-white/60"}`}
                     >
                       {/* Guide Header - Clickable */}
                       <div
                         className="flex items-center gap-3 p-4 cursor-pointer"
                         onClick={() => toggleGuide(idx)}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isGuideOpen}
+                        aria-controls={`guide-${idx}-content`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleGuide(idx);
+                          }
+                        }}
                       >
                         <div
                           className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
@@ -4449,7 +4500,7 @@ const ItineraryApp = () => {
 
                       {/* Collapsible Content */}
                       {isGuideOpen && (
-                        <div className="px-5 pb-5 animate-fadeIn">
+                        <div id={`guide-${idx}-content`} className="px-5 pb-5 animate-fadeIn">
                           <p
                             className={`text-sm mb-4 leading-relaxed ${theme.textSec}`}
                           >
@@ -4517,7 +4568,14 @@ const ItineraryApp = () => {
                       )}
                     </div>
                   );
-                })}
+                })
+                ) : (
+                  <div className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}>
+                    <BookOpen className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`} />
+                    <p className={`text-sm font-medium ${theme.textSec}`}>暫無參考指南</p>
+                    <p className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}>敬請期待更多內容</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -4525,7 +4583,7 @@ const ItineraryApp = () => {
 
         {/* 3. 商家導覽 (Shops Tab) */}
         {activeTab === "shops" && (
-          <div className="flex-1 px-4 pb-4 space-y-4 animate-fadeIn">
+          <div className="flex-1 px-4 pb-4 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
@@ -4548,17 +4606,28 @@ const ItineraryApp = () => {
               </p>
 
               <div className="space-y-3">
-                {shopGuideData.map((areaData, idx) => {
+                {shopGuideData && shopGuideData.length > 0 ? (
+                  shopGuideData.map((areaData, idx) => {
                   const isShopOpen = expandedShops[idx];
                   return (
                     <div
                       key={idx}
-                      className={`backdrop-blur-sm border rounded-2xl shadow-sm transition-colors duration-300 ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
+                      className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
                     >
                       {/* Shop Header - Clickable */}
                       <div
                         className="flex items-center justify-between p-4 cursor-pointer"
                         onClick={() => toggleShop(idx)}
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isShopOpen}
+                        aria-controls={`shop-${idx}-content`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleShop(idx);
+                          }
+                        }}
                       >
                         <div>
                           <h3 className={`text-base font-bold ${theme.accent}`}>
@@ -4581,7 +4650,7 @@ const ItineraryApp = () => {
 
                       {/* Collapsible Content */}
                       {isShopOpen && (
-                        <div className="px-5 pb-5 animate-fadeIn">
+                        <div id={`shop-${idx}-content`} className="px-5 pb-5 animate-fadeIn">
                           <p className={`text-sm mb-4 ${theme.textSec}`}>
                             {areaData.desc}
                           </p>
@@ -4727,7 +4796,14 @@ const ItineraryApp = () => {
                       )}
                     </div>
                   );
-                })}
+                })
+                ) : (
+                  <div className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}>
+                    <Store className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`} />
+                    <p className={`text-sm font-medium ${theme.textSec}`}>暫無商家資訊</p>
+                    <p className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}>敬請期待更多內容</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -4735,7 +4811,7 @@ const ItineraryApp = () => {
 
         {/* 4. AI 導遊 (AI Tab) */}
         {activeTab === "ai" && (
-          <div className="flex-1 px-4 pb-4 space-y-4 flex flex-col h-[calc(100vh-130px)] animate-fadeIn">
+          <div className="flex-1 px-4 pb-4 space-y-5 flex flex-col h-[calc(100vh-130px)] animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden max-w-full transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
@@ -4920,7 +4996,7 @@ const ItineraryApp = () => {
 
         {/* 5. 實用連結 (Resources Tab) */}
         {activeTab === "resources" && (
-          <div className="flex-1 px-4 pb-4 space-y-4 animate-fadeIn">
+          <div className="flex-1 px-4 pb-4 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 shadow-xl min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
@@ -4938,7 +5014,8 @@ const ItineraryApp = () => {
               </h2>
 
               <div className="space-y-4">
-                {usefulLinks.map((section, idx) => (
+                {usefulLinks && usefulLinks.length > 0 ? (
+                  usefulLinks.map((section, idx) => (
                   <div key={idx}>
                     <h3
                       className={`text-xs font-bold mb-2.5 px-3 py-1.5 rounded-lg w-fit border ${isDarkMode ? "text-blue-300 bg-blue-900/20 border-blue-800/30" : "text-[#3B5998] bg-[#E8F0FE] border-blue-100"}`}
@@ -4976,7 +5053,14 @@ const ItineraryApp = () => {
                       ))}
                     </div>
                   </div>
-                ))}
+                ))
+                ) : (
+                  <div className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}>
+                    <LinkIcon className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`} />
+                    <p className={`text-sm font-medium ${theme.textSec}`}>暫無實用連結</p>
+                    <p className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}>敬請期待更多內容</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
