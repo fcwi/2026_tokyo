@@ -249,7 +249,7 @@ const SkyObjects = ({ isDay, condition }) => {
     background: isDay ? "#f1c40f" : "transparent",
     boxShadow: isDay
       ? "0 0 60px #f39c12" // 白天太陽光暈
-      : "-30px 10px 0 0 #f5f6fa, -30px 10px 25px 5px rgba(245, 246, 250, 0.4)", // 夜晚月亮
+      : "-30px 10px 0 0 #f5f6fa, -30px 10px 15px 2px rgba(245, 246, 250, 0.4)", // 夜晚月亮
     transform: showCelestial
       ? isDay
         ? "scale(1)"
