@@ -3332,7 +3332,7 @@ const ItineraryApp = () => {
                                 className={`text-xs font-medium mt-0.5 ${theme.textSec}`}
                               >
                                 {userWeather.temp !== null
-                                  ? `H:${userWeather.temp + 4}°  L:${userWeather.temp - 2}°`
+                                  ? `高溫:${userWeather.temp + 4}°  低溫:${userWeather.temp - 2}°`
                                   : ""}
                               </span>
                             </div>
