@@ -709,8 +709,8 @@ const ItineraryApp = () => {
 
     // 🌟 卡片質感：夜間改為較亮的深灰玻璃
     cardBg: isDarkMode
-      ? `bg-[#262626]/60 backdrop-blur-xl backdrop-saturate-150 border-white/10`
-      : `bg-white/60 backdrop-blur-xl backdrop-saturate-150 border-white/40`,
+      ? `bg-[#262626]/85 backdrop-blur-md backdrop-saturate-150 border-white/10 transform-gpu`
+      : `bg-white/80 backdrop-blur-md backdrop-saturate-150 border-white/40 transform-gpu`,
 
     // 邊框
     cardBorder: isDarkMode ? `border-white/10` : `border-${cBase}-200/50`,
@@ -880,14 +880,16 @@ const ItineraryApp = () => {
       width: "100%",
       // 強制啟用硬體加速，減少閃爍與延遲
       z: 0,
-      willChange: "transform, opacity",
+      // willChange: "transform, opacity",
     }),
     center: {
       x: 0,
       opacity: 1,
       position: "relative",
+      z: 0,
+      zIndex: 1,
       transition: {
-        duration: 0.25, // 稍微增加一點點時間，讓動畫更滑順
+        duration: 0.35, // 稍微增加一點點時間，讓動畫更滑順
         ease: [0.23, 1, 0.32, 1], // 使用自訂 bezier 曲線（更具回彈感的減速）
       },
     },
@@ -3164,63 +3166,69 @@ if (isDayTime) {
                     exit="exit"
                     className="space-y-4"
                   >
-                    {/* === 總覽頁面：天氣與預報卡片 === */}
-                    <div className={`backdrop-blur-xl border rounded-[2rem] p-5 ${theme.cardShadow} transition-colors duration-300 relative overflow-hidden ${theme.cardBg} ${theme.cardBorder}`}>
+
+                    {/* === 總覽頁面：天氣與預報卡片 (放大字體與緊湊版) === */}
+                    <div className={`backdrop-blur-xl border rounded-[1.5rem] p-4 ${theme.cardShadow} transition-colors duration-300 relative overflow-hidden ${theme.cardBg} ${theme.cardBorder}`}>
                         
                         {/* 上半部：目前天氣與地點 */}
-                        <div className="flex justify-between items-start mb-6">
-                            {/* 左側：大溫度與地點 */}
-                            <div>
-                                <div className={`flex items-center gap-1.5 text-xs font-bold mb-1 uppercase tracking-wide ${theme.textSec}`}>
-                                    <LocateFixed className={`w-3.5 h-3.5 ${theme.accent}`} /> {userWeather.locationName}
+                        <div className="flex justify-between items-center mb-3">
+                            {/* 左側：水平排列的溫度與資訊 */}
+                            <div className="flex items-center gap-4">
+                                {/* 1. 大溫度 (保持 5xl 但稍微加粗) */}
+                                <div className={`text-5xl font-medium tracking-tighter ${theme.text}`}>
+                                    {userWeather.temp !== null ? userWeather.temp : '--'}°
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <div className={`text-6xl font-thin tracking-tighter ${theme.text}`}>
-                                        {userWeather.temp !== null ? userWeather.temp : '--'}°
+                                
+                                {/* 2. 資訊堆疊 (字體全面放大) */}
+                                <div className="flex flex-col justify-center gap-0.5">
+                                    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide opacity-90 ${theme.textSec}`}>
+                                        <LocateFixed className={`w-3.5 h-3.5 ${theme.accent}`} /> {userWeather.locationName}
                                     </div>
-                                    <div className="flex flex-col justify-center">
-                                        <div className={`text-lg font-medium ${theme.text}`}>
+                                    {/* 天氣狀況與高低溫 */}
+                                    <div className="flex flex-col">
+                                        <span className={`text-base font-bold leading-tight ${theme.text}`}>
                                             {userWeather.desc || "載入中"}
-                                        </div>
-                                        <div className={`text-xs ${theme.textSec}`}>
-                                            {userWeather.temp !== null ? `最高: ${userWeather.temp + 4}° 最低: ${userWeather.temp - 2}°` : ''}
-                                        </div>
+                                        </span>
+                                        <span className={`text-xs font-medium mt-0.5 ${theme.textSec}`}>
+                                            {userWeather.temp !== null ? `H:${userWeather.temp + 4}°  L:${userWeather.temp - 2}°` : ''}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* 右側：更新按鈕 (縮小並置頂) */}
+                            {/* 右側：更新按鈕 */}
                             <button
                                 onClick={() => getUserLocationWeather({ isSilent: false, highAccuracy: false })}
                                 disabled={isUpdatingLocation}
-                                className={`p-2 rounded-full border transition-all active:scale-95 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
+                                className={`p-2 rounded-full border transition-all active:scale-95 flex-shrink-0 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
                             >
                                 {isUpdatingLocation ? <Loader className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
                             </button>
                         </div>
 
-                        {/* 中間：每 3 小時預報 (Glass Strip) */}
-                        {/* 邏輯：從現在開始，每 3 小時取一筆，共 5 筆 */}
-                        <div className={`w-full overflow-x-auto pb-2 mb-4 scrollbar-hide`}>
-                            <div className="flex justify-between min-w-[300px] gap-2">
+                        {/* 中間：每 3 小時預報 (圖示放大 + 排列緊密) */}
+                        <div className={`w-full overflow-x-auto pb-1 mb-1 scrollbar-hide`}>
+                            {/* min-w 改小，讓內容自然靠攏 */}
+                            <div className="flex justify-between items-center min-w-[260px] px-1">
                                 {[0, 3, 6, 9, 12].map((offset, i) => {
                                     const currentHour = new Date().getHours();
                                     const targetIndex = currentHour + offset;
-                                    
-                                    // 取得對應時間的資料 (若無 hourly 資料則顯示 --)
                                     const hourDataTemp = userWeather.hourly?.temperature_2m?.[targetIndex];
                                     const hourDataCode = userWeather.hourly?.weathercode?.[targetIndex];
-                                    
-                                    // 時間標籤
                                     let timeLabel = i === 0 ? "現在" : `${(currentHour + offset) % 24}時`;
-                                    
-                                    // 圖示
                                     const icon = hourDataCode !== undefined ? getWeatherInfo(hourDataCode).icon : <Loader className="w-4 h-4 animate-spin opacity-50"/>;
 
                                     return (
-                                        <div key={i} className="flex flex-col items-center gap-2 min-w-[50px]">
-                                            <span className={`text-[10px] font-medium opacity-70 ${theme.textSec}`}>{timeLabel}</span>
-                                            <div className="scale-90">{icon}</div>
+                                        <div key={i} className="flex flex-col items-center gap-1.5 min-w-[48px] p-1 rounded-xl hover:bg-black/5 transition-colors group">
+                                            {/* 時間：稍微放大 */}
+                                            <span className={`text-[10px] font-bold opacity-70 group-hover:opacity-100 ${theme.textSec}`}>{timeLabel}</span>
+                                            
+                                            {/* 圖示：移除縮放，恢復 100% 大小，視覺更飽滿 */}
+                                            <div className="transform transition-transform group-hover:scale-110 drop-shadow-sm">
+                                                {icon}
+                                            </div>
+                                            
+                                            {/* 溫度：放大為 text-sm 並加粗 */}
                                             <span className={`text-sm font-bold ${theme.text}`}>
                                                 {hourDataTemp !== undefined ? `${Math.round(hourDataTemp)}°` : '--'}
                                             </span>
@@ -3230,132 +3238,91 @@ if (isDayTime) {
                             </div>
                         </div>
 
-                        {/* 下半部：穿衣提醒與溫差比較 (整合) */}
-                        <div className={`mt-2 pt-3 border-t flex flex-col gap-2 ${isDarkMode ? "border-white/10" : "border-black/5"}`}>
-                            {/* 溫差比較邏輯 (保持原有邏輯) */}
-                            {userWeather.temp !== null && (() => {
-                                const targetDayIndex = tripStatus === "during" ? currentTripDayIndex + 1 : 0;
-                                if (targetDayIndex < 0 || targetDayIndex >= itineraryData.length) return null;
+                        {/* 下半部：智慧行程預報 (動態地名 + 介面置中優化版) */}
+                        <div className={`mt-2 pt-2.5 border-t flex flex-col justify-center min-h-[36px] ${isDarkMode ? "border-white/15" : "border-black/5"}`}>
+                            {userWeather.temp !== null ? (() => {
+                                // 1. 決定比較對象
+                                let targetDayIndex = 0;
+                                let targetName = "抵達首站";
+                                
+                                if (tripStatus === "during") {
+                                    if (currentTripDayIndex >= itineraryData.length - 1) {
+                                        return <p className={`text-xs text-center opacity-70 ${theme.textSec}`}>旅程即將圓滿結束 ✨</p>;
+                                    }
+                                    targetDayIndex = currentTripDayIndex + 1;
+                                    targetName = "明天";
+                                } else if (tripStatus === "before") {
+                                    targetDayIndex = 0;
+                                    // ✅ 修改 1：動態抓取第一天的地點名稱 (如：輕井澤)
+                                    const firstLocKey = getDailyLocation(0);
+                                    const locObj = tripConfig.locations.find(l => l.key === firstLocKey);
+                                    targetName = locObj ? locObj.name : "首站";
+                                } else {
+                                    return <p className={`text-xs text-center opacity-70 ${theme.textSec}`}>旅程已結束</p>;
+                                }
+
+                                // 2. 取得資料
                                 const targetLoc = getDailyLocation(targetDayIndex);
                                 const forecast = weatherForecast[targetLoc];
-                                if (!forecast || !forecast.temperature_2m_max) return null;
                                 
+                                if (!forecast || !forecast.temperature_2m_max) {
+                                    return <p className={`text-xs text-center opacity-70 ${theme.textSec}`}>正在分析目的地天氣...</p>;
+                                }
+
                                 const destMax = forecast.temperature_2m_max[targetDayIndex];
                                 const destMin = forecast.temperature_2m_min[targetDayIndex];
                                 const destAvg = (destMax + destMin) / 2;
-                                const tempDiff = Math.abs(destAvg - userWeather.temp);
-                                const isColder = destAvg < userWeather.temp;
+                                const destCode = forecast.weathercode[targetDayIndex];
+                                
+                                // 3. 計算差異 (已移除未使用的 isHotter)
+                                const diff = destAvg - userWeather.temp;
+                                const absDiff = Math.abs(diff).toFixed(0);
+                                const isColder = diff < 0;
+                                const weatherInfo = getWeatherData(destCode);
 
-                                if (tempDiff >= 5) { // 稍微降低門檻，讓它更容易顯示
-                                    return (
-                                        <div className={`text-xs flex items-center gap-2 ${isColder ? "text-sky-400" : "text-orange-400"}`}>
-                                            <AlertCircle className="w-3.5 h-3.5" />
-                                            <span>{tripStatus === "during" ? "明天" : "目的地"}比現在{isColder ? "冷" : "熱"} {tempDiff.toFixed(0)}°C</span>
-                                        </div>
-                                    );
+                                // 4. 生成智慧建議文案
+                                let advicePart = "";
+                                const isRainy = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(destCode);
+                                const isSnowy = [71, 73, 75, 77, 85, 86].includes(destCode);
+
+                                if (Math.abs(diff) < 2) {
+                                    advicePart = "溫差不大，穿著可參考目前";
+                                } else if (isColder) {
+                                    advicePart = "請加強保暖";
+                                } else {
+                                    advicePart = "建議穿著輕便";
                                 }
-                                return null;
-                            })()}
 
-                            {/* 靜態建議 */}
-                            <p className={`text-xs leading-relaxed opacity-80 ${theme.textSec}`}>
-                                {userWeather.error ? "無法獲取天氣資訊" : "建議洋蔥式穿搭，並隨身攜帶雨具以備不時之需。"}
-                            </p>
+                                if (isRainy) advicePart += "並攜帶雨具";
+                                else if (isSnowy) advicePart += "並穿著防滑鞋";
+                                
+                                // 5. 渲染 UI
+                                return (
+                                    // ✅ 修改 2：改用 items-center 讓標籤與文字垂直置中，視覺更整齊
+                                    <div className="flex items-center gap-2.5 animate-fadeIn">
+                                        {/* 左側標籤：移除了 mt-0.5，讓 flexbox 自動置中 */}
+                                        <div className={`px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap tracking-wide ${isDarkMode ? "bg-white/10 text-neutral-300" : "bg-black/5 text-stone-600"}`}>
+                                            {targetName}
+                                        </div>
+                                        
+                                        {/* 右側：整合資訊 */}
+                                        <p className={`text-xs leading-relaxed font-medium ${theme.textSec}`}>
+                                            天氣為<span className={`font-bold mx-0.5 ${theme.text}`}>{weatherInfo.text}</span>，
+                                            氣溫比目前{isColder ? "低" : "高"}
+                                            <span className={`mx-0.5 font-bold ${isColder ? "text-sky-400" : "text-orange-400"}`}>
+                                                {absDiff}°C
+                                            </span>，
+                                            {advicePart}。
+                                        </p>
+                                    </div>
+                                );
+                            })() : (
+                                <p className={`text-xs text-center opacity-70 ${theme.textSec}`}>
+                                    <Loader className="w-3 h-3 inline mr-1 animate-spin"/>
+                                    定位中，稍後將為您比對溫差...
+                                </p>
+                            )}
                         </div>
-                    </div>
-                    <div className={`backdrop-blur-xl border rounded-[1.5rem] p-3.5 ${theme.cardShadow} transition-colors duration-300 relative overflow-hidden ${theme.cardBg} ${theme.cardBorder}`}>
-    
-    {/* 上半部：目前天氣與地點 (緊湊佈局) */}
-    <div className="flex justify-between items-center mb-2">
-        {/* 左側：水平排列的溫度與資訊 */}
-        <div className="flex items-center gap-3">
-            {/* 1. 大溫度 (縮小為 5xl) */}
-            <div className={`text-5xl font-thin tracking-tighter ${theme.text}`}>
-                {userWeather.temp !== null ? userWeather.temp : '--'}°
-            </div>
-            
-            {/* 2. 資訊堆疊 (地點/描述/高低溫) */}
-            <div className="flex flex-col justify-center gap-0.5">
-                <div className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide opacity-80 ${theme.textSec}`}>
-                    <LocateFixed className={`w-3 h-3 ${theme.accent}`} /> {userWeather.locationName}
-                </div>
-                <div className="flex items-baseline gap-2">
-                    <span className={`text-sm font-medium ${theme.text}`}>
-                        {userWeather.desc || "載入中"}
-                    </span>
-                    <span className={`text-[10px] ${theme.textSec}`}>
-                        {userWeather.temp !== null ? `H:${userWeather.temp + 4}° L:${userWeather.temp - 2}°` : ''}
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        {/* 右側：更新按鈕 (保持原樣但微調位置) */}
-        <button
-            onClick={() => getUserLocationWeather({ isSilent: false, highAccuracy: false })}
-            disabled={isUpdatingLocation}
-            className={`p-1.5 rounded-full border transition-all active:scale-95 flex-shrink-0 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
-        >
-            {isUpdatingLocation ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-        </button>
-    </div>
-
-    {/* 中間：每 3 小時預報 (緊湊版) */}
-    <div className={`w-full overflow-x-auto pb-1 mb-2 scrollbar-hide`}>
-        <div className="flex justify-between min-w-[280px] gap-1">
-            {[0, 3, 6, 9, 12].map((offset, i) => {
-                const currentHour = new Date().getHours();
-                const targetIndex = currentHour + offset;
-                const hourDataTemp = userWeather.hourly?.temperature_2m?.[targetIndex];
-                const hourDataCode = userWeather.hourly?.weathercode?.[targetIndex];
-                let timeLabel = i === 0 ? "現在" : `${(currentHour + offset) % 24}時`;
-                const icon = hourDataCode !== undefined ? getWeatherInfo(hourDataCode).icon : <Loader className="w-3 h-3 animate-spin opacity-50"/>;
-
-                return (
-                    <div key={i} className="flex flex-col items-center gap-1 min-w-[45px] px-1 py-1 rounded-lg hover:bg-black/5 transition-colors">
-                        <span className={`text-[9px] font-medium opacity-70 ${theme.textSec}`}>{timeLabel}</span>
-                        {/* 圖示縮放為 0.75 */}
-                        <div className="scale-75 origin-center transform -my-1">{icon}</div>
-                        <span className={`text-xs font-bold ${theme.text}`}>
-                            {hourDataTemp !== undefined ? `${Math.round(hourDataTemp)}°` : '--'}
-                        </span>
-                    </div>
-                );
-            })}
-        </div>
-    </div>
-
-    {/* 下半部：穿衣提醒 (緊湊版：字體縮小、間距減少) */}
-    <div className={`mt-1 pt-2 border-t flex items-center justify-between gap-2 ${isDarkMode ? "border-white/10" : "border-black/5"}`}>
-        {/* 靜態建議 */}
-        <p className={`text-[10px] leading-tight opacity-80 ${theme.textSec} truncate flex-1`}>
-            {userWeather.error ? "無法獲取資訊" : "建議洋蔥式穿搭，隨身攜帶雨具。"}
-        </p>
-
-        {/* 溫差比較 (如果有的話顯示在右側) */}
-        {userWeather.temp !== null && (() => {
-            const targetDayIndex = tripStatus === "during" ? currentTripDayIndex + 1 : 0;
-            if (targetDayIndex < 0 || targetDayIndex >= itineraryData.length) return null;
-            const targetLoc = getDailyLocation(targetDayIndex);
-            const forecast = weatherForecast[targetLoc];
-            if (!forecast || !forecast.temperature_2m_max) return null;
-            
-            const destMax = forecast.temperature_2m_max[targetDayIndex];
-            const destMin = forecast.temperature_2m_min[targetDayIndex];
-            const destAvg = (destMax + destMin) / 2;
-            const tempDiff = Math.abs(destAvg - userWeather.temp);
-            const isColder = destAvg < userWeather.temp;
-
-            if (tempDiff >= 3) {
-                return (
-                    <div className={`text-[10px] flex items-center gap-1 font-bold whitespace-nowrap ${isColder ? "text-sky-400" : "text-orange-400"}`}>
-                        <span>{tripStatus === "during" ? "明天" : "當地"}{isColder ? "冷" : "熱"}{tempDiff.toFixed(0)}°</span>
-                    </div>
-                );
-            }
-            return null;
-        })()}
-    </div>
                     </div>
 
                     {/* 2. Flight & Emergency Info */}
