@@ -4062,36 +4062,24 @@ const ItineraryApp = () => {
                               </span>
                             </div>
                             <h2
-                              className={`text-2xl font-extrabold mb-3 leading-tight drop-shadow-sm ${theme.text}`}
+                              className={`text-2xl font-extrabold mb-2 leading-tight drop-shadow-sm ${theme.text}`}
                             >
                               {current.title}
                             </h2>
 
-                            {/* Hotel Link Block */}
-                            <div
-                              className={`flex items-start gap-2 text-xs p-3 rounded-xl border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700 text-neutral-300" : "bg-blue-50/30 border-blue-100/50 text-stone-600"}`}
-                            >
-                              <Hotel
-                                className={`w-4 h-4 mt-0.5 flex-shrink-0 ${theme.accent}`}
-                              />
-
-                              {current.stay.includes("溫暖的家") ? (
-                                <span className="font-medium leading-relaxed tracking-wide">
-                                  {current.stay}
-                                </span>
-                              ) : (
+                            {/* Hotel Info Inline */}
+                            {!current.stay.includes("溫暖的家") && (
+                              <div className={`text-xs font-medium flex items-center gap-1.5 mt-2 ${theme.textSec}`}>
+                                <Hotel className={`w-3.5 h-3.5 ${theme.accent}`} />
                                 <a
                                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.stay.split("(")[0])}`}
-                                  // target="_blank"
-                                  // rel="noopener noreferrer"
-                                  className={`font-medium leading-relaxed tracking-wide hover:underline underline-offset-4 decoration-2 flex items-center gap-1 ${isDarkMode ? "decoration-sky-400 hover:text-sky-300" : "decoration-[#5D737E] hover:text-[#3B5998]"}`}
+                                  className={`hover:underline underline-offset-2 ${isDarkMode ? "hover:text-sky-300" : "hover:text-[#5D737E]"}`}
                                   title="在 Google Maps 開啟導航"
                                 >
                                   {current.stay}
-                                  <ExternalLink className="w-3 h-3 opacity-60" />
                                 </a>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Timeline Events */}
