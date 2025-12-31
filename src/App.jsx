@@ -31,8 +31,7 @@ import {
   Map,
   BookOpen,
   FileText,
-  Maximize,
-  Minimize,
+  Calculator,
   Sparkles,
   Languages,
   Send,
@@ -82,6 +81,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import ChatInput from "./components/ChatInput.jsx";
 import CurrencyWidget from "./components/CurrencyWidget.jsx";
+import CalculatorModal from "./components/CalculatorModal.jsx";
 
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
@@ -458,19 +458,27 @@ const ItineraryApp = () => {
     return !!cached; // 有快取為 true，無快取為 false（顯示啟動畫面）
   });
 
-  // --- Full Screen Logic ---
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // --- 裝置與匯率狀態 ---
   const [isMobile, setIsMobile] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [rateData, setRateData] = useState({
+    current: null,
+    trend: "neutral",
+    diff: 0,
+    loading: true,
+    error: false,
+  });
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const { code, target } = tripConfig.currency;
 
   // 1. 偵測是否為手機裝置
   useEffect(() => {
     const checkMobile = () => {
       const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-      // 簡單判斷：如果是 Android 或 iOS
       if (/android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent)) {
         setIsMobile(true);
       } else {
-        setIsMobile(window.innerWidth < 768); // 或者用寬度判斷
+        setIsMobile(window.innerWidth < 768);
       }
     };
     checkMobile();
@@ -478,46 +486,68 @@ const ItineraryApp = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // 2. 監聽全螢幕狀態改變 (避免使用者用手機原生手勢退出後，按鈕狀態沒變)
+  // 2. 監聽網路狀態，與匯率 UI 共用
   useEffect(() => {
-    const handleFsChange = () => {
-      const isFs =
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.mozFullScreenElement ||
-        document.msFullscreenElement;
-      setIsFullscreen(!!isFs);
-    };
-    document.addEventListener("fullscreenchange", handleFsChange);
-    document.addEventListener("webkitfullscreenchange", handleFsChange); // iOS/Safari
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
     return () => {
-      document.removeEventListener("fullscreenchange", handleFsChange);
-      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
-  // 3. 切換全螢幕函式
-  const toggleFullScreen = async () => {
-    const doc = document.documentElement;
-    // 進入全螢幕
-    if (!isFullscreen) {
+  // 3. 匯率抓取：集中在 App 供匯率元件與計算機共用
+  useEffect(() => {
+    if (!isOnline) {
+      setRateData((prev) => ({ ...prev, loading: false }));
+      return;
+    }
+
+    setRateData((prev) => ({ ...prev, loading: true, error: false }));
+
+    const fetchRates = async () => {
       try {
-        if (doc.requestFullscreen) await doc.requestFullscreen();
-        else if (doc.webkitRequestFullscreen)
-          await doc.webkitRequestFullscreen(); // Safari
-        else if (doc.msRequestFullscreen) await doc.msRequestFullscreen(); // IE11
+        const nowRes = await fetch(
+          `https://latest.currency-api.pages.dev/v1/currencies/${code}.json`,
+        );
+        const nowData = await nowRes.json();
+        const currentRate = nowData[code][target.toLowerCase()];
+
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - 7);
+        const dateStr = pastDate.toISOString().split("T")[0];
+
+        const pastRes = await fetch(
+          `https://try.readme.io/https://${dateStr}.currency-api.pages.dev/v1/currencies/${code}.json`,
+        );
+        let pastRate = currentRate;
+        if (pastRes.ok) {
+          const pastData = await pastRes.json();
+          pastRate = pastData[code][target.toLowerCase()];
+        }
+
+        const diff = currentRate - pastRate;
+        let trend = "neutral";
+        if (diff > 0.0001) trend = "up";
+        if (diff < -0.0001) trend = "down";
+
+        setRateData({
+          current: currentRate,
+          trend,
+          diff,
+          loading: false,
+          error: false,
+        });
       } catch (err) {
-        console.error("全螢幕切換失敗:", err);
-        // iOS Safari 通常不支援 DOM 全螢幕，這裡可以選擇跳提示或忽略
+        console.error("匯率抓取失敗:", err);
+        setRateData((prev) => ({ ...prev, loading: false, error: true }));
       }
-    }
-    // 離開全螢幕
-    else {
-      if (document.exitFullscreen) await document.exitFullscreen();
-      else if (document.webkitExitFullscreen)
-        await document.webkitExitFullscreen();
-    }
-  };
+    };
+
+    fetchRates();
+  }, [code, target, isOnline]);
 
   // 加密工具用的 State
   const [toolKey, setToolKey] = useState("");
@@ -873,11 +903,6 @@ const ItineraryApp = () => {
   const handleAuthSubmit = (e) => {
     e.preventDefault();
     attemptUnlock(password);
-
-    // 手機解鎖時嘗試進入全螢幕
-    if (isMobile) {
-      toggleFullScreen();
-    }
   };
 
   const generateEncryptedString = async () => {
@@ -3209,7 +3234,12 @@ const ItineraryApp = () => {
             </div>
 
             {/* 第二排：匯率資訊 */}
-            <CurrencyWidget isDarkMode={isDarkMode} theme={theme} />
+            <CurrencyWidget
+              isDarkMode={isDarkMode}
+              theme={theme}
+              rateData={rateData}
+              isOnline={isOnline}
+            />
           </div>
         </div>
 
@@ -5129,26 +5159,30 @@ const ItineraryApp = () => {
           )}
         </button>
 
-        {/* 🆕 全螢幕按鈕 (修正位置：剛好在分享按鈕上方 1rem 處) */}
+        {/* 🆕 計算機按鈕：取代全螢幕切換 */}
         {isMobile && (
           <button
-            onClick={toggleFullScreen}
-            // 修改這裡：將 bottom-xx 改為 bottom-[19rem]
+            onClick={() => setIsCalculatorOpen(true)}
             className={`fixed bottom-[19rem] right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100
               ${
                 isDarkMode
-                  ? "bg-neutral-800/40 border-neutral-600 text-neutral-300 hover:bg-neutral-800/90"
+                  ? "bg-neutral-800/40 border-neutral-600 text-neutral-200 hover:bg-neutral-800/90"
                   : "bg-white/40 border-stone-200 text-[#5D737E] hover:bg-white/90"
               }`}
-            aria-label="切換全螢幕"
+            aria-label="開啟計算機"
           >
-            {isFullscreen ? (
-              <Minimize className="w-6 h-6" />
-            ) : (
-              <Maximize className="w-6 h-6" />
-            )}
+            <Calculator className="w-6 h-6" />
           </button>
         )}
+
+        <CalculatorModal
+          isOpen={isCalculatorOpen}
+          onClose={() => setIsCalculatorOpen(false)}
+          isDarkMode={isDarkMode}
+          rateData={rateData}
+          currencyCode={tripConfig.currency.code}
+          currencyTarget={tripConfig.currency.target}
+        />
 
         {/* Toast Notification */}
         {toast.show && (
