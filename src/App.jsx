@@ -82,6 +82,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ChatInput from "./components/ChatInput.jsx";
 import CurrencyWidget from "./components/CurrencyWidget.jsx";
 import CalculatorModal from "./components/CalculatorModal.jsx";
+import TestModePanel from "./components/TestModePanel.jsx";
 
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
@@ -1046,6 +1047,12 @@ const ItineraryApp = () => {
     // 2. 是純粹的水平滑動嗎？ (absX > absY * slopeThreshold)
     //    如果 absY (垂直移動) 很大，代表使用者正在捲動網頁，這裡就會回傳 false，避免誤觸。
     if (absX > minSwipeDistance && absX > absY * slopeThreshold) {
+      // 🆕 測試模式：滑動會重置計數
+      if (testModeClickCount > 0) {
+        setTestModeClickCount(0);
+        showToast("連續點擊計數已重置，請重新開始", "info");
+      }
+
       // 判斷方向
       if (distanceX > 0) {
         // 往左滑 (手指由右向左) -> 下一頁
@@ -1216,6 +1223,47 @@ const ItineraryApp = () => {
 
   // 目前使用者主動更新位置的 loading 狀態（用於更新按鈕）
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+
+  // --- 🆕 測試模式相關狀態 ---
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [testModeClickCount, setTestModeClickCount] = useState(0);
+  const [testDateTime, setTestDateTime] = useState(new Date());
+  const [testLatitude, setTestLatitude] = useState(35.4437); // 輕井澤預設座標
+  const [testLongitude, setTestLongitude] = useState(138.3919);
+  const [testWeatherOverride, setTestWeatherOverride] = useState({
+    overview: null,
+    days: {}, // 例如: { 0: 0, 1: 71, ...}
+  });
+  // 🆕 測試設定鎖定機制：防止其他操作覆蓋測試設定
+  const [frozenTestDateTime, setFrozenTestDateTime] = useState(null);
+  const [frozenTestWeatherOverride, setFrozenTestWeatherOverride] = useState(null);
+
+  // 🆕 凍結/解凍測試設定的邏輯
+  const freezeTestSettings = () => {
+    setFrozenTestDateTime(new Date(testDateTime));
+    setFrozenTestWeatherOverride(JSON.parse(JSON.stringify(testWeatherOverride)));
+    console.log(`🔒 凍結測試設定 - dateTime=${testDateTime.toLocaleString('zh-TW')}, weather=`, testWeatherOverride);
+    showToast("✅ 測試設定已凍結，不會被覆蓋", "success");
+  };
+
+  const unfreezeTestSettings = () => {
+    setFrozenTestDateTime(null);
+    setFrozenTestWeatherOverride(null);
+    console.log(`🔓 解凍測試設定`);
+    showToast("測試設定已解凍", "success");
+  };
+
+  // 🆕 測試模式時，根據 testDateTime 更新日夜模式
+  useEffect(() => {
+    if (isTestMode) {
+      const hour = testDateTime.getHours();
+      if (hour >= 17 || hour < 6) {
+        setIsDarkMode(true);
+      } else {
+        setIsDarkMode(false);
+      }
+    }
+  }, [isTestMode, testDateTime]);
 
   // --- 🆕 API 中止控制器（AbortController）---
   // 用於中止長期 API 調用，避免卸載後的狀態更新
@@ -1470,26 +1518,39 @@ const ItineraryApp = () => {
     return itineraryData[dayIndex].locationKey || tripConfig.locations[0].key;
   };
 
-  // --- Trip Date Logic ---
-  const tripStartDate = new Date(tripConfig.startDate);
-  const tripEndDate = new Date(tripConfig.endDate);
-  const today = new Date();
+  // --- Trip Date Logic (🆕 支援測試模式) ---
+  // 🆕 使用 useMemo 確保當測試時間改變時會重新計算
+  const { tripStatus, daysUntilTrip, currentTripDayIndex } = React.useMemo(() => {
+    const tripStartDate = new Date(tripConfig.startDate);
+    const tripEndDate = new Date(tripConfig.endDate);
+    // 🆕 測試模式：優先使用凍結的時間，否則使用 testDateTime，最後才用當前時間
+    const displayDateTime = frozenTestDateTime || (isTestMode ? testDateTime : new Date());
+    
+    console.log(`🧪 行程狀態計算 - isTestMode=${isTestMode}, isFrozen=${!!frozenTestDateTime}, displayDateTime=${displayDateTime.toLocaleString('zh-TW')}`);
 
-  let tripStatus = "before"; // 'before', 'during', 'after'
-  let daysUntilTrip = 0;
-  let currentTripDayIndex = -1;
+    let calculatedTripStatus = "before"; // 'before', 'during', 'after'
+    let calculatedDaysUntilTrip = 0;
+    let calculatedCurrentTripDayIndex = -1;
 
-  if (today < tripStartDate) {
-    tripStatus = "before";
-    const diffTime = Math.abs(tripStartDate - today);
-    daysUntilTrip = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  } else if (today >= tripStartDate && today <= tripEndDate) {
-    tripStatus = "during";
-    const diffTime = Math.abs(today - tripStartDate);
-    currentTripDayIndex = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  } else {
-    tripStatus = "after";
-  }
+    if (displayDateTime < tripStartDate) {
+      calculatedTripStatus = "before";
+      const diffTime = Math.abs(tripStartDate - displayDateTime);
+      calculatedDaysUntilTrip = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } else if (displayDateTime >= tripStartDate && displayDateTime <= tripEndDate) {
+      calculatedTripStatus = "during";
+      const diffTime = Math.abs(displayDateTime - tripStartDate);
+      calculatedCurrentTripDayIndex = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      console.log(`🧪 正在行程中 - currentTripDayIndex=${calculatedCurrentTripDayIndex}`);
+    } else {
+      calculatedTripStatus = "after";
+    }
+
+    return {
+      tripStatus: calculatedTripStatus,
+      daysUntilTrip: calculatedDaysUntilTrip,
+      currentTripDayIndex: calculatedCurrentTripDayIndex,
+    };
+  }, [isTestMode, testDateTime, frozenTestDateTime]);
 
   // --- User Location Weather Logic (平時只用 OSM，節省額度) ---
   const getUserLocationWeather = React.useCallback(
@@ -2653,6 +2714,47 @@ const ItineraryApp = () => {
     }
   };
 
+  // --- 🆕 測試模式相關函式 ---
+  const handleTitleClick = () => {
+    // 靜默計數，不顯示提示
+    if (testModeClickCount === 0) {
+      // 開始新一輪計數
+      setTestModeClickCount(1);
+    } else if (testModeClickCount < 9) {
+      setTestModeClickCount(testModeClickCount + 1);
+    } else if (testModeClickCount === 9) {
+      // 達到 10 次時才顯示提示
+      setTestModeClickCount(10);
+      showToast("🩷", "success");
+    }
+  };
+
+  const handleInterruptClick = () => {
+    // 任何其他點擊都重置計數
+    if (testModeClickCount > 0) {
+      setTestModeClickCount(0);
+      showToast("連續點擊計數已重置，請重新開始", "info");
+    }
+  };
+
+  const handleLockButtonClick = () => {
+    // 鎖定按鈕的點擊邏輯
+    if (testModeClickCount === 10) {
+      // 進入測試模式 - 重置所有測試變數到當前實際值
+      setTestDateTime(new Date());
+      setTestLatitude(userWeather?.lat || 35.6762);
+      setTestLongitude(userWeather?.lon || 139.6503);
+      setTestWeatherOverride({ overview: null, days: {} });
+      setIsTestMode(true);
+      setTestModeClickCount(0);
+      showToast("🩷 進入測試模式！", "success");
+    } else {
+      // 正常鎖定行程
+      setIsVerified(false);
+      localStorage.removeItem("trip_password");
+    }
+  };
+
   const handleClearChat = () => {
     if (
       window.confirm(
@@ -2672,7 +2774,9 @@ const ItineraryApp = () => {
 
     // 2. 準備時間資訊 (AI 回答時需要)
     const tz = autoTimeZone || tripConfig.timeZone || "Asia/Taipei";
-    const localTimeStr = new Date().toLocaleString("zh-TW", {
+    // 🆕 測試模式：使用 testDateTime
+    const displayTime = isTestMode ? testDateTime : new Date();
+    const localTimeStr = displayTime.toLocaleString("zh-TW", {
       timeZone: tz,
       hour12: false,
     });
@@ -2783,8 +2887,10 @@ const ItineraryApp = () => {
         }
 
         const startDate = new Date(tripConfig.startDate);
+        // 🆕 測試模式：使用 testDateTime
+        const displayTime = isTestMode ? testDateTime : new Date();
         const today = new Date(
-          new Date().toLocaleString("en-US", { timeZone: tz }),
+          displayTime.toLocaleString("en-US", { timeZone: tz }),
         );
         const diffTime = today - startDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
@@ -2861,13 +2967,29 @@ const ItineraryApp = () => {
   const displayWeather = React.useMemo(() => {
     const currentLocation = getDailyLocation(activeDay);
     const weatherData = weatherForecast[currentLocation];
+    // 🆕 優先使用凍結的天氣設定
+    const effectiveWeatherOverride = frozenTestWeatherOverride || testWeatherOverride;
 
     if (!weatherForecast.loading && weatherData) {
       const dayIndex = activeDay === -1 ? 0 : activeDay;
       const forecastIndex = dayIndex < weatherData.time.length ? dayIndex : 0;
       const maxTemp = Math.round(weatherData.temperature_2m_max[forecastIndex]);
       const minTemp = Math.round(weatherData.temperature_2m_min[forecastIndex]);
-      const weatherCode = weatherData.weathercode[forecastIndex];
+      
+      // 🆕 測試模式：使用覆蓋的天氣代碼
+      let weatherCode;
+      if (isTestMode) {
+        if (activeDay === -1) {
+          weatherCode = effectiveWeatherOverride.overview !== null ? effectiveWeatherOverride.overview : weatherData.weathercode[forecastIndex];
+          console.log(`🧪 測試模式總覽天氣：覆蓋=${effectiveWeatherOverride.overview}, 原始=${weatherData.weathercode[forecastIndex]}, 最終=${weatherCode}, isFrozen=${!!frozenTestWeatherOverride}`);
+        } else {
+          weatherCode = effectiveWeatherOverride.days[activeDay] !== undefined ? effectiveWeatherOverride.days[activeDay] : weatherData.weathercode[forecastIndex];
+          console.log(`🧪 測試模式 Day ${activeDay + 1} 天氣：覆蓋=${effectiveWeatherOverride.days[activeDay]}, 原始=${weatherData.weathercode[forecastIndex]}, 最終=${weatherCode}, isFrozen=${!!frozenTestWeatherOverride}`);
+        }
+      } else {
+        weatherCode = weatherData.weathercode[forecastIndex];
+      }
+      
       const info = getWeatherInfo(weatherCode);
 
       return {
@@ -2886,7 +3008,7 @@ const ItineraryApp = () => {
       desc: weatherForecast.loading ? "載入中..." : "無資料",
       advice: weatherForecast.loading ? "請稍候" : "無法取得預報，請稍後再試",
     };
-  }, [activeDay, weatherForecast, getWeatherInfo]);
+  }, [activeDay, weatherForecast, getWeatherInfo, isTestMode, testWeatherOverride, frozenTestWeatherOverride]);
 
   // --- Lock Screen Render ---
   if (!isVerified) {
@@ -3126,8 +3248,22 @@ const ItineraryApp = () => {
   };
 
   // 取得當前應該顯示的天氣代碼 (總覽用 userWeather，行程用 displayWeather)
-  const currentEffectCode =
+  let currentEffectCode =
     activeDay === -1 ? userWeather.weatherCode : displayWeather.code;
+  
+  console.log(`🧪 初始 currentEffectCode=${currentEffectCode}, isTestMode=${isTestMode}, activeDay=${activeDay}, isFrozen=${!!frozenTestWeatherOverride}`);
+  
+  // 🆕 應用天氣覆寫（優先使用凍結設定，不受 isTestMode 影響）
+  const effectiveWeatherOverride = frozenTestWeatherOverride || testWeatherOverride;
+  if (activeDay === -1 && effectiveWeatherOverride.overview !== null) {
+    // 總覽頁面使用 overview 覆蓋
+    currentEffectCode = effectiveWeatherOverride.overview;
+    console.log(`🧪 應用${frozenTestWeatherOverride ? '凍結' : ''}總覽天氣覆蓋: ${currentEffectCode}`);
+  } else if (activeDay >= 0 && effectiveWeatherOverride.days[activeDay] !== undefined) {
+    // 行程頁面使用對應 day 的覆蓋
+    currentEffectCode = effectiveWeatherOverride.days[activeDay];
+    console.log(`🧪 應用${frozenTestWeatherOverride ? '凍結' : ''} Day ${activeDay + 1} 天氣覆蓋: ${currentEffectCode}`);
+  }
   const particleType = getParticleType(currentEffectCode, isDarkMode);
   const skyCondition = getSkyCondition(currentEffectCode);
   const isDayTime = !isDarkMode;
@@ -3212,10 +3348,11 @@ const ItineraryApp = () => {
         {/* 1. items-end: 讓左邊標題卡片與右邊匯率卡片的「底部」對齊 */}
         {/* 2. gap-4: 拉開左右兩邊的距離，創造呼吸感 */}
         <div className="flex justify-between items-end px-4 pt-5 pb-2 relative z-20 gap-4">
-          {/* 左側：標題卡片 */}
+          {/* 左側：標題卡片 - 添加點擊邏輯 */}
           {/* 3. min-w-0: 允許 flex item 縮小，防止破版 */}
           <div
-            className={`px-3 py-2 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 ${theme.cardBg} ${theme.cardBorder}`}
+            className={`px-3 py-2 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 cursor-pointer select-none active:scale-95 ${theme.cardBg} ${theme.cardBorder}`}
+            onClick={handleTitleClick}
           >
             {/* 4. text-base + whitespace-nowrap: 字體改小一點，且強制不換行 */}
             <h1
@@ -3237,19 +3374,27 @@ const ItineraryApp = () => {
             {/* 第一排：功能按鈕 (維持原樣) */}
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setIsVerified(false);
-                  localStorage.removeItem("trip_password");
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLockButtonClick();
                 }}
                 className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
-                title="鎖定行程"
+                title={testModeClickCount === 10 ? "進入測試模式" : "鎖定行程"}
                 aria-label="鎖定或解鎖行程"
               >
-                <Lock className="w-4 h-4 fill-current" />
+                {testModeClickCount === 10 ? (
+                  <Key className="w-4 h-4 fill-current text-pink-500 animate-bounce" />
+                ) : (
+                  <Lock className="w-4 h-4 fill-current" />
+                )}
               </button>
 
               <button
-                onClick={toggleTheme}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleInterruptClick();
+                  toggleTheme();
+                }}
                 className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
                 aria-label={`切換到${isDarkMode ? "亮色" : "深色"}模式`}
                 title={isDarkMode ? "切換為亮色模式" : "切換為深色模式"}
@@ -3425,7 +3570,9 @@ const ItineraryApp = () => {
                         {/* min-w 改小，讓內容自然靠攏 */}
                         <div className="flex justify-between items-center min-w-[260px] px-1">
                           {[0, 3, 6, 9, 12].map((offset, i) => {
-                            const currentHour = new Date().getHours();
+                            // 🆕 測試模式：使用 testDateTime
+                            const displayTime = isTestMode ? new Date(testDateTime) : new Date();
+                            const currentHour = displayTime.getHours();
                             const targetIndex = currentHour + offset;
                             const hourDataTemp =
                               userWeather.hourly?.temperature_2m?.[targetIndex];
@@ -5080,7 +5227,10 @@ const ItineraryApp = () => {
           >
             {/* 1. 行程 (Itinerary) */}
             <button
-              onClick={() => setActiveTab("itinerary")}
+              onClick={() => {
+                handleInterruptClick();
+                setActiveTab("itinerary");
+              }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group backdrop-blur-md border
                 ${
                   activeTab === "itinerary"
@@ -5102,7 +5252,10 @@ const ItineraryApp = () => {
 
             {/* 2. 指南 (Guides) */}
             <button
-              onClick={() => setActiveTab("guides")}
+              onClick={() => {
+                handleInterruptClick();
+                setActiveTab("guides");
+              }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
                   activeTab === "guides"
@@ -5124,7 +5277,10 @@ const ItineraryApp = () => {
 
             {/* 3. AI 核心按鈕 (修正版：使用完整 Class 名稱) */}
             <button
-              onClick={() => setActiveTab("ai")}
+              onClick={() => {
+                handleInterruptClick();
+                setActiveTab("ai");
+              }}
               className={`mx-1 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg backdrop-blur-md active:scale-95 border
                 ${
                   activeTab === "ai"
@@ -5157,7 +5313,10 @@ const ItineraryApp = () => {
 
             {/* 4. 商家 (Shops) */}
             <button
-              onClick={() => setActiveTab("shops")}
+              onClick={() => {
+                handleInterruptClick();
+                setActiveTab("shops");
+              }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
                   activeTab === "shops"
@@ -5179,7 +5338,10 @@ const ItineraryApp = () => {
 
             {/* 5. 連結 (Resources) */}
             <button
-              onClick={() => setActiveTab("resources")}
+              onClick={() => {
+                handleInterruptClick();
+                setActiveTab("resources");
+              }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
                   activeTab === "resources"
@@ -5254,6 +5416,42 @@ const ItineraryApp = () => {
           rateData={rateData}
           currencyCode={tripConfig.currency.code}
           currencyTarget={tripConfig.currency.target}
+        />
+
+        {/* 🆕 測試模式面板 */}
+        <TestModePanel
+          isOpen={isTestMode}
+          onClose={() => setIsTestMode(false)}
+          testDateTime={testDateTime}
+          onDateTimeChange={(newDateTime) => {
+            console.log(`🧪 更新時間: ${testDateTime.toLocaleString('zh-TW')} -> ${newDateTime.toLocaleString('zh-TW')}`);
+            setTestDateTime(newDateTime);
+          }}
+          testLatitude={testLatitude}
+          testLongitude={testLongitude}
+          onLocationChange={(coords) => {
+            console.log(`🧪 更新位置: (${testLatitude}, ${testLongitude}) -> (${coords.lat}, ${coords.lon})`);
+            setTestLatitude(coords.lat);
+            setTestLongitude(coords.lon);
+            // 🆕 在測試模式下，主動抓取新座標的天氣資料
+            getUserLocationWeather({
+              isSilent: false,
+              coords: { latitude: coords.lat, longitude: coords.lon }
+            });
+          }}
+          testWeatherOverride={testWeatherOverride}
+          onWeatherChange={(newOverride) => {
+            console.log(`🧪 更新天氣覆蓋: `, testWeatherOverride, ` -> `, newOverride);
+            setTestWeatherOverride(newOverride);
+          }}
+          theme={theme}
+          isDarkMode={isDarkMode}
+          itineraryData={itineraryData}
+          currentUserWeather={userWeather}
+          // 🔒 凍結相關的 props
+          isFrozen={!!frozenTestDateTime || !!frozenTestWeatherOverride}
+          onFreeze={freezeTestSettings}
+          onUnfreeze={unfreezeTestSettings}
         />
 
         {/* Toast Notification */}
