@@ -9,6 +9,7 @@ import {
   Save,
   RotateCcw,
 } from "lucide-react";
+import MapPicker from "./MapPicker.jsx";
 
 const TestModePanel = ({
   isOpen,
@@ -104,9 +105,9 @@ const TestModePanel = ({
       >
         {/* Header */}
         <div
-          className={`sticky top-0 flex items-center justify-between p-4 border-b ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
+          className={`sticky top-0 flex items-center justify-between p-4 border-b ${isDarkMode ? "border-neutral-700/50 bg-neutral-900/40" : "border-stone-200/50 bg-white/30"} backdrop-blur-sm`}
         >
-          <h2 className={`text-lg font-bold ${theme.text}`}>🧪 測試模式</h2>
+          <h2 className={`text-lg font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}><span>🧪</span><span>測試模式</span></h2>
           <button
             onClick={onClose}
             className={`p-2 rounded-lg transition-colors ${isDarkMode ? "hover:bg-neutral-700" : "hover:bg-stone-200"}`}
@@ -129,7 +130,7 @@ const TestModePanel = ({
         <div className="p-4 space-y-6">
           {/* 1. 日期時間調整 */}
           <div className="space-y-3">
-            <h3 className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}>
+            <h3 className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}>
               <Calendar className="w-4 h-4" /> 日期與時間
             </h3>
             <div className="grid grid-cols-2 gap-3">
@@ -164,7 +165,7 @@ const TestModePanel = ({
 
           {/* 2. 經緯度調整 */}
           <div className="space-y-3">
-            <h3 className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}>
+            <h3 className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}>
               <MapPin className="w-4 h-4" /> 位置座標
             </h3>
             <div className="grid grid-cols-2 gap-3">
@@ -202,11 +203,23 @@ const TestModePanel = ({
                 <div>🧭 {currentUserWeather?.lat?.toFixed(4) || "--"}, {currentUserWeather?.lon?.toFixed(4) || "--"}</div>
               </div>
             </div>
+
+            {/* 🆕 互動式地圖 */}
+            <MapPicker
+              latitude={tempLatitude}
+              longitude={tempLongitude}
+              onLocationChange={(loc) => {
+                setTempLatitude(loc.lat);
+                setTempLongitude(loc.lon);
+              }}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
           </div>
 
           {/* 3. 天氣覆蓋 */}
           <div className="space-y-3">
-            <h3 className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}>
+            <h3 className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}>
               <Cloud className="w-4 h-4" /> 天氣覆蓋
             </h3>
             

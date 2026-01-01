@@ -3536,7 +3536,7 @@ const ItineraryApp = () => {
         {/* 1. 行程分頁 (Itinerary Tab) - 完整動畫版 */}
         {activeTab === "itinerary" && (
           <div
-            className="flex-1 space-y-5 px-4 pb-4 overflow-x-hidden relative"
+            className="flex-1 space-y-5 px-4 pb-32 overflow-x-hidden relative"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             ref={scrollContainerRef}
@@ -4711,7 +4711,7 @@ const ItineraryApp = () => {
 
         {/* 2. 參考指南 (Guides Tab) */}
         {activeTab === "guides" && (
-          <div className="flex-1 px-4 pb-4 space-y-5 animate-fadeIn">
+          <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
@@ -4866,7 +4866,7 @@ const ItineraryApp = () => {
 
         {/* 3. 商家導覽 (Shops Tab) */}
         {activeTab === "shops" && (
-          <div className="flex-1 px-4 pb-4 space-y-5 animate-fadeIn">
+          <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
@@ -5094,7 +5094,7 @@ const ItineraryApp = () => {
 
         {/* 4. AI 導遊 (AI Tab) */}
         {activeTab === "ai" && (
-          <div className="flex-1 px-4 pb-4 space-y-5 flex flex-col h-[calc(100vh-130px)] animate-fadeIn">
+          <div className="flex-1 px-4 pb-32 space-y-5 flex flex-col h-[calc(100vh-130px)] animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden max-w-full transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
@@ -5279,7 +5279,7 @@ const ItineraryApp = () => {
 
         {/* 5. 實用連結 (Resources Tab) */}
         {activeTab === "resources" && (
-          <div className="flex-1 px-4 pb-4 space-y-5 animate-fadeIn">
+          <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 shadow-xl min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
