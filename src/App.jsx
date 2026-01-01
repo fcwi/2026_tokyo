@@ -116,6 +116,18 @@ class Particle {
       this.size = Math.random() * 2;
       this.alpha = Math.random();
       this.fade = Math.random() * 0.02;
+    } else if (this.type === "fog") {
+      this.vy = Math.random() * 0.3 - 0.15;
+      this.vx = Math.random() * 0.4 - 0.2;
+      this.size = Math.random() * 80 + 40;
+      this.alpha = Math.random() * 0.3 + 0.1;
+      this.fadeDirection = Math.random() > 0.5 ? 1 : -1;
+    } else if (this.type === "lightning") {
+      this.startTime = Date.now();
+      this.duration = Math.random() * 200 + 100;
+      this.active = true;
+      this.x = Math.random() * this.canvas.width;
+      this.y = Math.random() * this.canvas.height * 0.5;
     }
   }
 
@@ -124,6 +136,22 @@ class Particle {
     if (this.type === "stars") {
       this.alpha += this.fade;
       if (this.alpha <= 0 || this.alpha >= 1) this.fade = -this.fade;
+      return;
+    } else if (this.type === "fog") {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.alpha += 0.005 * this.fadeDirection;
+      if (this.alpha <= 0.05 || this.alpha >= 0.4) {
+        this.fadeDirection = -this.fadeDirection;
+      }
+      if (this.x < -this.size) this.x = this.canvas.width + this.size;
+      if (this.y < -this.size) this.y = this.canvas.height + this.size;
+      return;
+    } else if (this.type === "lightning") {
+      const elapsed = Date.now() - this.startTime;
+      if (elapsed > this.duration + 2000) {
+        this.reset();
+      }
       return;
     }
     this.x += this.vx;
@@ -158,6 +186,39 @@ class Particle {
       this.ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
       this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       this.ctx.fill();
+    } else if (this.type === "fog") {
+      // 繪製霧氣顆粒
+      const gradient = this.ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+      gradient.addColorStop(0, `rgba(200, 200, 200, ${this.alpha})`);
+      gradient.addColorStop(1, `rgba(200, 200, 200, 0)`);
+      this.ctx.fillStyle = gradient;
+      this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      this.ctx.fill();
+    } else if (this.type === "lightning") {
+      // 繪製閃電
+      const elapsed = Date.now() - this.startTime;
+      if (elapsed < this.duration) {
+        const brightness = Math.max(0, 1 - elapsed / this.duration);
+        this.ctx.strokeStyle = `rgba(255, 255, 200, ${brightness})`;
+        this.ctx.lineWidth = 3 + Math.random() * 2;
+        this.ctx.lineCap = "round";
+        
+        // 繪製鋸齒狀閃電
+        const segments = 5;
+        let currentX = this.x;
+        let currentY = this.y;
+        
+        this.ctx.beginPath();
+        this.ctx.moveTo(currentX, currentY);
+        
+        for (let i = 0; i < segments; i++) {
+          currentX += (Math.random() - 0.5) * 60;
+          currentY += this.canvas.height / segments + Math.random() * 20;
+          this.ctx.lineTo(currentX, currentY);
+        }
+        
+        this.ctx.stroke();
+      }
     }
   }
 }
@@ -181,7 +242,12 @@ const WeatherParticles = ({ type, isDay }) => {
     resize();
 
     // 修正：直接實例化外部的 Particle 類別，並傳入參數
-    const count = type === "rain" ? 150 : type === "snow" ? 80 : 100;
+    const count = 
+      type === "rain" ? 150 : 
+      type === "snow" ? 80 : 
+      type === "fog" ? 30 : 
+      type === "lightning" ? 8 : 
+      100;
     for (let i = 0; i < count; i++) {
       particles.push(new Particle(canvas, ctx, type, isDay));
     }
@@ -1516,6 +1582,34 @@ const ItineraryApp = () => {
       return tripConfig.locations[0].key;
     // 回傳該日期設定的 locationKey
     return itineraryData[dayIndex].locationKey || tripConfig.locations[0].key;
+  };
+
+  // 生成 Meteoblue 天氣連結（英文版，支援固定經緯度）
+  // 參數可以是 locationKey (string) 或直接傳入 { lat, lon } 物件
+  const getWeatherLink = (locationKeyOrCoords) => {
+    let lat, lon;
+    
+    if (typeof locationKeyOrCoords === 'object' && locationKeyOrCoords.lat !== undefined) {
+      // 直接傳入經緯度物件（用於總覽頁的用戶位置）
+      lat = locationKeyOrCoords.lat;
+      lon = locationKeyOrCoords.lon;
+    } else {
+      // 傳入 locationKey（用於固定地點）
+      const location = tripConfig.locations.find((l) => l.key === locationKeyOrCoords);
+      if (!location) return "#";
+      lat = location.lat;
+      lon = location.lon;
+    }
+    
+    // 將經緯度轉換為 Meteoblue 格式（如：36.340N138.630E）
+    const latDir = lat >= 0 ? 'N' : 'S';
+    const lonDir = lon >= 0 ? 'E' : 'W';
+    const latAbs = Math.abs(lat).toFixed(3);
+    const lonAbs = Math.abs(lon).toFixed(3);
+    const coords = `${latAbs}${latDir}${lonAbs}${lonDir}`;
+    
+    // Meteoblue 英文週預報
+    return `https://www.meteoblue.com/en/weather/week/${coords}`;
   };
 
   // --- Trip Date Logic (🆕 支援測試模式) ---
@@ -3231,8 +3325,12 @@ const ItineraryApp = () => {
     if (code === null || code === undefined) return null;
     // 晴朗且是晚上 -> 星星
     if (code === 0 && isDark) return "stars";
-    // 下雨
-    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code))
+    // 多霧 -> 霧特效
+    if ([45, 48].includes(code)) return "fog";
+    // 雷雨 -> 閃電特效
+    if ([95, 96, 99].includes(code)) return "lightning";
+    // 下雨（不包括雷雨）
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code))
       return "rain";
     // 下雪
     if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
@@ -3242,8 +3340,10 @@ const ItineraryApp = () => {
   const getSkyCondition = (code) => {
     if (code === null || code === undefined) return "clear";
     if (code === 0) return "clear";
-    if ([1, 2, 3, 45, 48].includes(code)) return "cloudy";
+    if ([1, 2, 3].includes(code)) return "cloudy";
+    if ([45, 48].includes(code)) return "fog";
     if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
+    if ([95, 96, 99].includes(code)) return "thunderstorm";
     return "rain"; // 其他視為有雨或陰天
   };
 
@@ -3276,21 +3376,31 @@ const ItineraryApp = () => {
   };
 
   if (isDayTime) {
-    // 判斷是否在下雨
-    const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(
+    // 判斷是否下雨（不包括雷雨）
+    const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(
       currentEffectCode,
     );
-    // 判斷是否下雪 (新增這行)
+    // 判斷是否下雪
     const isSnowing = [71, 73, 75, 77, 85, 86].includes(currentEffectCode);
+    // 判斷是否多霧
+    const isFoggy = [45, 48].includes(currentEffectCode);
+    // 判斷是否雷雨
+    const isThunderstorm = [95, 96, 99].includes(currentEffectCode);
     // 判斷是否多雲
-    const isCloudy = [1, 2, 3, 45, 48].includes(currentEffectCode);
+    const isCloudy = [1, 2, 3].includes(currentEffectCode);
 
-    if (isRaining) {
+    if (isThunderstorm) {
+      // 白天且雷雨：背景非常暗 (深灰黑色)
+      dynamicBgStyle = { backgroundColor: "#4a5568" };
+    } else if (isRaining) {
       // 白天且下雨：背景顯著變暗 (深藍灰色)
       dynamicBgStyle = { backgroundColor: weatherColors.rain };
     } else if (isSnowing) {
-      // [新增] 白天且下雪：背景變暗以突顯白色雪花 (使用與下雨相同的深色，或可選更冷的色調)
+      // 白天且下雪：背景變暗以突顯白色雪花
       dynamicBgStyle = { backgroundColor: weatherColors.snow };
+    } else if (isFoggy) {
+      // 白天且多霧：背景使用霧白色
+      dynamicBgStyle = { backgroundColor: "#c7d2e0" };
     } else if (isCloudy) {
       // 白天且多雲：背景稍微變暗 (淺灰色)
       dynamicBgStyle = { backgroundColor: "#cbd5e1" };
@@ -3342,6 +3452,10 @@ const ItineraryApp = () => {
       `}</style>
       <SkyObjects isDay={!isDarkMode} condition={skyCondition} />
       <WeatherParticles type={particleType} isDay={!isDarkMode} />
+      {/* 雷雨時同時顯示雨和閃電 */}
+      {particleType === "lightning" && (
+        <WeatherParticles type="rain" isDay={!isDarkMode} />
+      )}
 
       <div className="max-w-md mx-auto relative min-h-screen flex flex-col z-10">
         {/* Header Title with Material Glass */}
@@ -3524,7 +3638,18 @@ const ItineraryApp = () => {
                               <LocateFixed
                                 className={`w-3.5 h-3.5 ${theme.accent}`}
                               />{" "}
-                              {userWeather.locationName}
+                              <span className="flex items-center gap-1">
+                                {userWeather.locationName}
+                                <a
+                                  href={getWeatherLink({ lat: userWeather.lat, lon: userWeather.lon })}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`p-0.5 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
+                                  title="查看此位置的詳細氣象資訊"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </span>
                             </div>
                             {/* 天氣狀況與高低溫 */}
                             <div className="flex flex-col">
@@ -3548,28 +3673,28 @@ const ItineraryApp = () => {
                         <button
                           onClick={() =>
                             getUserLocationWeather({
-                              isSilent: false,
-                              highAccuracy: false,
-                            })
-                          }
-                          disabled={isUpdatingLocation}
-                          className={`p-2 rounded-full border transition-all active:scale-95 flex-shrink-0 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
-                        >
-                          {isUpdatingLocation ? (
-                            <Loader className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <RotateCcw className="w-4 h-4" />
-                          )}
-                        </button>
+                                isSilent: false,
+                                highAccuracy: false,
+                              })
+                            }
+                            disabled={isUpdatingLocation}
+                            className={`p-2 rounded-full border transition-all active:scale-95 flex-shrink-0 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
+                          >
+                            {isUpdatingLocation ? (
+                              <Loader className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-4 h-4" />
+                            )}
+                          </button>
                       </div>
 
-                      {/* 中間：每 3 小時預報 (圖示放大 + 排列緊密) */}
+                      {/* 中間：每 2 小時預報共 7 個時段（緊湊版） */}
                       <div
                         className={`w-full overflow-x-auto pb-1 mb-1 scrollbar-hide`}
                       >
-                        {/* min-w 改小，讓內容自然靠攏 */}
-                        <div className="flex justify-between items-center min-w-[260px] px-1">
-                          {[0, 3, 6, 9, 12].map((offset, i) => {
+                        {/* 緊湊佈局，移除 min-w 限制 */}
+                        <div className="flex justify-between items-center px-0.5">
+                          {[0, 2, 4, 6, 8, 10, 12].map((offset, i) => {
                             // 🆕 測試模式：使用 testDateTime
                             const displayTime = isTestMode ? new Date(testDateTime) : new Date();
                             const currentHour = displayTime.getHours();
@@ -3586,29 +3711,29 @@ const ItineraryApp = () => {
                               hourDataCode !== undefined ? (
                                 getWeatherInfo(hourDataCode).icon
                               ) : (
-                                <Loader className="w-4 h-4 animate-spin opacity-50" />
+                                <Loader className="w-3.5 h-3.5 animate-spin opacity-50" />
                               );
 
                             return (
                               <div
                                 key={i}
-                                className="flex flex-col items-center gap-1.5 min-w-[48px] p-1 rounded-xl hover:bg-black/5 transition-colors group"
+                                className="flex flex-col items-center gap-0.5 min-w-0 px-0.5 py-1 rounded-lg hover:bg-black/5 transition-colors group flex-1"
                               >
-                                {/* 時間：稍微放大 */}
+                                {/* 時間：縮小字體 */}
                                 <span
-                                  className={`text-[10px] font-bold opacity-70 group-hover:opacity-100 ${theme.textSec}`}
+                                  className={`text-[9px] font-bold opacity-70 group-hover:opacity-100 whitespace-nowrap ${theme.textSec}`}
                                 >
                                   {timeLabel}
                                 </span>
 
-                                {/* 圖示：移除縮放，恢復 100% 大小，視覺更飽滿 */}
-                                <div className="transform transition-transform group-hover:scale-110 drop-shadow-sm">
+                                {/* 圖示：縮小尺寸 */}
+                                <div className="transform transition-transform group-hover:scale-110 drop-shadow-sm scale-90">
                                   {icon}
                                 </div>
 
-                                {/* 溫度：放大為 text-sm 並加粗 */}
+                                {/* 溫度：縮小字體 */}
                                 <span
-                                  className={`text-sm font-bold ${theme.text}`}
+                                  className={`text-xs font-bold ${theme.text}`}
                                 >
                                   {hourDataTemp !== undefined
                                     ? `${Math.round(hourDataTemp)}°`
@@ -4176,9 +4301,20 @@ const ItineraryApp = () => {
                               className={`flex items-center gap-1.5 text-xs font-bold mb-1.5 uppercase tracking-wide ${theme.textSec}`}
                             >
                               <Calendar className="w-3.5 h-3.5" /> 預報 (
-                              {tripConfig.locations.find(
-                                (l) => l.key === currentLocation,
-                              )?.name || "當地"}
+                              <span className="flex items-center gap-1">
+                                {tripConfig.locations.find(
+                                  (l) => l.key === currentLocation,
+                                )?.name || "當地"}
+                                <a
+                                  href={getWeatherLink(currentLocation)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`p-0.5 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
+                                  title="查看此位置的詳細氣象資訊"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </span>
                               )
                             </div>
                             <div className="flex items-center gap-4">
