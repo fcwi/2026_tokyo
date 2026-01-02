@@ -1602,9 +1602,13 @@ const ItineraryApp = () => {
         customName = null,
       ) => {
         try {
-          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,weathercode,uv_index,uv_index_clear_sky,wind_speed_10m,wind_gusts_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,uv_index_clear_sky_max,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max&forecast_days=7&timezone=auto`;
+          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weathercode,uv_index,uv_index_clear_sky,wind_speed_10m,wind_gusts_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,uv_index_clear_sky_max,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max,sunrise,sunset&forecast_days=7&timezone=auto`;
           const weatherRes = await fetch(weatherUrl);
           const weatherData = await weatherRes.json();
+
+          if (weatherData.error) {
+            throw new Error(weatherData.reason || "Weather API error");
+          }
 
           let city = customName;
           let landmark = "";
@@ -2169,12 +2173,18 @@ const ItineraryApp = () => {
 
     const fetchWeather = async () => {
       try {
-        const params = `hourly=temperature_2m,apparent_temperature,precipitation_probability,weathercode,uv_index,uv_index_clear_sky,wind_speed_10m,wind_gusts_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,uv_index_clear_sky_max,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max&forecast_days=7&timezone=auto`;
+        const params = `hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weathercode,uv_index,uv_index_clear_sky,wind_speed_10m,wind_gusts_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,uv_index_clear_sky_max,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max,sunrise,sunset&forecast_days=7&timezone=auto`;
 
         const weatherPromises = tripConfig.locations.map(async (loc) => {
           const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&${params}`;
           const res = await fetch(url, { signal: controller.signal });
           const data = await res.json();
+
+          if (data.error) {
+            console.error(`Weather API error for ${loc.key}:`, data.reason);
+            return { key: loc.key, data: null };
+          }
+
           if (!cancelled && data.timezone) {
             setAutoTimeZone(data.timezone);
           }
@@ -2873,7 +2883,7 @@ const ItineraryApp = () => {
     const weatherData = weatherForecast[currentLocation];
     const effectiveWeatherOverride = frozenTestWeatherOverride || testWeatherOverride;
 
-    if (!weatherForecast.loading && weatherData) {
+    if (!weatherForecast.loading && weatherData && weatherData.time) {
       const dayIndex = activeDay === -1 ? 0 : activeDay;
       const forecastIndex = dayIndex < weatherData.time.length ? dayIndex : 0;
       const maxTemp = Math.round(weatherData.temperature_2m_max[forecastIndex]);
@@ -5585,6 +5595,8 @@ const ItineraryApp = () => {
           <div className="relative z-10 w-full max-w-[400px]">
             <WeatherDetail
               weather={detailWeatherData}
+              activeDay={activeDay}
+              simulatedDate={frozenTestDateTime || (isTestMode ? testDateTime : new Date())}
               loading={weatherDetailLoading}
               isDarkMode={isDarkMode}
               theme={currentTheme}
