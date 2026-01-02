@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Camera, X, MicOff, Send, MapPin, Plus } from "lucide-react";
+import { Camera, X, Mic, MicOff, Send, MapPin, Plus } from "lucide-react";
 
 const ChatInput = ({
   inputMessage,
@@ -18,7 +18,6 @@ const ChatInput = ({
   const [showActions, setShowActions] = useState(false);
   const theme = tripConfig?.theme || {};
   const cBase = theme.colorBase || "stone";
-  const cAccent = theme.colorAccent || "amber";
   
   // 根據主題配置定義語義化顏色
   const sc = theme.semanticColors || {
@@ -96,8 +95,9 @@ const ChatInput = ({
                 {listeningLang === "zh-TW" ? (
                   <MicOff className="w-5 h-5" />
                 ) : (
-                  <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
-                    中
+                  <div className="flex items-center justify-center gap-1">
+                    <Mic className="w-4 h-4" />
+                    <span className="font-bold text-[11px]">中</span>
                   </div>
                 )}
               </button>
@@ -122,8 +122,9 @@ const ChatInput = ({
                   {listeningLang === tripConfig.language.code ? (
                     <MicOff className="w-5 h-5" />
                   ) : (
-                    <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
-                      {tripConfig.language.label}
+                    <div className="flex items-center justify-center gap-1">
+                      <Mic className="w-4 h-4" />
+                      <span className="font-bold text-[11px]">{tripConfig.language.label}</span>
                     </div>
                   )}
                 </button>

@@ -509,7 +509,7 @@ export const itineraryData = [
     locationKey: "karuizawa",
     date: "1/24 (六)",
     title: "抵達與移動：直奔雪國",
-    stay: "輕井澤王子大飯店西館 (露臺房 Terrace Room)",
+    stay: "輕井澤王子大飯店西館",
     routeInfo: {
       summary: "成田機場 → 京成上野 → JR上野 → 輕井澤 → 飯店",
       mapUrl:
@@ -625,7 +625,7 @@ export const itineraryData = [
     locationKey: "karuizawa",
     date: "1/25 (日)",
     title: "輕井澤：安心玩雪與購物",
-    stay: "輕井澤王子大飯店西館 (露臺房 Terrace Room)",
+    stay: "輕井澤王子大飯店西館",
     routeInfo: {
       summary: "飯店 → 王子滑雪場 → 王子Outlet → 飯店",
       mapUrl:
@@ -713,7 +713,7 @@ export const itineraryData = [
     locationKey: "ueno",
     date: "1/26 (一)",
     title: "移動日 + 上野輕鬆逛",
-    stay: "&HERE TOKYO UENO (上野)",
+    stay: "&HERE TOKYO UENO",
     routeInfo: {
       summary: "輕井澤 → 上野站 → 飯店 → Yamashiroya → PARCO_ya → 阿美橫丁",
       mapUrl:
@@ -798,7 +798,7 @@ export const itineraryData = [
     locationKey: "roppongi",
     date: "1/27 (二)",
     title: "六本木：藝術與浪漫之夜",
-    stay: "&HERE TOKYO UENO (上野)",
+    stay: "&HERE TOKYO UENO",
     routeInfo: {
       summary: "上野 → 麻布台之丘 → teamLab → 六本木之丘 → 櫸木坂點燈 → 上野",
       mapUrl:
@@ -901,7 +901,7 @@ export const itineraryData = [
     locationKey: "odaiba",
     date: "1/28 (三)",
     title: "台場夢想日 + 童裝採購",
-    stay: "&HERE TOKYO UENO (上野)",
+    stay: "&HERE TOKYO UENO",
     routeInfo: {
       summary: "上野 → 台場DiverCity → LaLaport豐洲 → 上野",
       mapUrl:
@@ -1144,7 +1144,7 @@ export const tripConfig = {
     {
       name: "輕井澤王子西館",
       phone: "+81-267-42-1111",
-      address: "長野県北佐久郡輕井澤町輕井澤",
+      address: "長野県北佐久郡輕井澤町輕井澤 1016-87",
       note: "露臺房 Terrace Room",
     },
     {
