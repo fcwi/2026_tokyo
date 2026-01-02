@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import "./WeatherDetail.css";
 import { 
   Wind, Droplets, Sun, Activity, 
-  RefreshCw, MapPin, X, Cloud, CloudRain, Snowflake, CloudLightning, CloudFog, Moon,
+  MapPin, X, Cloud, CloudRain, Snowflake, CloudLightning, CloudFog, Moon,
   Sunrise, Sunset
 } from "lucide-react";
 
@@ -104,10 +104,12 @@ const MoonPhaseSvg = ({ phase = 0, size = 20 }) => {
 };
 
 const getTempColor = (temp) => {
-  if (temp <= 10) return "#3b82f6"; // 藍色 (冷)
-  if (temp <= 20) return "#fbbf24"; // 黃色 (涼)
-  if (temp <= 30) return "#f97316"; // 橘色 (暖)
-  return "#ef4444"; // 紅色 (熱)
+  if (temp < 0) return "#1e3a8a";    // 深藍色 (Below 0)
+  if (temp <= 10) return "#60a5fa";  // 淺藍色 (0-10)
+  if (temp <= 20) return "#22c55e";  // 綠色 (10-20)
+  if (temp <= 25) return "#eab308";  // 黃色 (20-25)
+  if (temp < 35) return "#f97316";   // 橙色 (25-35)
+  return "#ef4444";                  // 紅色 (35+)
 };
 
 const getTempGradient = (min, max) => {
