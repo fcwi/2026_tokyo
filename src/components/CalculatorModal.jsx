@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import "./CalculatorModal.css";
 
 const CalculatorModal = ({
   isOpen,
@@ -152,105 +153,95 @@ const CalculatorModal = ({
   };
 
   const fxLabel = fxDirection === "baseToTarget" ? target : base;
-
-  const baseCard = isDarkMode
-    ? "bg-neutral-900/80 border-neutral-700 text-white"
-    : "bg-white/90 border-stone-200 text-stone-800";
-  const keypadBtn = (variant = "default") => {
-    const common = "rounded-xl py-3 text-lg font-semibold transition active:scale-95 shadow-sm border";
-    if (variant === "accent") {
-      return `${common} ${isDarkMode ? "bg-amber-400 text-black border-amber-300" : "bg-amber-300 text-black border-amber-200"}`;
-    }
-    if (variant === "operator") {
-      return `${common} ${isDarkMode ? "bg-neutral-800 text-amber-100 border-neutral-700" : "bg-stone-100 text-amber-600 border-stone-200"}`;
-    }
-    if (variant === "muted") {
-      return `${common} ${isDarkMode ? "bg-neutral-800 text-neutral-200 border-neutral-700" : "bg-stone-100 text-stone-700 border-stone-200"}`;
-    }
-    return `${common} ${isDarkMode ? "bg-neutral-700 text-white border-neutral-600" : "bg-white text-stone-900 border-stone-200"}`;
-  };
+  const themeClass = isDarkMode ? "theme-dark" : "theme-light";
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       <div
-        className={`relative w-full max-w-sm rounded-3xl border backdrop-blur-xl shadow-2xl overflow-hidden ${baseCard}`}
+        className={`calc-modal ${themeClass}`}
         role="dialog"
         aria-modal="true"
         aria-label="計算機"
       >
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="space-y-0.5">
-            <p className="text-[11px] uppercase tracking-[0.28em] opacity-60">Calculator</p>
-            <p className="text-sm font-semibold opacity-80">當前貨幣：{currentUnit}</p>
+        {/* Header */}
+        <div className="calc-header">
+          <div className="calc-header-title">
+            <p className="calc-title-label">Calculator</p>
+            <p className="calc-title-main">當前貨幣：{currentUnit}</p>
           </div>
           <button
             onClick={onClose}
-            className={`p-2 rounded-full border transition hover:scale-95 ${isDarkMode ? "border-neutral-700 hover:bg-neutral-800" : "border-stone-200 hover:bg-stone-100"}`}
+            className="calc-close-btn"
             aria-label="關閉計算機"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-4 pb-4 space-y-3">
-          <div className="flex items-center justify-between text-xs font-semibold">
-            <span className="opacity-70">1 {base} ~ {formattedRate} {target}</span>
+        {/* Content */}
+        <div className="calc-content">
+          {/* Rate Info */}
+          <div className="calc-rate-info">
+            <span className="calc-rate-label">1 {base} ~ {formattedRate} {target}</span>
             <button
               onClick={handleFxConvert}
-              className={`px-3 py-1 rounded-full text-xs font-bold border transition ${isDarkMode ? "bg-amber-400 text-black border-amber-300" : "bg-amber-300 text-black border-amber-200"}`}
+              className="calc-convert-btn"
             >
-              當前貨幣：{currentUnit}
+              轉{fxLabel}
             </button>
           </div>
 
+          {/* Hint */}
           {fxHint && (
-            <div className="text-[11px] font-medium opacity-80">{fxHint}</div>
+            <div className="calc-hint">{fxHint}</div>
           )}
 
+          {/* Display */}
           <div
-            className={`text-right text-4xl font-mono px-3 py-4 rounded-2xl border ${isDarkMode ? "bg-neutral-800/80 border-neutral-700" : "bg-stone-50 border-stone-200"}`}
+            className="calc-display"
             aria-live="polite"
           >
             {displayValue}
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
-            <button className={keypadBtn("muted")} onClick={clearAll}>AC</button>
-            <button className={keypadBtn("muted")} onClick={toggleSign}>+/-</button>
-            <button className={keypadBtn("muted")} onClick={handleFxConvert}>
+          {/* Keypad */}
+          <div className="calc-keypad">
+            <button className="calc-btn calc-btn-muted" onClick={clearAll}>AC</button>
+            <button className="calc-btn calc-btn-muted" onClick={toggleSign}>+/-</button>
+            <button className="calc-btn calc-btn-muted" onClick={handleFxConvert}>
               轉{fxLabel}
             </button>
-            <button className={keypadBtn("operator")} onClick={() => handleOperator("/")}>
+            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("/")}>
               /
             </button>
 
-            <button className={keypadBtn()} onClick={() => inputDigit("7")}>7</button>
-            <button className={keypadBtn()} onClick={() => inputDigit("8")}>8</button>
-            <button className={keypadBtn()} onClick={() => inputDigit("9")}>9</button>
-            <button className={keypadBtn("operator")} onClick={() => handleOperator("*")}>
+            <button className="calc-btn" onClick={() => inputDigit("7")}>7</button>
+            <button className="calc-btn" onClick={() => inputDigit("8")}>8</button>
+            <button className="calc-btn" onClick={() => inputDigit("9")}>9</button>
+            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("*")}>
               *
             </button>
 
-            <button className={keypadBtn()} onClick={() => inputDigit("4")}>4</button>
-            <button className={keypadBtn()} onClick={() => inputDigit("5")}>5</button>
-            <button className={keypadBtn()} onClick={() => inputDigit("6")}>6</button>
-            <button className={keypadBtn("operator")} onClick={() => handleOperator("-")}>
+            <button className="calc-btn" onClick={() => inputDigit("4")}>4</button>
+            <button className="calc-btn" onClick={() => inputDigit("5")}>5</button>
+            <button className="calc-btn" onClick={() => inputDigit("6")}>6</button>
+            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("-")}>
               -
             </button>
 
-            <button className={keypadBtn()} onClick={() => inputDigit("1")}>1</button>
-            <button className={keypadBtn()} onClick={() => inputDigit("2")}>2</button>
-            <button className={keypadBtn()} onClick={() => inputDigit("3")}>3</button>
-            <button className={keypadBtn("operator")} onClick={() => handleOperator("+")}>
+            <button className="calc-btn" onClick={() => inputDigit("1")}>1</button>
+            <button className="calc-btn" onClick={() => inputDigit("2")}>2</button>
+            <button className="calc-btn" onClick={() => inputDigit("3")}>3</button>
+            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("+")}>
               +
             </button>
 
-            <button className={`${keypadBtn()} col-span-2`} onClick={() => inputDigit("0")}>
+            <button className="calc-btn calc-btn-wide" onClick={() => inputDigit("0")}>
               0
             </button>
-            <button className={keypadBtn()} onClick={inputDot}>.</button>
-            <button className={keypadBtn("accent")} onClick={handleEqual}>=</button>
+            <button className="calc-btn" onClick={inputDot}>.</button>
+            <button className="calc-btn calc-btn-accent" onClick={handleEqual}>=</button>
           </div>
         </div>
       </div>
