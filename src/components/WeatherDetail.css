@@ -1,0 +1,246 @@
+/* WeatherDetail.css - Ultra Compact Version */
+
+:root {
+  --wc-bg-glass: rgba(255, 255, 255, 0.75);
+  --wc-border: rgba(255, 255, 255, 0.6);
+  --wc-text-primary: #1d1d1f;
+  --wc-text-secondary: #6e6e73;
+  --wc-panel-bg: rgba(255, 255, 255, 0.5);
+  --wc-divider: rgba(0, 0, 0, 0.08);
+  --wc-bar-bg: rgba(0, 0, 0, 0.1);
+}
+
+.weather-card.theme-dark {
+  --wc-bg-glass: rgba(28, 28, 30, 0.85);
+  --wc-border: rgba(255, 255, 255, 0.12);
+  --wc-text-primary: #ffffff;
+  --wc-text-secondary: #98989d;
+  --wc-panel-bg: rgba(255, 255, 255, 0.1);
+  --wc-divider: rgba(255, 255, 255, 0.15);
+  --wc-bar-bg: rgba(255, 255, 255, 0.2);
+}
+
+.weather-card {
+  background: var(--wc-bg-glass);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--wc-border);
+  border-radius: 24px;
+  /* ⬇️ 內距再縮小 */
+  padding: 14px 16px; 
+  width: 100%;
+  max-width: 360px; /* 寬度稍微縮窄，讓視覺更集中 */
+  max-height: 85vh; 
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  color: var(--wc-text-primary);
+  display: flex;
+  flex-direction: column;
+  /* ⬇️ 關鍵：大幅縮小區塊間距 (原本16px) */
+  gap: 8px; 
+  box-sizing: border-box;
+}
+
+.weather-card::-webkit-scrollbar { display: none; }
+
+/* --- Compact Header --- */
+.wc-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  /* 移除底部邊距 */
+  margin-bottom: 0px;
+}
+
+.wc-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+.wc-location-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px; /* 字體微縮 */
+  font-weight: 700;
+  color: var(--wc-text-primary);
+}
+.text-accent { color: #007aff; }
+
+.wc-temp-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.wc-temp-big {
+  /* ⬇️ 大溫度縮小，節省高度 */
+  font-size: 38px; 
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.wc-temp-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0px;
+  padding-bottom: 3px;
+}
+
+.wc-desc {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wc-hl {
+  font-size: 11px;
+  display: flex;
+  gap: 6px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* 按鈕組 */
+.wc-header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.wc-icon-btn {
+  width: 28px; /* 按鈕縮小 */
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--wc-panel-bg);
+  color: var(--wc-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.wc-icon-btn:hover { background: rgba(0,0,0,0.1); }
+.wc-icon-btn.close { background: rgba(0,0,0,0.05); }
+
+/* --- Grid --- */
+.wc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px; /* 格子間距縮小 */
+}
+.wc-grid-item {
+  background: var(--wc-panel-bg);
+  border-radius: 12px;
+  padding: 8px 2px; /* 內距縮小 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1px;
+}
+.wc-grid-label {
+  font-size: 9px;
+  color: var(--wc-text-secondary);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.wc-grid-value { font-size: 14px; font-weight: 600; }
+
+/* --- Hourly --- */
+.wc-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--wc-text-secondary);
+  /* ⬇️ 標題下邊距縮小 */
+  margin-bottom: 4px; 
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+.wc-hourly-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 0px; /* 移除底部 padding */
+  scrollbar-width: none;
+  height: 80px; /* 固定高度防止撐開 */
+}
+.wc-hourly-scroll::-webkit-scrollbar { display: none; }
+
+.wc-hour-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  gap: 1px;
+}
+.wc-h-time { font-size: 11px; color: var(--wc-text-secondary); font-weight: 500; }
+.wc-h-icon-wrapper { height: 24px; display: flex; align-items: center; justify-content: center; }
+.wc-h-desc { font-size: 9px; color: var(--wc-text-secondary); font-weight: 500; } 
+.wc-h-temp { font-size: 14px; font-weight: 600; margin-top: 1px; }
+.wc-h-pop { font-size: 9px; color: #0a84ff; font-weight: 700; }
+
+/* --- Daily --- */
+/* ⬇️ 這是最佔空間的列表，大幅壓縮 */
+.wc-daily-list { display: flex; flex-direction: column; gap: 2px; }
+
+.wc-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* ⬇️ 行高縮小 */
+  padding: 2px 0; 
+  border-bottom: 1px solid var(--wc-divider);
+}
+.wc-day-row:last-child { border-bottom: none; }
+
+.wc-day-name { width: 32px; font-size: 13px; font-weight: 500; }
+
+.wc-day-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 16px;
+}
+.wc-day-desc { font-size: 12px; color: var(--wc-text-secondary); font-weight: 500; }
+.wc-day-pop { 
+  font-size: 9px; color: #007aff; background: rgba(0,122,255,0.1); 
+  padding: 1px 4px; border-radius: 4px; font-weight: 600; 
+  display: flex; align-items: center; gap: 2px;
+}
+
+.wc-day-temp { display: flex; align-items: center; gap: 4px; width: 80px; justify-content: flex-end; }
+.wc-temp-min { font-size: 13px; color: var(--wc-text-secondary); width: 20px; text-align: right; }
+.wc-temp-high { font-size: 13px; font-weight: 600; width: 20px; text-align: right; }
+.wc-temp-bar { 
+  flex: 1; height: 3px; background: var(--wc-bar-bg); border-radius: 2px; 
+}
+
+/* --- Footer --- */
+.wc-footer {
+  /* ⬇️ 上邊距縮小 */
+  margin-top: 6px; 
+  padding-top: 8px;
+  border-top: 1px solid var(--wc-divider);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--wc-text-primary);
+  font-weight: 500;
+  /* 確保底部有空間 */
+  padding-bottom: 2px;
+}
+
+.wd-skeleton {
+  background: rgba(150, 150, 150, 0.15);
+  border-radius: 6px;
+}

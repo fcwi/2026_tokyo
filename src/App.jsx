@@ -83,6 +83,7 @@ import ChatInput from "./components/ChatInput.jsx";
 import CurrencyWidget from "./components/CurrencyWidget.jsx";
 import CalculatorModal from "./components/CalculatorModal.jsx";
 import TestModePanel from "./components/TestModePanel.jsx";
+import WeatherDetail from "./components/WeatherDetail.jsx";
 
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
@@ -1220,6 +1221,9 @@ const ItineraryApp = () => {
     loading: true,
   });
 
+  // 天氣詳情頁面狀態
+  const [showWeatherDetail, setShowWeatherDetail] = useState(false);
+
   // User Location Weather State
   const [userWeather, setUserWeather] = useState(() => {
     try {
@@ -1576,41 +1580,13 @@ const ItineraryApp = () => {
   );
 
   // 3. Determine Location based on Day Index
-  const getDailyLocation = (dayIndex) => {
+  const getDailyLocation = React.useCallback((dayIndex) => {
     // 如果是總覽 (-1) 或找不到資料，預設回傳第一個地點 (通常是主要城市)
     if (dayIndex === -1 || !itineraryData[dayIndex])
       return tripConfig.locations[0].key;
     // 回傳該日期設定的 locationKey
     return itineraryData[dayIndex].locationKey || tripConfig.locations[0].key;
-  };
-
-  // 生成 Meteoblue 天氣連結（英文版，支援固定經緯度）
-  // 參數可以是 locationKey (string) 或直接傳入 { lat, lon } 物件
-  const getWeatherLink = (locationKeyOrCoords) => {
-    let lat, lon;
-    
-    if (typeof locationKeyOrCoords === 'object' && locationKeyOrCoords.lat !== undefined) {
-      // 直接傳入經緯度物件（用於總覽頁的用戶位置）
-      lat = locationKeyOrCoords.lat;
-      lon = locationKeyOrCoords.lon;
-    } else {
-      // 傳入 locationKey（用於固定地點）
-      const location = tripConfig.locations.find((l) => l.key === locationKeyOrCoords);
-      if (!location) return "#";
-      lat = location.lat;
-      lon = location.lon;
-    }
-    
-    // 將經緯度轉換為 Meteoblue 格式（如：36.340N138.630E）
-    const latDir = lat >= 0 ? 'N' : 'S';
-    const lonDir = lon >= 0 ? 'E' : 'W';
-    const latAbs = Math.abs(lat).toFixed(3);
-    const lonAbs = Math.abs(lon).toFixed(3);
-    const coords = `${latAbs}${latDir}${lonAbs}${lonDir}`;
-    
-    // Meteoblue 英文週預報
-    return `https://www.meteoblue.com/en/weather/week/${coords}`;
-  };
+  }, []);
 
   // --- Trip Date Logic (🆕 支援測試模式) ---
   // 🆕 使用 useMemo 確保當測試時間改變時會重新計算
@@ -1676,7 +1652,7 @@ const ItineraryApp = () => {
         customName = null,
       ) => {
         try {
-          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,weathercode&forecast_days=2&timezone=auto`;
+          const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,apparent_temperature,precipitation_probability,weathercode,uv_index,uv_index_clear_sky,wind_speed_10m,wind_gusts_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,uv_index_clear_sky_max,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max&forecast_days=7&timezone=auto`;
           const weatherRes = await fetch(weatherUrl);
           const weatherData = await weatherRes.json();
 
@@ -1748,6 +1724,7 @@ const ItineraryApp = () => {
             desc: info.text,
             weatherCode: weatherData.current_weather.weathercode,
             hourly: weatherData.hourly,
+            daily: weatherData.daily,
             locationName: city || "未知地點",
             landmark: landmark,
             isGeneric: isGeneric, // ✅ 將判斷結果存入 State
@@ -2274,7 +2251,7 @@ const ItineraryApp = () => {
 
     const fetchWeather = async () => {
       try {
-        const params = `daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=14`;
+        const params = `hourly=temperature_2m,apparent_temperature,precipitation_probability,weathercode,uv_index,uv_index_clear_sky,wind_speed_10m,wind_gusts_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,uv_index_clear_sky_max,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max&forecast_days=7&timezone=auto`;
 
         // 自動為 config 裡的每一個地點產生 fetch 請求
         const weatherPromises = tripConfig.locations.map(async (loc) => {
@@ -2284,7 +2261,13 @@ const ItineraryApp = () => {
           if (!cancelled && data.timezone) {
             setAutoTimeZone(data.timezone);
           }
-          return { key: loc.key, data: data.daily };
+          return {
+            key: loc.key,
+            data: {
+              ...data.daily,
+              hourly: data.hourly,
+            },
+          };
         });
 
         const results = await Promise.all(weatherPromises);
@@ -3102,7 +3085,54 @@ const ItineraryApp = () => {
       desc: weatherForecast.loading ? "載入中..." : "無資料",
       advice: weatherForecast.loading ? "請稍候" : "無法取得預報，請稍後再試",
     };
-  }, [activeDay, weatherForecast, getWeatherInfo, isTestMode, testWeatherOverride, frozenTestWeatherOverride]);
+  }, [activeDay, weatherForecast, getWeatherInfo, isTestMode, testWeatherOverride, frozenTestWeatherOverride, getDailyLocation]);
+
+  // Weather detail payload for the new page/component
+  const detailWeatherData = React.useMemo(() => {
+    if (activeDay === -1) {
+      const desc =
+        userWeather?.desc ||
+        (userWeather?.weatherCode != null
+          ? getWeatherData(userWeather.weatherCode)?.text
+          : "");
+      return userWeather
+        ? { ...userWeather, desc, loading: userWeather.loading }
+        : null;
+    }
+
+    const locKey = getDailyLocation(activeDay);
+    const forecast = weatherForecast[locKey];
+    if (!forecast) return null;
+
+    const code =
+      forecast.weathercode?.[activeDay] ?? forecast.weathercode?.[0];
+    const info = code != null ? getWeatherData(code) : null;
+    const locName =
+      tripConfig.locations.find((l) => l.key === locKey)?.name || locKey;
+
+    return {
+      temp:
+        forecast.temperature_2m_max?.[activeDay] ??
+        forecast.temperature_2m_max?.[0] ??
+        null,
+      desc: info?.text || "",
+      locationName: locName,
+      weatherCode: code,
+      hourly: forecast.hourly,
+      daily: forecast,
+      loading: weatherForecast.loading,
+    };
+  }, [
+    activeDay,
+    userWeather,
+    weatherForecast,
+    getDailyLocation,
+    getWeatherData,
+  ]);
+
+  const weatherDetailLoading =
+    !isAppReady ||
+    (activeDay === -1 ? userWeather?.loading : weatherForecast.loading);
 
   // --- Lock Screen Render ---
   if (!isVerified) {
@@ -3640,15 +3670,13 @@ const ItineraryApp = () => {
                               />{" "}
                               <span className="flex items-center gap-1">
                                 {userWeather.locationName}
-                                <a
-                                  href={getWeatherLink({ lat: userWeather.lat, lon: userWeather.lon })}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  onClick={() => setShowWeatherDetail(true)}
                                   className={`p-0.5 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
                                   title="查看此位置的詳細氣象資訊"
                                 >
                                   <ExternalLink className="w-3 h-3" />
-                                </a>
+                                </button>
                               </span>
                             </div>
                             {/* 天氣狀況與高低溫 */}
@@ -3878,6 +3906,7 @@ const ItineraryApp = () => {
                         )}
                       </div>
                     </div>
+
 
                     {/* 2. Flight & Emergency Info */}
                     <div
@@ -4305,15 +4334,13 @@ const ItineraryApp = () => {
                                 {tripConfig.locations.find(
                                   (l) => l.key === currentLocation,
                                 )?.name || "當地"}
-                                <a
-                                  href={getWeatherLink(currentLocation)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  onClick={() => setShowWeatherDetail(true)}
                                   className={`p-0.5 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
                                   title="查看此位置的詳細氣象資訊"
                                 >
                                   <ExternalLink className="w-3 h-3" />
-                                </a>
+                                </button>
                               </span>
                               )
                             </div>
@@ -4673,6 +4700,7 @@ const ItineraryApp = () => {
                               </div>
                             </div>
                           )}
+
 
                           {/* Notice */}
                           {current.notice && (
@@ -5693,6 +5721,63 @@ const ItineraryApp = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+      {/* Weather Detail Modal */}
+      {showWeatherDetail && detailWeatherData && (
+        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          {/* 隱形遮罩 */}
+          <div className="absolute inset-0" onClick={() => setShowWeatherDetail(false)} />
+          
+          <div className="relative z-10 w-full max-w-[400px]">
+            {/* ⚠️ 這裡原本的外部 <button> 已經移除，不需要了 ⚠️ */}
+
+            <WeatherDetail
+              weather={detailWeatherData}
+              loading={weatherDetailLoading}
+              isDarkMode={isDarkMode}
+              
+              // 1. 🆕 傳入關閉功能
+              onClose={() => setShowWeatherDetail(false)}
+              
+              // 2. 更新功能
+              onRefresh={() => {
+                if (activeDay === -1) {
+                  getUserLocationWeather({ isSilent: false });
+                } else {
+                  showToast("已更新預報資訊");
+                }
+              }}
+              
+              // 3. 建議內容
+              advice={(() => {
+                if (!userWeather?.temp || !detailWeatherData.temp) return null;
+                const targetTemp = detailWeatherData.daily?.temperature_2m_max?.[0] || detailWeatherData.temp;
+                const diff = targetTemp - userWeather.temp;
+                const absDiff = Math.abs(diff).toFixed(0);
+                const isColder = diff < 0;
+                const code = detailWeatherData.weatherCode;
+                
+                // 簡易判斷
+                const isRainy = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code);
+                const isSnowy = [71, 73, 75, 77, 85, 86].includes(code);
+                
+                let extraAdvice = "建議穿著輕便";
+                if (isColder && absDiff > 3) extraAdvice = "請加強保暖";
+                if (isRainy) extraAdvice += "並攜帶雨具";
+                if (isSnowy) extraAdvice += "並穿著防滑鞋";
+
+                return (
+                  <>
+                    天氣為 <b>{detailWeatherData.desc}</b>，
+                    氣溫比目前{isColder ? "低" : "高"} <b style={{ color: isColder ? '#007aff' : '#ff9500' }}>{absDiff}°C</b>，
+                    {extraAdvice}。
+                  </>
+                );
+              })()}
+            />
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
