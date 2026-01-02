@@ -860,11 +860,11 @@ const ItineraryApp = () => {
 
       // 🌟 卡片質感：夜間改為較亮的深灰玻璃
       cardBg: isDarkMode
-        ? `bg-[#262626]/85 backdrop-blur-md backdrop-saturate-150 border-white/10 transform-gpu`
-        : `bg-white/80 backdrop-blur-md backdrop-saturate-150 border-white/40 transform-gpu`,
+        ? `bg-[#262626]/85 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transform-gpu`
+        : `bg-white/80 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] transform-gpu`,
 
       // 邊框
-      cardBorder: isDarkMode ? `border-white/10` : `border-${cBase}-200/50`,
+      cardBorder: isDarkMode ? `border-white/5` : `border-${cBase}-200/30`,
 
       // 陰影系統（分層次）
       cardShadow: isDarkMode
@@ -884,7 +884,7 @@ const ItineraryApp = () => {
       // 導覽列
       navBg: isDarkMode
         ? `bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30`
-        : `bg-white/30 backdrop-blur-2xl border-white/30 shadow-lg shadow-${cBase}-500/5`,
+        : `bg-white/30 backdrop-blur-2xl border-white/15 shadow-lg shadow-${cBase}-500/5`,
 
       // 裝飾光暈
       blob1: isDarkMode
@@ -3296,7 +3296,7 @@ const ItineraryApp = () => {
                       </span>
                     </p>
                     <div
-                      className={`p-2 rounded border break-all font-mono text-[10px] select-all cursor-text ${isDarkMode ? "bg-neutral-900 border-neutral-700 text-green-400" : "bg-white border-slate-300 text-slate-600"}`}
+                      className={`p-2 rounded border break-all font-mono text-xs select-all cursor-text ${isDarkMode ? "bg-neutral-900 border-neutral-700 text-green-400" : "bg-white border-slate-300 text-slate-600"}`}
                     >
                       {toolResult}
                     </div>
@@ -3495,18 +3495,18 @@ const ItineraryApp = () => {
           {/* 左側：標題卡片 - 添加點擊邏輯 */}
           {/* 3. min-w-0: 允許 flex item 縮小，防止破版 */}
           <div
-            className={`px-3 py-2 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 cursor-pointer select-none active:scale-95 ${theme.cardBg} ${theme.cardBorder}`}
+            className={`px-3 py-2.5 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 cursor-pointer select-none active:scale-95 ${theme.cardBg} ${theme.cardBorder}`}
             onClick={handleTitleClick}
           >
-            {/* 4. text-base + whitespace-nowrap: 字體改小一點，且強制不換行 */}
+            {/* 4. text-lg + whitespace-nowrap: 字體稍微放大，增加易讀性 */}
             <h1
-              className={`text-base font-bold tracking-wide transition-colors whitespace-nowrap ${theme.text}`}
+              className={`text-lg font-bold tracking-wide transition-colors whitespace-nowrap ${theme.text}`}
             >
               {tripConfig.title}
             </h1>
-            {/* 5. text-[10px]: 副標題改更小，視覺層次更好 */}
+            {/* 5. text-xs: 副標題改為 12px，視覺層次更好 */}
             <p
-              className={`text-[10px] mt-0.5 font-medium tracking-widest whitespace-nowrap ${theme.textSec}`}
+              className={`text-xs mt-0.5 font-medium tracking-widest whitespace-nowrap opacity-70 ${theme.textSec}`}
             >
               {tripConfig.subTitle}
             </p>
@@ -3590,10 +3590,10 @@ const ItineraryApp = () => {
                 ref={(el) => (navItemsRef.current[-1] = el)}
                 onClick={() => changeDay(-1)}
                 aria-label="查看行程總覽"
-                className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm flex items-center gap-1.5 shadow-sm active:scale-95 hover:scale-105
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-sm flex items-center gap-1.5 shadow-sm active:scale-95 hover:scale-105
                   ${
                     activeDay === -1
-                      ? `${theme.accentBg} ${theme.accent} ${isDarkMode ? "border-neutral-600" : "border-stone-300"} scale-105 shadow-md`
+                      ? `${theme.accentBg} ${theme.accent} ${isDarkMode ? "border-white/10" : "border-white/20"} scale-105 shadow-md`
                       : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5 hover:shadow-md`
                   }`}
               >
@@ -3606,10 +3606,10 @@ const ItineraryApp = () => {
                   ref={(el) => (navItemsRef.current[index] = el)}
                   onClick={() => changeDay(index)}
                   aria-label={`查看${data.day}`}
-                  className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all duration-300 border backdrop-blur-sm shadow-sm active:scale-95 hover:scale-105
+                  className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-sm shadow-sm active:scale-95 hover:scale-105
                     ${
                       activeDay === index
-                        ? `${theme.accentBg} ${theme.text} ${isDarkMode ? "border-neutral-600" : "border-stone-300"} scale-105 shadow-md`
+                        ? `${theme.accentBg} ${theme.text} ${isDarkMode ? "border-white/10" : "border-white/20"} scale-105 shadow-md`
                         : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5 hover:shadow-md`
                     }`}
                 >
@@ -3870,7 +3870,7 @@ const ItineraryApp = () => {
                               <div className="flex items-center gap-2.5 animate-fadeIn">
                                 {/* 左側標籤：移除了 mt-0.5，讓 flexbox 自動置中 */}
                                 <div
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap tracking-wide ${isDarkMode ? "bg-white/10 text-neutral-300" : "bg-black/5 text-stone-600"}`}
+                                  className={`px-1.5 py-0.5 rounded text-xs font-bold whitespace-nowrap tracking-wide ${isDarkMode ? "bg-white/10 text-neutral-300" : "bg-black/5 text-stone-600"}`}
                                 >
                                   {targetName}
                                 </div>
@@ -4003,7 +4003,7 @@ const ItineraryApp = () => {
                                     </div>
                                     <button
                                       onClick={() => handleCopy(hotel.address)}
-                                      className={`text-[10px] flex items-start gap-1.5`}
+                                      className={`text-xs flex items-start gap-1.5`}
                                       title="點擊複製地址"
                                     >
                                       <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
@@ -4440,7 +4440,7 @@ const ItineraryApp = () => {
                               return (
                                 <div
                                   key={idx}
-                                  className={`group rounded-2xl border shadow-sm transition-all duration-300 overflow-hidden ${isDarkMode ? "bg-neutral-800/30 border-neutral-700 hover:bg-neutral-800/50" : "bg-white/60 border-white/60 hover:bg-white/80 hover:shadow-md"}`}
+                                  className={`group rounded-2xl border shadow-sm transition-all duration-300 overflow-hidden ${isDarkMode ? "bg-neutral-800/30 border-white/5 hover:bg-neutral-800/50" : "bg-white/60 border-white/20 hover:bg-white/80 hover:shadow-md"}`}
                                 >
                                   {/* Header Row */}
                                   <div
@@ -4470,7 +4470,7 @@ const ItineraryApp = () => {
                                       <div className="flex justify-between items-start">
                                         <div>
                                           <div
-                                            className={`text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5 w-fit px-2 py-0.5 rounded-full ${isDarkMode ? "bg-neutral-700 text-neutral-300" : "bg-stone-200/50 text-stone-600"}`}
+                                            className={`text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5 w-fit px-2.5 py-1 rounded-full ${isDarkMode ? "bg-neutral-700/50 text-neutral-400" : "bg-stone-100 text-stone-500"}`}
                                           >
                                             <Clock className="w-3 h-3" />{" "}
                                             {event.time}
@@ -4478,7 +4478,7 @@ const ItineraryApp = () => {
                                           {/* Title and Map Link */}
                                           <div className="flex items-center gap-2 mb-1.5">
                                             <h3
-                                              className={`text-base font-bold leading-tight ${theme.text}`}
+                                              className={`text-lg font-bold leading-tight ${theme.text}`}
                                             >
                                               {event.title}
                                             </h3>
@@ -4762,7 +4762,7 @@ const ItineraryApp = () => {
                   return (
                     <div
                       key={idx}
-                      className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/70 border-white/60"}`}
+                      className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/40 border-white/5" : "bg-white/70 border-white/20"}`}
                     >
                       {/* Guide Header - Clickable */}
                       <div
@@ -5095,7 +5095,7 @@ const ItineraryApp = () => {
                                     {chain.name}
                                   </span>
                                   <span
-                                    className={`text-[10px] border-l pl-2 ${isDarkMode ? "border-neutral-600 text-neutral-500" : "text-stone-400 border-stone-200"}`}
+                                    className={`text-xs border-l pl-2 ${isDarkMode ? "border-neutral-600 text-neutral-500" : "text-stone-400 border-stone-200"}`}
                                   >
                                     {chain.location}
                                   </span>
@@ -5382,11 +5382,11 @@ const ItineraryApp = () => {
           <div
             // 容器：基礎色系通常較固定，這裡使用 style 變數輔助或是保留原樣 (若 cBase 是 stone/neutral 通常沒問題)
             // 若發現容器背景也消失，建議同樣改用查表法，但目前主要問題在 AI 按鈕
-            className={`flex items-center gap-1 px-2 py-2 rounded-full backdrop-blur-xl border shadow-2xl transition-all duration-300
+            className={`flex items-center gap-1 px-2 py-2 rounded-full backdrop-blur-2xl border shadow-2xl transition-all duration-300
             ${
               isDarkMode
-                ? `bg-${cBase}-900/70 border-${cBase}-700/60 shadow-black/50`
-                : `bg-${cBase}-50/70 border-${cBase}-300/70 shadow-${cBase}-500/20`
+                ? `bg-${cBase}-900/60 border-white/10 shadow-black/50`
+                : `bg-${cBase}-50/60 border-white/20 shadow-${cBase}-500/10`
             }`}
           >
             {/* 1. 行程 (Itinerary) */}
@@ -5399,8 +5399,8 @@ const ItineraryApp = () => {
                 ${
                   activeTab === "itinerary"
                     ? isDarkMode
-                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30`
-                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
+                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
                       : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
@@ -5410,7 +5410,7 @@ const ItineraryApp = () => {
                 className={`w-5 h-5 ${activeTab === "itinerary" ? "stroke-[2.5px]" : "stroke-2"}`}
               />
               {activeTab === "itinerary" && (
-                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+                <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button>
 
@@ -5424,8 +5424,8 @@ const ItineraryApp = () => {
                 ${
                   activeTab === "guides"
                     ? isDarkMode
-                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30`
-                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
+                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
                       : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
@@ -5435,7 +5435,7 @@ const ItineraryApp = () => {
                 className={`w-5 h-5 ${activeTab === "guides" ? "stroke-[2.5px]" : "stroke-2"}`}
               />
               {activeTab === "guides" && (
-                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+                <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button>
 
@@ -5448,7 +5448,7 @@ const ItineraryApp = () => {
               className={`mx-1 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg backdrop-blur-md active:scale-95 border
                 ${
                   activeTab === "ai"
-                    ? "scale-105 ring-4 ring-opacity-30"
+                    ? "scale-110 ring-4 ring-opacity-20 -translate-y-1"
                     : "hover:scale-105"
                 }
                 ${
@@ -5457,15 +5457,15 @@ const ItineraryApp = () => {
                     // 定義顏色對應表 (包含日間/夜間)
                     const styles = {
                       amber: isDarkMode
-                        ? "bg-gradient-to-tr from-amber-600/90 to-amber-500/90 ring-amber-500/50 border-amber-400/30 shadow-amber-900/40"
-                        : "bg-gradient-to-tr from-amber-400 to-amber-500 ring-amber-400/50 border-amber-300/50 shadow-amber-500/40", // 日間：金黃漸層
+                        ? "bg-gradient-to-tr from-amber-600/90 to-amber-500/90 ring-amber-500/40 border-amber-400/20 shadow-amber-900/40"
+                        : "bg-gradient-to-tr from-amber-400 to-amber-500 ring-amber-400/40 border-amber-300/40 shadow-amber-500/40", // 日間：金黃漸層
                       sky: isDarkMode
-                        ? "bg-gradient-to-tr from-sky-600/90 to-sky-500/90 ring-sky-500/50 border-sky-400/30 shadow-sky-900/40"
-                        : "bg-gradient-to-tr from-sky-400 to-sky-500 ring-sky-400/50 border-sky-300/50 shadow-sky-500/40",
+                        ? "bg-gradient-to-tr from-sky-600/90 to-sky-500/90 ring-sky-500/40 border-sky-400/20 shadow-sky-900/40"
+                        : "bg-gradient-to-tr from-sky-400 to-sky-500 ring-sky-400/40 border-sky-300/40 shadow-sky-500/40",
                       // 預設 fallback (避免設定檔打錯字時全白)
                       default: isDarkMode
-                        ? "bg-gradient-to-tr from-stone-600 to-stone-500 ring-stone-500/50 border-stone-400/30"
-                        : "bg-gradient-to-tr from-stone-400 to-stone-500 ring-stone-400/50 border-stone-300/50",
+                        ? "bg-gradient-to-tr from-stone-600 to-stone-500 ring-stone-500/40 border-stone-400/20"
+                        : "bg-gradient-to-tr from-stone-400 to-stone-500 ring-stone-400/40 border-stone-300/40",
                     };
                     return styles[cAccent] || styles.default;
                   })()
@@ -5485,8 +5485,8 @@ const ItineraryApp = () => {
                 ${
                   activeTab === "shops"
                     ? isDarkMode
-                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30`
-                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
+                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
                       : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
@@ -5496,7 +5496,7 @@ const ItineraryApp = () => {
                 className={`w-5 h-5 ${activeTab === "shops" ? "stroke-[2.5px]" : "stroke-2"}`}
               />
               {activeTab === "shops" && (
-                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+                <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button>
 
@@ -5510,8 +5510,8 @@ const ItineraryApp = () => {
                 ${
                   activeTab === "resources"
                     ? isDarkMode
-                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/30`
-                      : `bg-${cBase}-200/50 text-${cBase}-700 border-${cBase}-300/40 shadow-sm`
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
+                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
                       : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
@@ -5521,7 +5521,7 @@ const ItineraryApp = () => {
                 className={`w-5 h-5 ${activeTab === "resources" ? "stroke-[2.5px]" : "stroke-2"}`}
               />
               {activeTab === "resources" && (
-                <span className="absolute -bottom-[3px] w-1 h-1 rounded-full bg-current opacity-80 shadow-sm"></span>
+                <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button>
           </div>
