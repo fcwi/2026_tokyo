@@ -1,7 +1,4 @@
-﻿// 概述：ItineraryApp 主介面與互動邏輯
-// 功能：狀態管理、定位/天氣、語音與朗讀、行程呈現、UI 控制
-// 說明：本次優化僅更新註解與排版，不更動核心流程。
-import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
+﻿import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
 import {
   Sun,
   CloudSnow,
@@ -76,7 +73,8 @@ import {
   tripConfig,
   checklistData,
 } from "./tripdata_2026_karuizawa.jsx";
-// 有時 ESLint 會誤判 JSX 中的 `motion` 為未使用，為避免噪音先在此行暫時抑制該檢查
+
+// 抑制 ESLint 對於 JSX 中 motion 未使用的誤判
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import ChatInput from "./components/ChatInput.jsx";
@@ -88,10 +86,6 @@ import WeatherDetail from "./components/WeatherDetail.jsx";
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
 
-// --- 新增：來自 ios_weather 的視覺特效組件 ---
-
-// 1. Canvas 粒子系統
-// --- 修正：將 Particle 類別移至組件外部 ---
 class Particle {
   constructor(canvas, ctx, type, isDay) {
     this.canvas = canvas;
@@ -167,12 +161,9 @@ class Particle {
     if (!this.ctx) return;
     this.ctx.beginPath();
     if (this.type === "rain") {
-      // 2. 修改雨滴顏色邏輯
       if (this.isDay) {
-        // 白天雨滴：使用藍色，稍微透明
         this.ctx.strokeStyle = "rgba(100, 149, 237, 0.6)";
       } else {
-        // 晚上雨滴：維持原來的白色半透明
         this.ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
       }
       this.ctx.lineWidth = 1;
@@ -188,7 +179,6 @@ class Particle {
       this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       this.ctx.fill();
     } else if (this.type === "fog") {
-      // 繪製霧氣顆粒
       const gradient = this.ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
       gradient.addColorStop(0, `rgba(200, 200, 200, ${this.alpha})`);
       gradient.addColorStop(1, `rgba(200, 200, 200, 0)`);
@@ -196,7 +186,6 @@ class Particle {
       this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       this.ctx.fill();
     } else if (this.type === "lightning") {
-      // 繪製閃電
       const elapsed = Date.now() - this.startTime;
       if (elapsed < this.duration) {
         const brightness = Math.max(0, 1 - elapsed / this.duration);
@@ -204,7 +193,6 @@ class Particle {
         this.ctx.lineWidth = 3 + Math.random() * 2;
         this.ctx.lineCap = "round";
         
-        // 繪製鋸齒狀閃電
         const segments = 5;
         let currentX = this.x;
         let currentY = this.y;
@@ -223,6 +211,7 @@ class Particle {
     }
   }
 }
+
 const WeatherParticles = ({ type, isDay }) => {
   const canvasRef = useRef(null);
 
@@ -242,7 +231,6 @@ const WeatherParticles = ({ type, isDay }) => {
     window.addEventListener("resize", resize);
     resize();
 
-    // 修正：直接實例化外部的 Particle 類別，並傳入參數
     const count = 
       type === "rain" ? 150 : 
       type === "snow" ? 80 : 
@@ -278,7 +266,7 @@ const WeatherParticles = ({ type, isDay }) => {
     />
   );
 };
-// 2. 雲層 SVG
+
 const CloudSVG = ({ style, color }) => (
   <svg
     viewBox="0 0 24 24"
@@ -293,21 +281,18 @@ const CloudSVG = ({ style, color }) => (
   </svg>
 );
 
-// 3. 天體與雲層控制
 const SkyObjects = ({ isDay, condition }) => {
   const showCelestial = condition === "clear";
   const isCloudy = condition !== "clear";
-  // 根據天氣狀況決定雲的顏色
   let cloudColor;
   if (condition === "rain" || condition === "snow") {
-    cloudColor = "#bdc3c7"; // 原本的雨雪天灰色
+    cloudColor = "#bdc3c7";
   } else if (condition === "cloudy" && isDay) {
-    cloudColor = "#d1d5db"; // 新增：白天多雲時使用淺灰色
+    cloudColor = "#d1d5db";
   } else {
-    cloudColor = "#ecf0f1"; // 預設白色 (夜晚或晴天)
+    cloudColor = "#ecf0f1";
   }
 
-  // 天體樣式
   const celestialStyle = {
     top: "10%",
     right: "10%",
@@ -316,8 +301,8 @@ const SkyObjects = ({ isDay, condition }) => {
     borderRadius: "50%",
     background: isDay ? "#f1c40f" : "transparent",
     boxShadow: isDay
-      ? "0 0 60px #f39c12" // 白天太陽光暈
-      : "-30px 10px 0 0 #f5f6fa, -30px 10px 15px 2px rgba(245, 246, 250, 0.4)", // 夜晚月亮
+      ? "0 0 60px #f39c12"
+      : "-30px 10px 0 0 #f5f6fa, -30px 10px 15px 2px rgba(245, 246, 250, 0.4)",
     transform: showCelestial
       ? isDay
         ? "scale(1)"
@@ -330,13 +315,11 @@ const SkyObjects = ({ isDay, condition }) => {
 
   return (
     <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden">
-      {/* 太陽/月亮 */}
       <div
         className="transition-all duration-1000 ease-in-out"
         style={celestialStyle}
       />
 
-      {/* 雲層 (CSS 動畫需在全域樣式定義) */}
       {isCloudy && (
         <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-20 overflow-hidden opacity-60">
           <CloudSVG
@@ -372,7 +355,7 @@ const SkyObjects = ({ isDay, condition }) => {
   );
 };
 
-// --- Native Web Crypto API Utilities (取代 crypto-js) ---
+// 使用 Web Crypto API 實作加密工具，取代外部依賴以提升安全性與效能
 const CryptoUtils = {
   buffToHex: (buffer) =>
     Array.from(new Uint8Array(buffer))
@@ -383,7 +366,7 @@ const CryptoUtils = {
       hex.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
     ),
 
-  // 使用 PBKDF2 + AES-GCM 進行加密
+  // 採用 PBKDF2 衍生金鑰並配合 AES-GCM 進行加密
   encrypt: async (text, password) => {
     const encoder = new TextEncoder();
     const salt = window.crypto.getRandomValues(new Uint8Array(16));
@@ -410,7 +393,6 @@ const CryptoUtils = {
     return `${CryptoUtils.buffToHex(salt.buffer)}:${CryptoUtils.buffToHex(iv.buffer)}:${CryptoUtils.buffToHex(encrypted)}`;
   },
 
-  // 解密
   decrypt: async (packedData, password) => {
     try {
       const [saltHex, ivHex, cipherHex] = packedData.split(":");
@@ -445,23 +427,17 @@ const CryptoUtils = {
   },
 };
 
-// --- 加密 Key 區域 ---
-// 1) Gemini API Key
 const ENCRYPTED_API_KEY_PAYLOAD = (
   import.meta.env.VITE_ENCODED_KEY || ""
 ).trim();
 
-// 2) Google Maps API Key
-// 請使用下方加密工具生成後貼上
 const ENCRYPTED_MAPS_KEY_PAYLOAD = (
   import.meta.env.VITE_ENCODED_MAPS_KEY || ""
 ).trim();
 
-// 環境檢查和除錯工具
-// const isDev = import.meta.env.DEV; // Vite 環境變量：開發環境為 true
-const isDev = true; // 固定為開發模式true，方便測試
+// 開發環境偵錯開關
+const isDev = true;
 
-// 條件性日誌：僅在開發環境輸出
 const debugLog = (message, data = null) => {
   if (isDev) {
     if (data === null) {
@@ -472,7 +448,6 @@ const debugLog = (message, data = null) => {
   }
 };
 
-// 條件性日誌分組
 const debugGroup = (label) => {
   if (isDev) console.group(label);
 };
@@ -481,22 +456,20 @@ const debugGroupEnd = () => {
   if (isDev) console.groupEnd();
 };
 
-// 簡單的延遲函式
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const ItineraryApp = () => {
-  // --- Security State ---
   const [isVerified, setIsVerified] = useState(false);
   const [password, setPassword] = useState("");
-  const [apiKey, setApiKey] = useState(""); // Gemini Key
-  const [mapsApiKey, setMapsApiKey] = useState(""); // 🆕 Maps Key
+  const [apiKey, setApiKey] = useState("");
+  const [mapsApiKey, setMapsApiKey] = useState("");
   const [authError, setAuthError] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [showEncryptTool, setShowEncryptTool] = useState(false); // 控制加密工具顯示
-  const [fullPreviewImage, setFullPreviewImage] = useState(null); // 儲存目前放大的圖片 URL 或 Base64
+  const [showEncryptTool, setShowEncryptTool] = useState(false);
+  const [fullPreviewImage, setFullPreviewImage] = useState(null);
   const scrollContainerRef = useRef(null);
-  const [loadingText, setLoadingText] = useState(""); // 用來顯示隨機載入文字
-  const [autoTimeZone, setAutoTimeZone] = useState("Asia/Taipei"); // 預設時區為台北
+  const [loadingText, setLoadingText] = useState("");
+  const [autoTimeZone, setAutoTimeZone] = useState("Asia/Taipei");
   const [toast, setToast] = useState({
     show: false,
     message: "",
@@ -504,29 +477,24 @@ const ItineraryApp = () => {
   });
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
 
-  // 防止圖片放大時背景捲動
   useEffect(() => {
     if (fullPreviewImage) {
-      // 當圖片放大時，鎖定背景滾動
       document.body.style.overflow = "hidden";
     } else {
-      // 當關閉放大時，恢復背景滾動
       document.body.style.overflow = "";
     }
 
-    // 元件卸載時的清理邏輯，確保不會永久鎖定
     return () => {
       document.body.style.overflow = "";
     };
   }, [fullPreviewImage]);
 
-  // 初始化定位完成狀態：有快取即視為完成，否則顯示啟動畫面
+  // 優先從快取讀取天氣資訊，若無則顯示啟動畫面進行定位
   const [isAppReady, setIsAppReady] = useState(() => {
     const cached = localStorage.getItem("cached_user_weather");
-    return !!cached; // 有快取為 true，無快取為 false（顯示啟動畫面）
+    return !!cached;
   });
 
-  // --- 裝置與匯率狀態 ---
   const [isMobile, setIsMobile] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [rateData, setRateData] = useState({
@@ -539,7 +507,6 @@ const ItineraryApp = () => {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const { code, target } = tripConfig.currency;
 
-  // 1. 偵測是否為手機裝置
   useEffect(() => {
     const checkMobile = () => {
       const userAgent = navigator.userAgent || navigator.vendor || window.opera;
@@ -554,7 +521,6 @@ const ItineraryApp = () => {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // 2. 監聽網路狀態，與匯率 UI 共用
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -566,7 +532,6 @@ const ItineraryApp = () => {
     };
   }, []);
 
-  // 3. 匯率抓取：集中在 App 供匯率元件與計算機共用
   useEffect(() => {
     if (!isOnline) {
       setRateData((prev) => ({ ...prev, loading: false }));
@@ -617,14 +582,11 @@ const ItineraryApp = () => {
     fetchRates();
   }, [code, target, isOnline]);
 
-  // 加密工具用的 State
   const [toolKey, setToolKey] = useState("");
   const [toolPwd, setToolPwd] = useState("");
   const [toolResult, setToolResult] = useState("");
-  const [keyType, setKeyType] = useState("gemini"); // 用來切換要加密哪種 Key
+  const [keyType, setKeyType] = useState("gemini");
 
-  // --- 輔助函式：解析 Markdown 粗體與 URL 連結 ---
-  // 先預先建立關鍵字 Set 與安全的 Regex，避免每次渲染反覆組裝大型字串
   const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const { keywordsSet, combinedRegex } = React.useMemo(() => {
     const allKeywordsRaw = [
@@ -633,7 +595,6 @@ const ItineraryApp = () => {
     ];
     const filtered = allKeywordsRaw.filter((k) => k && k.length >= 2);
     const set = new Set(filtered);
-    // 將每個關鍵字進行 Regex 逃脫，避免像 ( ), +, ? 等符號造成誤判
     const pattern = filtered.map(escapeRegex).join("|");
     const regex = new RegExp(
       `(https?://[^\\s]+)|(${pattern})|(\\*\\*.*?\\*\\*)`,
@@ -648,7 +609,6 @@ const ItineraryApp = () => {
     return text.split(combinedRegex).map((part, index) => {
       if (!part) return null;
 
-      // 1. 處理 URL
       if (/^https?:\/\//.test(part)) {
         return (
           <a
@@ -663,7 +623,6 @@ const ItineraryApp = () => {
         );
       }
 
-      // 💡 2. 處理行程關鍵字：點擊直接開地圖
       if (keywordsSet.has(part)) {
         return (
           <a
@@ -676,7 +635,6 @@ const ItineraryApp = () => {
         );
       }
 
-      // 3. 處理粗體
       if (part.startsWith("**") && part.endsWith("**")) {
         return (
           <strong key={index} className="font-bold">
@@ -689,24 +647,20 @@ const ItineraryApp = () => {
     });
   };
 
-  // 輔助函式：處理圖片選擇
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 檢查檔案大小（超過 5MB 可能阻塞主線程）
-    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    const maxFileSize = 5 * 1024 * 1024;
     if (file.size > maxFileSize) {
       showToast("圖片檔案過大（超過 5MB），請選擇較小的圖片", "error");
       return;
     }
 
-    // 使用 requestIdleCallback 將 Base64 轉換延遲到空閒時間
     const reader = new FileReader();
     reader.onload = (event) => {
       const imageData = event.target.result;
 
-      // 異步處理圖片壓縮（使用 requestIdleCallback 避免阻塞主線程）
       if ("requestIdleCallback" in window) {
         requestIdleCallback(
           () => {
@@ -715,7 +669,6 @@ const ItineraryApp = () => {
           { timeout: 2000 },
         );
       } else {
-        // Fallback: setTimeout for older browsers
         setTimeout(() => {
           processImageCompression(imageData);
         }, 100);
@@ -724,7 +677,6 @@ const ItineraryApp = () => {
     reader.readAsDataURL(file);
   };
 
-  // 提取圖片壓縮邏輯到獨立函式
   const processImageCompression = (imageData) => {
     const img = new Image();
     img.src = imageData;
@@ -733,7 +685,6 @@ const ItineraryApp = () => {
       let width = img.width;
       let height = img.height;
 
-      // 限制最長邊為 1600px，這在 Gemini 辨識與流量間取得了極佳平衡
       const MAX_SIDE = 1600;
       if (width > height) {
         if (width > MAX_SIDE) {
@@ -752,28 +703,23 @@ const ItineraryApp = () => {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
-      // 使用 jpeg 格式並設定 0.8 的品質，能顯著壓縮檔案體積但保留細節
       const compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
       setTempImage(compressedBase64);
     };
   };
 
-  // 輔助函式：移除圖片
   const clearImage = () => {
     setSelectedImage(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // 定義一個強大的複製函式（支援 fallback）
   const copyToClipboard = async (text, successMsg = "已複製到剪貼簿") => {
     try {
-      // 優先使用 navigator.clipboard（現代瀏覽器）
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
         showToast(successMsg);
         return true;
       } else {
-        // Fallback 到舊方法（某些舊瀏覽器或不安全上下文）
         const textArea = document.createElement("textarea");
         textArea.value = text;
         textArea.style.position = "fixed";
@@ -798,16 +744,12 @@ const ItineraryApp = () => {
     }
   };
 
-  // 定義一個簡單的複製函式（向後相容）
   const handleCopy = (text) => {
     copyToClipboard(text, `已複製：${text}`);
   };
 
-  // --- Theme Helpers ---
-  // Theme State
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Auto-detect sunset (approx 17:00 in winter Japan)
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour >= 17 || hour < 6) {
@@ -817,21 +759,15 @@ const ItineraryApp = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  // --- Weather Logic for Theme ---
   const getParticleType = (code, isDark) => {
     if (code === null || code === undefined) return null;
-    // 晴朗且是晚上 -> 星星
     if (code === 0 && isDark) return "stars";
-    // 多霧 -> 霧特效
     if ([45, 48].includes(code)) return "fog";
-    // 雷雨 -> 閃電特效
     if ([95, 96, 99].includes(code)) return "lightning";
-    // 下雨（不包括雷雨）
     if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code))
       return "rain";
-    // 下雪
     if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
-    return null; // 多雲或白天晴朗不顯示粒子
+    return null;
   };
 
   const getSkyCondition = (code) => {
@@ -841,34 +777,92 @@ const ItineraryApp = () => {
     if ([45, 48].includes(code)) return "fog";
     if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
     if ([95, 96, 99].includes(code)) return "thunderstorm";
-    return "rain"; // 其他視為有雨或陰天
+    return "rain";
   };
 
-  // --- Dynamic Theme Logic ---
-  // 從 Config 讀取設定，若無則使用預設值 (Memo 化，避免每次渲染重建物件)
   const currentTheme = React.useMemo(
-    () =>
-      tripConfig.theme || {
-        colorBase: "stone",
-        colorAccent: "amber",
-        bgTexture: "url('...')", // (省略預設值)
-        bgGradientLight:
-          "bg-[#FDFBF7] from-stone-200/40 via-transparent to-transparent",
-        bgGradientDark:
-          "bg-[#0C0C0C] from-neutral-800/30 via-transparent to-transparent",
-        blobs: {
-          light: ["bg-stone-400/20", "bg-orange-300/20", "bg-gray-300/30"],
-          dark: ["bg-blue-500/10", "bg-purple-500/10", "bg-emerald-500/10"],
+    () => {
+      const theme = tripConfig.theme || {};
+      return {
+        colorBase: theme.colorBase || "stone",
+        colorAccent: theme.colorAccent || "amber",
+        bgTexture: theme.bgTexture || `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
+        bgGradientLight: theme.bgGradientLight || "bg-[#FDFBF7] from-stone-100/50 via-white to-transparent",
+        bgGradientDark: theme.bgGradientDark || "bg-[#1A1A1A] from-[#252525] via-[#1A1A1A]/80 to-transparent",
+        blobs: theme.blobs || {
+          light: ["bg-orange-200/30", "bg-stone-200/30", "bg-amber-100/40"],
+          dark: ["bg-amber-500/10", "bg-purple-500/10", "bg-blue-500/10"],
         },
-        textColors: tripConfig.theme?.textColors || undefined,
-      },
+        textColors: theme.textColors || {
+          light: "text-stone-800",
+          dark: "text-stone-100",
+          secLight: "text-stone-500",
+          secDark: "text-stone-300",
+        },
+        semanticColors: theme.semanticColors || {
+          blue: { light: "text-[#5D737E]", dark: "text-sky-300" },
+          green: { light: "text-[#556B2F]", dark: "text-emerald-300" },
+          red: { light: "text-[#A04040]", dark: "text-red-300" },
+          orange: { light: "text-[#CD853F]", dark: "text-amber-300" },
+          pink: { light: "text-[#BC8F8F]", dark: "text-rose-300" },
+        },
+        weatherIconColors: theme.weatherIconColors || {
+          sun: "text-amber-400",
+          moon: "text-indigo-300",
+          cloud: "text-gray-400",
+          fog: "text-slate-400",
+          rain: "text-blue-400",
+          snow: "text-cyan-300",
+          lightning: "text-yellow-500",
+        },
+        weatherColors: theme.weatherColors || {
+          rain: "#94a3b8",
+          cloud: "#cbd5e1",
+          snow: "#94a3b8",
+        },
+        glassColors: theme.glassColors || {
+          card: {
+            light: "bg-white/85 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]",
+            dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
+          },
+          nav: {
+            light: "bg-white/30 backdrop-blur-2xl border-white/15 shadow-lg",
+            dark: "bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30"
+          },
+        },
+        tagColors: theme.tagColors || {
+          transport: { light: "bg-[#E8F0FE] text-[#3B5998]", dark: "bg-sky-900/30 text-sky-200" },
+          food: { light: "bg-[#F0F5E5] text-[#556B2F]", dark: "bg-emerald-900/30 text-emerald-200" },
+          shopping: { light: "bg-[#FFF8E1] text-[#8B6B23]", dark: "bg-amber-900/30 text-amber-200" },
+          hotel: { light: "bg-[#E6E6FA] text-[#6A5ACD]", dark: "bg-purple-900/30 text-purple-200" },
+          spot: { light: "bg-[#FFF0F5] text-[#BC8F8F]", dark: "bg-rose-900/30 text-rose-200" },
+        },
+        chatColors: theme.chatColors || {
+          userBubble: {
+            light: "bg-[#5D737E] text-white border-[#4A606A]",
+            dark: "bg-sky-800 text-white border-sky-700"
+          },
+          modelBubble: {
+            light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
+            dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700"
+          },
+          bg: {
+            light: "bg-[#F9F9F6]/50",
+            dark: "bg-black/20"
+          }
+        },
+        mainBg: theme.mainBg || {
+          light: "bg-[#F0F2F5] text-slate-700",
+          dark: "bg-[#1A1A1A] text-neutral-200"
+        }
+      };
+    },
     [],
   );
 
-  const cBase = currentTheme.colorBase; // e.g., "slate"
-  const cAccent = currentTheme.colorAccent; // e.g., "sky"
+  const cBase = currentTheme.colorBase;
+  const cAccent = currentTheme.colorAccent;
 
-  // 將紋理傳遞給 CSS 變數，避免每次渲染重建物件
   const containerStyle = React.useMemo(
     () => ({
       "--bg-texture": currentTheme.bgTexture,
@@ -876,23 +870,23 @@ const ItineraryApp = () => {
     [currentTheme.bgTexture],
   );
 
-  const colors = {
-    blue: isDarkMode ? "text-sky-300" : "text-[#5D737E]",
-    green: isDarkMode ? "text-emerald-300" : "text-[#556B2F]",
-    red: isDarkMode ? "text-red-300" : "text-[#A04040]",
-    orange: isDarkMode ? "text-amber-300" : "text-[#CD853F]",
-    pink: isDarkMode ? "text-rose-300" : "text-[#BC8F8F]",
-  };
+  const colors = React.useMemo(() => {
+    const sc = currentTheme.semanticColors;
+    return {
+      blue: isDarkMode ? sc.blue.dark : sc.blue.light,
+      green: isDarkMode ? sc.green.dark : sc.green.light,
+      red: isDarkMode ? sc.red.dark : sc.red.light,
+      orange: isDarkMode ? sc.orange.dark : sc.orange.light,
+      pink: isDarkMode ? sc.pink.dark : sc.pink.light,
+    };
+  }, [isDarkMode, currentTheme.semanticColors]);
 
-  // --- Auth Logic ---
-  // 1. Check local storage on load
   useEffect(() => {
     const checkSavedPassword = async () => {
       const savedPwd = localStorage.getItem("trip_password");
       if (savedPwd && ENCRYPTED_API_KEY_PAYLOAD) {
         await attemptUnlock(savedPwd, true);
       } else if (!ENCRYPTED_API_KEY_PAYLOAD) {
-        // 如果沒有設定加密 Key，直接解鎖 (開發模式或未設定)
         setIsVerified(true);
       }
     };
@@ -903,7 +897,6 @@ const ItineraryApp = () => {
     setIsAuthLoading(true);
     setAuthError("");
     try {
-      // 1. 解密 Gemini Key
       if (ENCRYPTED_API_KEY_PAYLOAD) {
         const decryptedGemini = await CryptoUtils.decrypt(
           ENCRYPTED_API_KEY_PAYLOAD,
@@ -916,7 +909,6 @@ const ItineraryApp = () => {
         }
       }
 
-      // 2) 解密 Maps Key（如有）
       if (ENCRYPTED_MAPS_KEY_PAYLOAD) {
         try {
           const decryptedMaps = await CryptoUtils.decrypt(
@@ -927,8 +919,7 @@ const ItineraryApp = () => {
             setMapsApiKey(decryptedMaps);
           }
         } catch (e) {
-          console.warn("Maps Key 解密失敗，可能密碼不同或未設定", e);
-          // 這裡可以選擇是否要拋出錯誤，或者允許只有 Gemini Key 成功也算過關
+          console.warn("Maps Key 解密失敗", e);
         }
       }
 
@@ -1015,7 +1006,6 @@ const ItineraryApp = () => {
     const currentY = e.touches[0].pageY;
     const diff = currentY - startYRef.current;
     if (diff > 0 && window.scrollY === 0) {
-      // 阻尼效果
       setPullDistance(Math.min(diff * 0.4, pullThreshold + 20));
     }
   };
@@ -1044,24 +1034,16 @@ const ItineraryApp = () => {
     }
   };
 
-  // const [touchEnd, setTouchEnd] = useState(null);
-  // 新增：紀錄滑動方向狀態 (1 代表去下一頁/向左滑，-1 代表回上一頁/向右滑)
-  // 初始值設為 0，避免第一次載入時有動畫
-  // 注意：目前不直接使用 `page` 變數，因此用空位忽略以避免 lint 警告
   const [[, direction], setPage] = useState([activeDay, 0]);
-  // 新增：定義 Framer Motion 動畫變數
-  // 這裡決定了畫面要怎麼進場 (enter) 和退場 (exit)
-  // 🆕 優化：添加 willChange + backdropFilter 優化，解決毛玻璃閃爍
+
   const slideVariants = {
     enter: (direction) => ({
       x: direction > 0 ? "100%" : "-100%",
       opacity: 0,
       position: "absolute",
       width: "100%",
-      // 強制啟用硬體加速，減少閃爍與延遲
       z: 0,
       willChange: "transform, opacity",
-      // 預先啟用 GPU：某些裝置需要這個提示
       backfaceVisibility: "hidden",
       WebkitFontSmoothing: "antialiased",
     }),
@@ -1073,9 +1055,8 @@ const ItineraryApp = () => {
       zIndex: 1,
       willChange: "auto",
       transition: {
-        duration: 0.35, // 稍微增加一點點時間，讓動畫更滑順
-        ease: [0.23, 1, 0.32, 1], // 使用自訂 bezier 曲線（更具回彈感的減速）
-        // 🆕 分離 opacity 動畫，讓毛玻璃效果更平滑
+        duration: 0.35,
+        ease: [0.23, 1, 0.32, 1],
         opacity: { duration: 0.3, ease: "easeOut" },
       },
     },
@@ -1089,59 +1070,45 @@ const ItineraryApp = () => {
       transition: { 
         duration: 0.2, 
         ease: "easeIn",
-        // 🆕 優化：exit 動畫也分離 opacity
         opacity: { duration: 0.15 },
       },
     }),
   };
 
   const onTouchStart = (e) => {
-    // 同時記錄 X 和 Y，用來判斷斜率
     setTouchStart({
       x: e.targetTouches[0].clientX,
       y: e.targetTouches[0].clientY,
     });
   };
-  // 🟢 新增：主動式防干擾監聽器 (解決 passive event 錯誤)
 
-  // 🟢 替換整個 onTouchEnd
   const onTouchEnd = (e) => {
     if (!touchStart) return;
 
     const endX = e.changedTouches[0].clientX;
     const endY = e.changedTouches[0].clientY;
 
-    // 計算水平與垂直的移動距離
     const distanceX = touchStart.x - endX;
     const distanceY = touchStart.y - endY;
 
-    // 取絕對值 (不管往左還往右，距離都是正的)
     const absX = Math.abs(distanceX);
     const absY = Math.abs(distanceY);
 
-    // ⚙️ 設定閥值
-    const minSwipeDistance = 75; // 門檻提高：要滑動 75px 才算數 (原本 50)
-    const slopeThreshold = 2.5; // 嚴格度：水平距離必須是垂直距離的 2.5 倍以上
+    const minSwipeDistance = 75;
+    const slopeThreshold = 2.5;
 
-    // 🛡️ 核心判斷：
-    // 1. 水平滑動距離夠長嗎？ (absX > minSwipeDistance)
-    // 2. 是純粹的水平滑動嗎？ (absX > absY * slopeThreshold)
-    //    如果 absY (垂直移動) 很大，代表使用者正在捲動網頁，這裡就會回傳 false，避免誤觸。
+    // 判斷是否為有效的水平滑動，並排除垂直捲動的干擾
     if (absX > minSwipeDistance && absX > absY * slopeThreshold) {
-      // 🆕 測試模式：滑動會重置計數
       if (testModeClickCount > 0) {
         setTestModeClickCount(0);
         showToast("連續點擊計數已重置，請重新開始", "info");
       }
 
-      // 判斷方向
       if (distanceX > 0) {
-        // 往左滑 (手指由右向左) -> 下一頁
         if (activeDay < itineraryData.length - 1) {
           changeDay(activeDay + 1);
         }
       } else {
-        // 往右滑 (手指由左向右) -> 上一頁
         if (activeDay > -1) {
           changeDay(activeDay - 1);
         }
@@ -1152,40 +1119,34 @@ const ItineraryApp = () => {
   };
 
   const changeDay = (newDay) => {
-    // 如果新頁碼 > 舊頁碼，代表去下一頁 (方向 1，內容往左移)
-    // 如果新頁碼 < 舊頁碼，代表回上一頁 (方向 -1，內容往右移)
     const newDirection = newDay > activeDay ? 1 : -1;
-    setPage([newDay, newDirection]); // 設定 Framer Motion 的 [頁碼, 方向]
-    setActiveDay(newDay); // 設定實際的 activeDay
+    setPage([newDay, newDirection]);
+    setActiveDay(newDay);
   };
 
-  // --- Checklist Logic ---
-  const [newItemText, setNewItemText] = useState(""); // 輸入框狀態
+  const [newItemText, setNewItemText] = useState("");
 
   const [checklist, setChecklist] = useState(() => {
     try {
       const saved = localStorage.getItem("trip_checklist_v1");
       if (saved) {
-        // ✅ 改為：直接使用儲存的清單 (這樣才能包含使用者新增的項目)
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
       console.error("讀取清單失敗", e);
     }
-    return checklistData; // 如果沒存檔過，就用預設資料
+    return checklistData;
   });
 
-  // 當 checklist 改變時，使用防抖延遲自動存入 localStorage（避免頻繁寫入）
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       localStorage.setItem("trip_checklist_v1", JSON.stringify(checklist));
-    }, 500); // 500ms 防抖延遲
+    }, 500);
 
     return () => clearTimeout(debounceTimer);
   }, [checklist]);
 
-  // 新增：航班資訊收折狀態 (預設 false = 收折)
   const [isFlightInfoExpanded, setIsFlightInfoExpanded] = useState(false);
 
   const [glowId, setGlowId] = useState(null);
@@ -1196,7 +1157,6 @@ const ItineraryApp = () => {
         if (item.id === id) {
           const newChecked = !item.checked;
           if (newChecked) {
-            // 觸發震動與發光
             if (navigator.vibrate) navigator.vibrate(10);
             setGlowId(id);
             setTimeout(() => setGlowId(null), 800);
@@ -1207,67 +1167,59 @@ const ItineraryApp = () => {
       }),
     );
   };
-  // 新增項目
+
   const handleAddItem = () => {
-    if (!newItemText.trim()) return; // 防止空字串
+    if (!newItemText.trim()) return;
     const newItem = {
-      id: Date.now(), // 使用時間戳記當作唯一 ID
+      id: Date.now(),
       text: newItemText.trim(),
       checked: false,
     };
-    setChecklist((prev) => [...prev, newItem]); // 加入清單末尾
-    setNewItemText(""); // 清空輸入框
+    setChecklist((prev) => [...prev, newItem]);
+    setNewItemText("");
     showToast("已新增檢查項目");
   };
-  // 刪除項目（長按或點擊垃圾桶）
+
   const handleDeleteItem = (id) => {
     if (window.confirm("確定要刪除此項目嗎？")) {
       setChecklist((prev) => prev.filter((item) => item.id !== id));
-      showToast("項目已刪除", "error"); // 使用 error 樣式顯示刪除提示
+      showToast("項目已刪除", "error");
     }
   };
-  // 重置檢查清單（還原為預設值）
+
   const handleResetChecklist = () => {
     if (
       window.confirm(
         "確定要重置檢查清單嗎？\n這將會：\n1. 刪除所有您自訂的項目\n2. 將所有預設項目還原為「未勾選」狀態",
       )
     ) {
-      // 使用 JSON 序列化來深拷貝 checklistData，確保是全新的狀態
-      // (雖然直接用 checklistData 也可以，但這樣寫最保險)
       setChecklist(JSON.parse(JSON.stringify(checklistData)));
       showToast("清單已還原成預設值");
     }
   };
 
-  // Weather State
   const [weatherForecast, setWeatherForecast] = useState({
     karuizawa: null,
     tokyo: null,
     loading: true,
   });
 
-  // 天氣詳情頁面狀態
   const [showWeatherDetail, setShowWeatherDetail] = useState(false);
 
-  // User Location Weather State
   const [userWeather, setUserWeather] = useState(() => {
     try {
-      // 1. 在元件初始化的瞬間，直接去讀快取
       const cached = localStorage.getItem("cached_user_weather");
       if (cached) {
         const parsed = JSON.parse(cached);
-        // 簡單驗證資料完整性，確保有地點名稱
         if (parsed && parsed.locationName) {
           debugLog("🚀 State 初始化：直接載入快取資料", parsed.locationName);
-          return parsed; // 直接回傳快取物件作為初始狀態
+          return parsed;
         }
       }
     } catch (e) {
       console.error("快取初始化解析失敗", e);
     }
 
-    // 2. 如果沒快取，才使用這個預設值
     return {
       temp: null,
       desc: "",
@@ -1279,27 +1231,23 @@ const ItineraryApp = () => {
     };
   });
 
-  // --- 🔧 DEBUG TOOL: 讓 Chrome Console 可以控制天氣 ---
+  // 讓開發者可以透過 Console 快速測試不同天氣與日夜效果
   useEffect(() => {
     window.setTestWeather = (code, isDark) => {
-      // 1. 強制修改天氣代碼 (影響總覽頁特效)
       if (code !== undefined) {
         setUserWeather((prev) => ({ ...prev, weatherCode: code }));
       }
-      // 2. 強制修改日夜模式 (true=黑夜, false=白天)
       if (isDark !== undefined) {
         setIsDarkMode(isDark);
       }
       console.log(`🧪 測試模式啟動: Code=${code}, DarkMode=${isDark}`);
     };
 
-    // 清理函式
     return () => {
       delete window.setTestWeather;
     };
   }, []);
 
-  // 位置來源狀態：'cache' | 'low' | 'high' | null
   const [locationSource, setLocationSource] = useState(() => {
     try {
       const cached = localStorage.getItem("cached_user_weather");
@@ -1309,32 +1257,26 @@ const ItineraryApp = () => {
     }
   });
 
-  // 追蹤最後一次高精度定位的時間（ms since epoch），用 useRef 避免不必要 rerender
   const lastHighPrecisionAtRef = useRef(null);
-  const isFetchingLocationRef = useRef(false); // 用於節流並避免並發
+  const isFetchingLocationRef = useRef(false);
   const lastFetchAtRef = useRef(0);
 
-  // 目前分享流程是否正在進行（用於 disable 與顯示 spinner）
   const [isSharing, setIsSharing] = useState(false);
 
-  // 目前使用者主動更新位置的 loading 狀態（用於更新按鈕）
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
-  // --- 🆕 測試模式相關狀態 ---
   const [isTestMode, setIsTestMode] = useState(false);
   const [testModeClickCount, setTestModeClickCount] = useState(0);
   const [testDateTime, setTestDateTime] = useState(new Date());
-  const [testLatitude, setTestLatitude] = useState(35.4437); // 輕井澤預設座標
+  const [testLatitude, setTestLatitude] = useState(35.4437);
   const [testLongitude, setTestLongitude] = useState(138.3919);
   const [testWeatherOverride, setTestWeatherOverride] = useState({
     overview: null,
-    days: {}, // 例如: { 0: 0, 1: 71, ...}
+    days: {},
   });
-  // 🆕 測試設定鎖定機制：防止其他操作覆蓋測試設定
   const [frozenTestDateTime, setFrozenTestDateTime] = useState(null);
   const [frozenTestWeatherOverride, setFrozenTestWeatherOverride] = useState(null);
 
-  // 🆕 凍結/解凍測試設定的邏輯
   const freezeTestSettings = () => {
     setFrozenTestDateTime(new Date(testDateTime));
     setFrozenTestWeatherOverride(JSON.parse(JSON.stringify(testWeatherOverride)));
@@ -1349,7 +1291,6 @@ const ItineraryApp = () => {
     showToast("測試設定已解凍", "success");
   };
 
-  // 🆕 測試模式時，根據 testDateTime 更新日夜模式
   useEffect(() => {
     if (isTestMode) {
       const hour = testDateTime.getHours();
@@ -1361,22 +1302,14 @@ const ItineraryApp = () => {
     }
   }, [isTestMode, testDateTime]);
 
-  // --- 🆕 API 中止控制器（AbortController）---
-  // 用於中止長期 API 調用，避免卸載後的狀態更新
   const geminiAbortControllerRef = useRef(null);
   const mapsAbortControllerRef = useRef(null);
 
-  // --- 🔧 API 結果快取（內存快取，使用 LRU 策略） ---
-  // 快取 Google Places API 查詢結果，key 為 "lat,lng,radius"
   const googlePlacesCacheRef = useRef({});
-  // 快取地名查詢結果，key 為 "lat,lng"
   const geoNamesCacheRef = useRef({});
-  // 快取大小限制（LRU）
   const CACHE_MAX_SIZE = 50;
-  const CACHE_EXPIRY_MS = 3600000; // 1 小時過期
+  const CACHE_EXPIRY_MS = 3600000;
 
-  // Chat State
-  // 🆕 輔助函式：根據模式取得對應的歡迎詞 (更新版)
   const getWelcomeMessage = (mode) => {
     const langName = tripConfig.language.name;
     const langLabel = tripConfig.language.label;
@@ -1387,7 +1320,6 @@ const ItineraryApp = () => {
         text: `您好！我是您的隨身 AI 口譯員 🌍\n\n💡 口譯模式功能：\n🎤 點「中」說話：我會將中文翻成${langName} (附拼音)。\n🎤 點「${langLabel}」說話：錄下對方說的${langName}，我會直接翻成中文！`,
       };
     } else {
-      // 導遊模式
       return {
         role: "model",
         text: `您好！我是您的專屬 AI 導遊 ✨\n我已經熟讀了您的行程。\n\n💡 導遊模式功能：\n🎤 點「中」說話：您可以詢問行程細節、交通方式或周邊推薦。\n(此模式專注於行程導覽，請切換模式以使用翻譯功能)`,
@@ -1395,12 +1327,10 @@ const ItineraryApp = () => {
     }
   };
 
-  // State 初始化
-  const [aiMode, setAiMode] = useState("translate"); // 預設為 'translate' (口譯模式)
+  const [aiMode, setAiMode] = useState("translate");
   const getStorageKey = (mode) => `trip_chat_history_${mode}`;
   const [messages, setMessages] = useState(() => {
     try {
-      // 預設讀取 translate (因為 aiMode 初始值是 translate)
       const saved = localStorage.getItem(getStorageKey("translate"));
       if (saved) return JSON.parse(saved);
     } catch (e) {
@@ -1409,21 +1339,20 @@ const ItineraryApp = () => {
     return [getWelcomeMessage("translate")];
   });
 
-  // 3. 修改：當 messages 變動時，使用防抖延遲存入「當下模式」的 Key（避免頻繁寫入 localStorage）
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       const historyToSave = messages.map((msg) => ({
         ...msg,
-        image: null, // 依然不存圖片
+        image: null,
       }));
       localStorage.setItem(
         getStorageKey(aiMode),
         JSON.stringify(historyToSave),
       );
-    }, 500); // 500ms 防抖延遲
+    }, 500);
 
     return () => clearTimeout(debounceTimer);
-  }, [messages, aiMode]); // 加入 aiMode 作為依賴
+  }, [messages, aiMode]);
 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -1431,20 +1360,19 @@ const ItineraryApp = () => {
   const [listeningLang, setListeningLang] = useState(null);
   const chatEndRef = useRef(null);
   const recognitionRef = useRef(null);
-  const [selectedImage, setSelectedImage] = useState(null); // 存 Base64
-  const [tempImage, setTempImage] = useState(null); // 暫存圖片
-  const fileInputRef = useRef(null); // 用來觸發隱藏的 input
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [tempImage, setTempImage] = useState(null);
+  const fileInputRef = useRef(null);
 
   const handleConfirmImage = () => {
-    setSelectedImage(tempImage); // 將暫存圖轉正
-    setTempImage(null); // 清空暫存
+    setSelectedImage(tempImage);
+    setTempImage(null);
   };
   const handleCancelImage = () => {
-    setTempImage(null); // 清空暫存
-    if (fileInputRef.current) fileInputRef.current.value = ""; // 清空 input 讓使用者可以重選同一張
+    setTempImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ... existing helper functions (toggleExpand, etc.) ...
   const toggleExpand = (dayIndex, eventIndex) => {
     const key = `${dayIndex}-${eventIndex}`;
     setExpandedItems((prev) => ({
@@ -1475,13 +1403,11 @@ const ItineraryApp = () => {
     if (activeTab === "ai") scrollToBottom();
   }, [messages, activeTab]);
 
-  // Show Toast Helper
   const showToast = React.useCallback((message, type = "success") => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
   }, []);
 
-  // --- 🧩 導遊模式：預先展平行程/指南/商家，減少每次發送重新組字 ---
   const flattenItinerary = (data) =>
     data
       .map((day) => {
@@ -1608,26 +1534,21 @@ const ItineraryApp = () => {
     [isDarkMode, cBase, currentTheme, getWeatherData],
   );
 
-  // 3. Determine Location based on Day Index
   const getDailyLocation = React.useCallback((dayIndex) => {
-    // 如果是總覽 (-1) 或找不到資料，預設回傳第一個地點 (通常是主要城市)
     if (dayIndex === -1 || !itineraryData[dayIndex])
       return tripConfig.locations[0].key;
-    // 回傳該日期設定的 locationKey
     return itineraryData[dayIndex].locationKey || tripConfig.locations[0].key;
   }, []);
 
-  // --- Trip Date Logic (🆕 支援測試模式) ---
-  // 🆕 使用 useMemo 確保當測試時間改變時會重新計算
   const { tripStatus, daysUntilTrip, currentTripDayIndex } = React.useMemo(() => {
     const tripStartDate = new Date(tripConfig.startDate);
     const tripEndDate = new Date(tripConfig.endDate);
-    // 🆕 測試模式：優先使用凍結的時間，否則使用 testDateTime，最後才用當前時間
+    // 優先順序：凍結的測試時間 > 測試模式時間 > 系統當前時間
     const displayDateTime = frozenTestDateTime || (isTestMode ? testDateTime : new Date());
     
     console.log(`🧪 行程狀態計算 - isTestMode=${isTestMode}, isFrozen=${!!frozenTestDateTime}, displayDateTime=${displayDateTime.toLocaleString('zh-TW')}`);
 
-    let calculatedTripStatus = "before"; // 'before', 'during', 'after'
+    let calculatedTripStatus = "before";
     let calculatedDaysUntilTrip = 0;
     let calculatedCurrentTripDayIndex = -1;
 
@@ -1651,7 +1572,6 @@ const ItineraryApp = () => {
     };
   }, [isTestMode, testDateTime, frozenTestDateTime]);
 
-  // --- User Location Weather Logic (平時只用 OSM，節省額度) ---
   const getUserLocationWeather = React.useCallback(
     async (options = {}) => {
       const {
@@ -1660,9 +1580,10 @@ const ItineraryApp = () => {
         timeout = 10000,
         coords = null,
       } = options;
-      // 節流：避免短時間重複觸發與並發更新
+
+      // 避免短時間內重複觸發定位請求，減少 API 消耗與效能負擔
       const now = Date.now();
-      const minGapMs = isSilent ? 3000 : 1500; // 靜默更新允許更長間隔
+      const minGapMs = isSilent ? 3000 : 1500;
       if (!highAccuracy) {
         if (
           isFetchingLocationRef.current ||
@@ -1687,12 +1608,11 @@ const ItineraryApp = () => {
 
           let city = customName;
           let landmark = "";
-          // 預設為 true (假設是不精準的)，除非 OSM 明確回傳了 name
           let isGeneric = true;
 
           if (!city) {
             try {
-              // 🔧 快取地名查詢結果
+              // 使用座標作為 Key 進行地名快取，避免重複查詢 Nominatim API
               const geoKey = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
               let geoData = geoNamesCacheRef.current[geoKey]?.data;
 
@@ -1706,7 +1626,6 @@ const ItineraryApp = () => {
                 const geoRes = await fetch(geoUrl);
                 geoData = await geoRes.json();
 
-                // 保存到快取
                 geoNamesCacheRef.current[geoKey] = {
                   data: geoData,
                   timestamp: Date.now(),
@@ -1726,14 +1645,11 @@ const ItineraryApp = () => {
                   addr.state ||
                   "您的位置";
 
-                // 🎯 關鍵判斷：OSM 有給 name 嗎？
+                // 判斷是否為具體地標（如建築物名稱），若無則回退至路名
                 if (geoData.name) {
-                  // Case A: 有名字 (e.g., 台北101, 7-11) -> 精準地標
                   landmark = geoData.name;
                   isGeneric = false;
                 } else {
-                  // Case B: 沒名字，只有路名/門牌 -> 通用地址
-                  // 這裡我們 "只存路名"，不查 Google Maps (符合您的需求1)
                   isGeneric = true;
                   if (addr.road) {
                     landmark = addr.road;
@@ -1756,7 +1672,7 @@ const ItineraryApp = () => {
             daily: weatherData.daily,
             locationName: city || "未知地點",
             landmark: landmark,
-            isGeneric: isGeneric, // ✅ 將判斷結果存入 State
+            isGeneric: isGeneric,
             lat: latitude,
             lon: longitude,
             loading: false,
@@ -1788,21 +1704,21 @@ const ItineraryApp = () => {
         }
       };
 
-      // --- 階段 1：嘗試讀取快取 (LocalStorage) ---
+      // 優先載入快取資料以提供即時反饋
       const cached = localStorage.getItem("cached_user_weather");
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           setUserWeather(parsed);
           setLocationSource("cache");
-          setIsAppReady(true); // 🚀 有快取直接過關
+          setIsAppReady(true);
           debugLog("🚀 快取載入成功");
         } catch (e) {
           console.error("快取解析失敗", e);
         }
       }
 
-      // --- 階段 2：低精確度 IP 定位 (若無快取且非靜默更新，則補位) ---
+      // 若無快取且非靜默更新，嘗試使用 IP 定位作為初步位置參考
       if (!cached && !isSilent && !coords) {
         try {
           const ipRes = await fetch("https://ipapi.co/json/");
@@ -1818,7 +1734,6 @@ const ItineraryApp = () => {
           }
         } catch {
           console.warn("IP 定位失敗");
-          // 最終防線：若連 IP 定位都失敗且無快取，使用台北
           if (!cached) {
             await fetchLocalWeather(25.033, 121.5654, "台北");
             setLocationSource("low");
@@ -1826,7 +1741,6 @@ const ItineraryApp = () => {
         }
       }
 
-      // 如果 caller 傳入 coords，優先使用（方便分享時要求高精度）
       if (coords && coords.latitude && coords.longitude) {
         try {
           setHasLocationPermission(true);
@@ -1846,7 +1760,7 @@ const ItineraryApp = () => {
         }
       }
 
-      // --- 階段 3：背景啟動瀏覽器定位 ---
+      // 啟動瀏覽器原生定位以獲取更精確的座標
       if (navigator.geolocation) {
         const geoOptions = {
           enableHighAccuracy: highAccuracy,
@@ -1863,12 +1777,10 @@ const ItineraryApp = () => {
             } else {
               setLocationSource("low");
             }
-            // 背景更新為取得的座標
             fetchLocalWeather(
               position.coords.latitude,
               position.coords.longitude,
             );
-            // 若為非高精度呼叫，成功取得位置後即解除節流鎖
             if (!highAccuracy) {
               isFetchingLocationRef.current = false;
               lastFetchAtRef.current = Date.now();
@@ -1878,15 +1790,12 @@ const ItineraryApp = () => {
             console.warn("GPS 定位未成功", err.code, err.message);
 
             if (err.code === 1) {
-              // PERMISSION_DENIED -> 鎖定按鈕並提示
               setHasLocationPermission(false);
               if (!isSilent) showToast("您已封鎖定位權限", "error");
             } else {
-              // 逾時或位置不可用 -> 設為 null (中立狀態)，允許重試
               setHasLocationPermission(null);
             }
 
-            // 最終防線：如果連 IP 定位都沒抓到 (沒畫面)，才回退到台北
             if (!cached && !isAppReady) {
               fetchLocalWeather(25.033, 121.5654, "台北");
               setLocationSource("low");
@@ -1896,7 +1805,6 @@ const ItineraryApp = () => {
           geoOptions,
         );
       } else {
-        // 瀏覽器不支援定位的 fallback
         setHasLocationPermission(false);
         if (!cached && !isAppReady) {
           fetchLocalWeather(25.033, 121.5654, "台北");
@@ -1905,7 +1813,7 @@ const ItineraryApp = () => {
         isFetchingLocationRef.current = false;
       }
 
-      // 如果目前不是要求高精度，且最後一次高精度定位超過 2 分鐘，則在背景啟動一次高精度確認（silent）
+      // 若當前非高精度請求且已過一段時間，則在背景嘗試獲取一次高精度位置
       if (!highAccuracy) {
         const twoMinutes = 2 * 60 * 1000;
         const last = lastHighPrecisionAtRef.current || 0;
@@ -1930,7 +1838,6 @@ const ItineraryApp = () => {
               }
             },
             (err) => {
-              // 不顯示提示，僅 log
               console.warn(
                 "Background high-precision geolocation failed:",
                 err,
@@ -1942,30 +1849,25 @@ const ItineraryApp = () => {
       }
     },
     [getWeatherData, showToast, isAppReady],
-  ); // 🔧 優化：包含 isAppReady 依賴（必要的依賴項）
+  );
 
-  // --- 定時更新位置與天氣邏輯 (改為：載入時立即啟動 + 每10分鐘背景更新) ---
-  // 🔧 優化：移除過度的 userWeather 依賴項，避免無限迴圈
   useEffect(() => {
-    // 讀取當前是否已有顯示資料：若已有則首次更新以靜默模式進行
     const alreadyHasData =
       userWeather.temp !== null && userWeather.locationName !== "定位中...";
 
-    // 首次載入時嘗試更新（若已有資料則靜默）
     getUserLocationWeather({ isSilent: alreadyHasData, highAccuracy: false });
 
-    // 背景每 10 分鐘靜默更新一次（低精度，優先快速回應）
+    // 每 10 分鐘自動更新一次天氣資訊，確保資料時效性
     const intervalId = setInterval(() => {
       debugLog("⏰ 自動更新位置與天氣...");
       getUserLocationWeather({ isSilent: true, highAccuracy: false });
     }, 600000);
 
     return () => clearInterval(intervalId);
-  }, [getUserLocationWeather, userWeather.locationName, userWeather.temp]); // 🔧 優化後的依賴項：包含必要的狀態依賴
+  }, [getUserLocationWeather, userWeather.locationName, userWeather.temp]);
 
   const handleShareLocation = async () => {
     if (!navigator.geolocation) {
-      // 如果瀏覽器不支援 geolocation，直接嘗試用現有資料分享（如果有）或提示
       const lat = userWeather.lat;
       const lng = userWeather.lon;
       const landmark = userWeather.landmark || "";
@@ -1997,7 +1899,6 @@ const ItineraryApp = () => {
               showToast("使用者取消分享", "info");
               return;
             }
-            // fallback
             await copyToClipboard(fullText, "分享失敗，但位置已複製到剪貼簿");
             return;
           }
@@ -2011,7 +1912,6 @@ const ItineraryApp = () => {
       return;
     }
 
-    // 1) 如果我們已經有座標（不論來源），先判斷是否已有「2 分鐘內的高精度位置」
     const twoMinutes = 2 * 60 * 1000;
     const hasRecentHigh =
       locationSource === "high" &&
@@ -2032,7 +1932,6 @@ const ItineraryApp = () => {
       const { baseMessage, fullText, tag } = composed;
       const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
-      // 若已有 2 分鐘內的高精度資料，直接分享（避免重新抓取）
       if (hasRecentHigh) {
         if (navigator.share) {
           try {
@@ -2061,7 +1960,6 @@ const ItineraryApp = () => {
         }
       }
 
-      // 若沒有 recent high-precision，則在使用者手勢中主動嘗試取得高精度；若失敗，再回退使用現有 coords 分享
       setIsSharing(true);
       showToast("正在取得精準位置...", "success");
 
@@ -2132,7 +2030,6 @@ const ItineraryApp = () => {
         return;
       } catch (err) {
         console.warn("高精度定位失敗，使用既有座標分享：", err);
-        // 失敗則使用既有座標進行分享（與前面相同邏輯）
         if (navigator.share) {
           try {
             await navigator.share({
@@ -2162,7 +2059,7 @@ const ItineraryApp = () => {
       }
     }
 
-    // 2) 如果沒有任何既有座標（尚未取得任何座標），則需要等待高精度定位結果才能分享
+    // 若完全沒有既有座標，則強制等待高精度定位結果後再分享
     setIsSharing(true);
     showToast("正在取得精準位置...", "success");
 
@@ -2194,7 +2091,7 @@ const ItineraryApp = () => {
         lng,
         landmark,
         (newData && newData.locationName) || userWeather.locationName,
-        (newData && newData.isGeneric) || false, // 這裡很重要，要用新的 generic 狀態
+        (newData && newData.isGeneric) || false,
       );
       const { baseMessage, fullText, tag } = composed;
 
@@ -2228,11 +2125,9 @@ const ItineraryApp = () => {
     }
   };
 
-  // ... existing weather fetch and voice logic ...
-  // --- 卸載清理：中止所有進行中的 API 請求和語音資源 ---
   useEffect(() => {
     return () => {
-      // 🆕 清理語音朗讀
+      // 組件卸載時立即停止語音與 API 請求，避免記憶體洩漏或狀態更新錯誤
       if ("speechSynthesis" in window) {
         try {
           window.speechSynthesis.cancel();
@@ -2242,7 +2137,6 @@ const ItineraryApp = () => {
         }
       }
 
-      // 中止所有 API 請求
       if (geminiAbortControllerRef.current) {
         geminiAbortControllerRef.current.abort();
       }
@@ -2252,21 +2146,17 @@ const ItineraryApp = () => {
     };
   }, []);
 
-  // --- Weather API Integration (加上 AbortController，避免卸載後更新狀態) ---
   useEffect(() => {
     if (!isVerified) return;
 
     const controller = new AbortController();
     let cancelled = false;
 
-    // 先嘗試從 LocalStorage 載入舊資料 (讓畫面秒開)
     const loadCachedForecast = () => {
       try {
         const cached = localStorage.getItem("trip_weather_forecast");
         if (cached) {
           const parsed = JSON.parse(cached);
-          // 簡單檢查資料時效 (例如超過 12 小時就不顯示舊的，或者您可以選擇永遠顯示)
-          // 這裡我們先做永遠顯示，確保離線可用
           setWeatherForecast({ ...parsed, loading: false });
           debugLog("📦 已載入 Day1~6 天氣快取");
         }
@@ -2275,14 +2165,12 @@ const ItineraryApp = () => {
       }
     };
 
-    // 執行載入
     loadCachedForecast();
 
     const fetchWeather = async () => {
       try {
         const params = `hourly=temperature_2m,apparent_temperature,precipitation_probability,weathercode,uv_index,uv_index_clear_sky,wind_speed_10m,wind_gusts_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,uv_index_clear_sky_max,wind_speed_10m_max,wind_gusts_10m_max,precipitation_probability_max&forecast_days=7&timezone=auto`;
 
-        // 自動為 config 裡的每一個地點產生 fetch 請求
         const weatherPromises = tripConfig.locations.map(async (loc) => {
           const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&${params}`;
           const res = await fetch(url, { signal: controller.signal });
@@ -2303,13 +2191,11 @@ const ItineraryApp = () => {
 
         if (cancelled) return;
 
-        // 轉換成物件格式: { karuizawa: {...}, tokyo: {...} }
         const newForecast = {};
         results.forEach((item) => {
           newForecast[item.key] = item.data;
         });
 
-        // 將抓到的新資料存入 LocalStorage
         localStorage.setItem(
           "trip_weather_forecast",
           JSON.stringify(newForecast),
@@ -2320,7 +2206,7 @@ const ItineraryApp = () => {
           loading: false,
         });
       } catch (error) {
-        if (error?.name === "AbortError") return; // 忽略中止錯誤
+        if (error?.name === "AbortError") return;
         console.error("Failed to fetch weather:", error);
         setWeatherForecast((prev) => ({ ...prev, loading: false }));
       }
@@ -2334,21 +2220,20 @@ const ItineraryApp = () => {
     };
   }, [isVerified]);
 
-  // --- Voice Input ---
   useEffect(() => {
     const updateVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       setAvailableVoices(voices);
     };
 
-    // Chrome 需要監聽事件，Safari/Firefox 比較直接
     window.speechSynthesis.onvoiceschanged = updateVoices;
-    updateVoices(); // 嘗試立即執行一次
+    updateVoices();
 
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
+
   useEffect(() => {
     if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
       const SpeechRecognition =
@@ -2373,19 +2258,14 @@ const ItineraryApp = () => {
       };
     }
 
-    // 🆕 清理函式：組件卸載時確保完全停止語音識別
     return () => {
       if (recognitionRef.current) {
         try {
-          // 停止語音識別
           recognitionRef.current.stop();
-          // 清除所有事件監聽器，避免內存洩漏
           recognitionRef.current.onresult = null;
           recognitionRef.current.onend = null;
           recognitionRef.current.onerror = null;
-          // 清除引用
           recognitionRef.current = null;
-          // 重置狀態
           setListeningLang(null);
         } catch (error) {
           console.error("清理語音識別資源時出錯:", error);
@@ -2402,11 +2282,9 @@ const ItineraryApp = () => {
 
     try {
       if (listeningLang === lang) {
-        // 停止當前識別
         recognitionRef.current.stop();
         setListeningLang(null);
       } else {
-        // 停止其他語言的識別（如果有的話）
         if (listeningLang) {
           recognitionRef.current.stop();
         }
@@ -2417,43 +2295,30 @@ const ItineraryApp = () => {
       }
     } catch (error) {
       console.error("語音識別操作出錯:", error);
-      // 發生錯誤時重置狀態
       setListeningLang(null);
       showToast("語音輸入出現問題，請重試", "error");
     }
   };
 
-  // --- Text-to-Speech ---
-  // 1. 定義各國語言的特徵與清理規則 (新增這段常數)
   const LANGUAGE_SPECS = {
     "ja-JP": {
-      // 日文：含平假名或片假名
       checkRegex: /[\u3040-\u309F\u30A0-\u30FF]/,
-      // 策略：移除括號內的拼音 (保留日文漢字與假名)
       cleanStrategy: "removeBrackets",
     },
     "th-TH": {
-      // 泰文：含泰文 Unicode 區塊
       checkRegex: /[\u0E00-\u0E7F]/,
-      // 策略：強力過濾 (只保留該國文字，刪除所有中文/英文/符號)
-      // 泰文翻譯通常混雜很多說明，所以用這個策略最乾淨
       cleanStrategy: "keepOnlyMatches",
     },
     "ko-KR": {
-      // 韓文：含諺文音節或字母
       checkRegex: /[\uAC00-\uD7AF\u1100-\u11FF]/,
-      // 策略：韓文結構通常像日文 (文法類似)，拼音在括號內，所以移除括號即可
       cleanStrategy: "removeBrackets",
     },
     "vi-VN": {
-      // 越南文：拉丁字母延伸 (這比較寬鬆，先做個範例)
       checkRegex: /[a-zA-Z\u00C0-\u1EF9]/,
       cleanStrategy: "removeBrackets",
     },
-    // 未來如果要擴充其他語言，直接在這裡加即可，不用動函式邏輯
   };
 
-  // 修改後的通用朗讀函式 (手機相容優化版)
   const handleSpeak = (text) => {
     if (!("speechSynthesis" in window)) {
       alert("抱歉，您的瀏覽器不支援語音朗讀功能。");
@@ -2466,13 +2331,11 @@ const ItineraryApp = () => {
       return;
     }
 
-    let textToSpeak = text.replace(/\*\*/g, ""); // 基礎清理
-    const configLangCode = tripConfig.language.code; // 目標語言 (如 ja-JP)
+    let textToSpeak = text.replace(/\*\*/g, "");
+    const configLangCode = tripConfig.language.code;
 
-    // 🆕 優化 1：正規化語言代碼 (解決 ja-JP 與 ja_JP 不匹配的問題)
     const normalizeLang = (code) => code.replace("_", "-").toLowerCase();
 
-    // 🔍 嘗試尋找語音包 (比對 normalized 之後的代碼)
     const targetVoice =
       availableVoices.find(
         (v) => normalizeLang(v.lang) === normalizeLang(configLangCode),
@@ -2481,9 +2344,6 @@ const ItineraryApp = () => {
         normalizeLang(v.lang).includes(normalizeLang(configLangCode)),
       );
 
-    // 🆕 優化 2：放寬判定標準
-    // 只要是「非中文」的目標語言，即使找不到 voice 物件，我們也假設手機系統支援該語言 (Blind Try)
-    // 這樣可以解決 iOS/Android 瀏覽器不回傳 voice 列表的問題
     const shouldTryForeign = configLangCode !== "zh-TW";
 
     const spec = LANGUAGE_SPECS[configLangCode] || {
@@ -2491,32 +2351,22 @@ const ItineraryApp = () => {
       cleanStrategy: "removeBrackets",
     };
 
-    // 決定清理策略
     if (shouldTryForeign) {
-      // ✅ 嘗試使用外語模式 (不管有沒有找到 voice 物件，都先執行清理)
       if (spec.cleanStrategy === "keepOnlyMatches") {
-        // 泰文：強力過濾
         const matches = textToSpeak.match(new RegExp(spec.checkRegex, "g"));
         if (matches) textToSpeak = matches.join(" ");
       } else {
-        // 日/韓：移除括號拼音
         textToSpeak = textToSpeak.replace(/\s*[()（].*?[)）]/g, "");
       }
     }
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
 
-    // 設定語言
     if (shouldTryForeign) {
-      // ⚠️ 關鍵：即使 targetVoice 是 undefined，也要設定 lang，讓手機系統自己去抓預設語音
       utterance.lang = configLangCode;
-
       if (targetVoice) {
-        utterance.voice = targetVoice; // 如果有找到特定語音包，就指定使用
+        utterance.voice = targetVoice;
       } else {
-        // 如果找不到，不跳錯誤，改為顯示「嘗試中」的溫和提示
-        // 這樣才不會因為手機列表不全而導致功能被鎖死
-        // showToast(`嘗試使用系統預設${configLangName}發音`, 'success');
         console.warn("未找到特定語音包，嘗試使用系統預設語言");
       }
     } else {
@@ -2528,7 +2378,6 @@ const ItineraryApp = () => {
     utterance.onerror = (e) => {
       console.error("Speech Error:", e);
       setIsSpeaking(false);
-      // 如果真的發生錯誤 (例如系統完全不支援)，再跳出提示
       if (e.error !== "interrupted") {
         showToast("語音播放失敗，請檢查手機設定", "error");
       }
@@ -2537,9 +2386,7 @@ const ItineraryApp = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  // --- Google Maps Places API Call Helper（使用正確的 Place Types + 快取 + AbortController） ---
   const fetchGooglePlaces = async (lat, lng, initialRadius = 100) => {
-    // 1. 內部執行搜尋的私有函式，方便重複呼叫
     const performSearch = async (radius) => {
       const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)},${radius}`;
       const cached = googlePlacesCacheRef.current[cacheKey];
@@ -2576,7 +2423,6 @@ const ItineraryApp = () => {
       };
 
       try {
-        // 每次呼叫前中止舊請求，確保不浪費額度
         if (mapsAbortControllerRef.current)
           mapsAbortControllerRef.current.abort();
         mapsAbortControllerRef.current = new AbortController();
@@ -2659,23 +2505,21 @@ const ItineraryApp = () => {
           signal: geminiAbortControllerRef.current.signal,
         });
 
-        // 成功回應
         if (response.ok) {
           return await response.json();
         }
 
-        // 偵測是否因為打太快被擋 (HTTP 429) 或 服務暫時不可用 (503)
+        // 處理流量限制 (429) 或服務暫時不可用 (503)
         if (response.status === 429 || response.status === 503) {
           console.warn(
-            `API 忙碌中，暫停一下... (嘗試 ${attempt + 1}/${maxRetries})`,
+            `API 忙碌中，嘗試進行指數退避... (嘗試 ${attempt + 1}/${maxRetries})`,
           );
           attempt++;
-          // 指數退避：2s, 4s, 8s...
+          // 指數退避：2s, 4s, 8s... 避免短時間內重複請求加重伺服器負擔
           await sleep(2000 * Math.pow(2, attempt));
-          continue; // 重新進入迴圈
+          continue;
         }
 
-        // Key 錯誤
         if (response.status === 400) {
           throw new Error("API 參數錯誤。");
         }
@@ -2683,15 +2527,14 @@ const ItineraryApp = () => {
           throw new Error("API Key 無效或過期，請檢查加密設定。");
         }
 
-        // 其他 API 錯誤直接拋出
         throw new Error(`API Error: ${response.status}`);
       } catch (error) {
-        // 🆕 中止請求不是真正的錯誤，直接拋出
+        // 中止請求通常是使用者切換頁面或手動停止，不視為錯誤
         if (error.name === "AbortError") {
           throw new Error("API 請求已被中止");
         }
         console.error("Fetch attempt error:", error);
-        if (error.message.includes("API Key")) throw error; // Key 錯就不重試了
+        if (error.message.includes("API Key")) throw error;
 
         attempt++;
         if (attempt < maxRetries) {
@@ -2704,50 +2547,32 @@ const ItineraryApp = () => {
     throw new Error("API Max retries reached");
   };
 
-  // --- Nearby POI Helper: Direct Maps API Call (修正版：移除 contextName 與 Gemini 依賴) ---
-  // 參數只保留 latitude, longitude，解決 ESLint 'contextName' unused 問題
+  // --- 周邊地標輔助：直接呼叫 Google Maps API ---
   const getBestPOI = async (latitude, longitude) => {
-    // 1. 檢查 Maps Key (完全與 Gemini Key 脫鉤)
     if (!mapsApiKey) {
-      debugLog("🗺️ [Google Maps] 略過：沒有設定 API Key");
+      debugLog("🗺️ [Google Maps] 略過：未設定 API Key");
       return null;
     }
 
     try {
       debugLog(
-        `🗺️ [Google Maps] 開始查詢周邊 POI... (Lat: ${latitude}, Lng: ${longitude})`,
+        `🗺️ [Google Maps] 查詢周邊 POI... (Lat: ${latitude}, Lng: ${longitude})`,
       );
-      // 2. 直接呼叫 Maps API (使用上方修正後的函式)
-      // 設定半徑 150m，只抓最靠近的點
+      // 預設搜尋半徑 100m，優先尋找最接近的具體地標
       const places = await fetchGooglePlaces(latitude, longitude, 100);
-      debugLog("🗺️ [Google Maps] API 回傳原始結果:", places);
+      debugLog("🗺️ [Google Maps] API 回傳結果:", places);
 
-      // if (places && places.length > 0) {
-      //   // 3. 取第一個結果 (Google 預設依關聯度/距離排序)
-      //   const bestPlace = places[0];
-      //   // Google Places API (New) 的 displayName 是物件: { text: "店名", languageCode: "zh-TW" }
-      //   const name = bestPlace.displayName?.text || bestPlace.name;
-
-      //   if (name) {
-      //     debugLog(`🗺️ [Google Maps]  找到最佳地標: "${name}"`);
-      //     return { name: name, source: "maps-direct" };
-      //   } else {
-      //     debugLog("🗺️ [Google Maps]  附近沒有顯著地標 (Zero Results)");
-      //   }
-      // }
       if (places) {
-        // places 現在就是最終的地標字串 (例如 "東京鐵塔")
         debugLog(`🗺️ [Google Maps] 找到最佳地標: "${places}"`);
         return { name: places, source: "maps-direct" };
       }
     } catch (e) {
       console.warn("getBestPOI 執行失敗:", e);
     }
-    // 若無結果回傳 null
     return null;
   };
 
-  // --- Build share text helper (決策核心) ---
+  // --- 建立分享文字 (決策核心) ---
   const buildShareText = async (
     latitude,
     longitude,
@@ -2758,17 +2583,14 @@ const ItineraryApp = () => {
     debugGroup("🚀 [分享流程決策樹]");
     debugLog("1. 狀態輸入:", {
       landmark: currentLandmark || "(無)",
-      isGeneric: isGeneric, // 這裡現在應該會正確顯示 true/false
+      isGeneric: isGeneric,
       city: locationName,
     });
 
     let finalLandmark = currentLandmark || "";
     let tag = currentLandmark ? "Street(OSM)" : "Unknown";
 
-    // 決策邏輯：
-    // 1. 完全沒地標 (landmark 空)
-    // 2. 或是 OSM 標記為通用地址 (isGeneric 為 true)
-    // 只有這兩種情況才去問 Google
+    // 決策邏輯：若 OSM 提供的地標為空，或是被判定為通用路名 (isGeneric)，則呼叫 Google Maps 補強
     if (!finalLandmark || isGeneric === true) {
       debugLog("2. 判定需要補強 (無地標或僅有路名)，呼叫 Google Maps...");
 
@@ -2779,9 +2601,7 @@ const ItineraryApp = () => {
         tag = "POI(GoogleMaps)";
         debugLog("3. Google Maps 救援成功！更新為:", finalLandmark);
 
-        // 💡 選擇性：是否要更新回畫面？
-        // 如果您希望分享後，畫面上的路名也變成店名，就保留下面這行。
-        // 如果希望畫面永遠保持路名，只有分享出去的文字變店名，就把下面這行註解掉。
+        // 同步更新 UI 上的地標資訊，讓使用者看到更精準的結果
         setUserWeather((prev) => ({
           ...prev,
           landmark: finalLandmark,
@@ -2791,7 +2611,7 @@ const ItineraryApp = () => {
         debugLog("3. Google Maps 無結果，維持 OSM 路名。");
       }
     } else {
-      debugLog("2. OSM 已是精準地標 (Name)，跳過 Google Maps。");
+      debugLog("2. OSM 已是精準地標，跳過 Google Maps。");
     }
 
     debugLog(`🏁 [最終輸出] Landmark: "${finalLandmark}"`);
@@ -2809,44 +2629,39 @@ const ItineraryApp = () => {
 
   const handleSwitchMode = (newMode) => {
     if (aiMode === newMode) return;
-    setAiMode(newMode); // 切換模式狀態
-    // 嘗試讀取新模式的存檔
+    setAiMode(newMode);
+    
+    // 切換模式時載入對應的對話紀錄，確保上下文連貫
     const saved = localStorage.getItem(getStorageKey(newMode));
     if (saved) {
       setMessages(JSON.parse(saved));
     } else {
-      // 如果該模式沒有存檔，就給一個新的歡迎詞
       setMessages([getWelcomeMessage(newMode)]);
     }
   };
 
-  // --- 🆕 測試模式相關函式 ---
+  // --- 測試模式觸發邏輯 (彩蛋) ---
   const handleTitleClick = () => {
-    // 靜默計數，不顯示提示
     if (testModeClickCount === 0) {
-      // 開始新一輪計數
       setTestModeClickCount(1);
     } else if (testModeClickCount < 9) {
       setTestModeClickCount(testModeClickCount + 1);
     } else if (testModeClickCount === 9) {
-      // 達到 10 次時才顯示提示
       setTestModeClickCount(10);
       showToast("🩷", "success");
     }
   };
 
   const handleInterruptClick = () => {
-    // 任何其他點擊都重置計數
     if (testModeClickCount > 0) {
       setTestModeClickCount(0);
-      showToast("連續點擊計數已重置，請重新開始", "info");
+      showToast("連續點擊計數已重置", "info");
     }
   };
 
   const handleLockButtonClick = () => {
-    // 鎖定按鈕的點擊邏輯
+    // 若已達成彩蛋條件，則進入測試模式；否則執行正常的登出/鎖定
     if (testModeClickCount === 10) {
-      // 進入測試模式 - 重置所有測試變數到當前實際值
       setTestDateTime(new Date());
       setTestLatitude(userWeather?.lat || 35.6762);
       setTestLongitude(userWeather?.lon || 139.6503);
@@ -2855,7 +2670,6 @@ const ItineraryApp = () => {
       setTestModeClickCount(0);
       showToast("🩷 進入測試模式！", "success");
     } else {
-      // 正常鎖定行程
       setIsVerified(false);
       localStorage.removeItem("trip_password");
     }
@@ -2869,33 +2683,27 @@ const ItineraryApp = () => {
     ) {
       const resetMsg = getWelcomeMessage(aiMode);
       setMessages([resetMsg]);
-      localStorage.removeItem(getStorageKey(aiMode)); // 只刪除當下的 Key
+      localStorage.removeItem(getStorageKey(aiMode));
     }
   };
 
-  // ... handleSendMessage logic updated to use systemInstruction ...
   const handleSendMessage = async () => {
-    // 1. 檢查：防止空訊息 (但允許「只有圖片沒有文字」的情況)
     if (!inputMessage.trim() && !selectedImage) return;
 
-    // 2. 準備時間資訊 (AI 回答時需要)
     const tz = autoTimeZone || tripConfig.timeZone || "Asia/Taipei";
-    // 🆕 測試模式：使用 testDateTime
     const displayTime = isTestMode ? testDateTime : new Date();
     const localTimeStr = displayTime.toLocaleString("zh-TW", {
       timeZone: tz,
       hour12: false,
     });
 
-    // 3. 建構使用者訊息 (存入 React State 顯示用)
-    // ⚠️ 之前可能不小心刪掉這段，導致發送失敗
     const userMsg = {
       role: "user",
       text: inputMessage,
       image: selectedImage,
     };
 
-    // 4. 設定載入中的隨機文字 (根據模式)
+    // 根據模式設定隨機的 Loading 提示，增加互動感
     let nextLoadingText = "";
     if (aiMode === "translate") {
       nextLoadingText = "正在進行雙向翻譯...";
@@ -2910,27 +2718,24 @@ const ItineraryApp = () => {
       nextLoadingText =
         guideLoadingTexts[Math.floor(Math.random() * guideLoadingTexts.length)];
     }
-    setLoadingText(nextLoadingText); // 更新 Loading 文字
+    setLoadingText(nextLoadingText);
 
-    // 5. 更新 UI 狀態
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage("");
-    setSelectedImage(null); // 送出後清空預覽區
+    setSelectedImage(null);
     setIsLoading(true);
 
     try {
-      // --- 定義一個轉換函式：將 React State 訊息轉為 Gemini API 格式 ---
+      // 將內部訊息格式轉換為 Gemini API 要求的格式 (支援多模態)
       const formatToGeminiPart = (msg) => {
         const parts = [];
 
-        // (A) 處理文字
         if (msg.text && msg.text.trim()) {
           parts.push({ text: msg.text });
         } else if (!msg.image) {
           parts.push({ text: "" });
         }
 
-        // (B) 處理圖片
         if (msg.image) {
           const [meta, data] = msg.image.split(",");
           const mimeType = meta.match(/:(.*?);/)?.[1] || "image/jpeg";
@@ -2945,11 +2750,9 @@ const ItineraryApp = () => {
         return { role: msg.role, parts: parts };
       };
 
-      // 6. 準備 Payload
       let payload;
 
       if (aiMode === "translate") {
-        // === 口譯模式 ===
         const targetLang = tripConfig.language.name;
         const translateSystemPrompt = `
         你是一個專業的即時口譯員，負責「繁體中文」與「${targetLang}」之間的雙向翻譯。
@@ -2977,9 +2780,7 @@ const ItineraryApp = () => {
           },
         };
       } else {
-        // === 導遊模式 ===
-
-        // 位置判斷
+        // 導遊模式：結合 GPS 位置、行程表與參考指南
         let locationInstruction = "";
         const isGpsAvailable =
           hasLocationPermission &&
@@ -2993,7 +2794,6 @@ const ItineraryApp = () => {
         }
 
         const startDate = new Date(tripConfig.startDate);
-        // 🆕 測試模式：使用 testDateTime
         const displayTime = isTestMode ? testDateTime : new Date();
         const today = new Date(
           displayTime.toLocaleString("en-US", { timeZone: tz }),
@@ -3063,17 +2863,14 @@ const ItineraryApp = () => {
     }
   };
 
-  // --- Weather Determination ---
+  // --- 天氣狀態判定 ---
   const current = activeDay === -1 ? null : itineraryData[activeDay];
-
-  // Determine current weather based on day
   const currentLocation = getDailyLocation(activeDay);
 
-  // 使用 useMemo 鎖定天氣資料，優化滑動效能
+  // 使用 useMemo 鎖定天氣資料，優化滑動效能並處理測試模式覆蓋
   const displayWeather = React.useMemo(() => {
     const currentLocation = getDailyLocation(activeDay);
     const weatherData = weatherForecast[currentLocation];
-    // 🆕 優先使用凍結的天氣設定
     const effectiveWeatherOverride = frozenTestWeatherOverride || testWeatherOverride;
 
     if (!weatherForecast.loading && weatherData) {
@@ -3082,15 +2879,12 @@ const ItineraryApp = () => {
       const maxTemp = Math.round(weatherData.temperature_2m_max[forecastIndex]);
       const minTemp = Math.round(weatherData.temperature_2m_min[forecastIndex]);
       
-      // 🆕 測試模式：使用覆蓋的天氣代碼
       let weatherCode;
       if (isTestMode) {
         if (activeDay === -1) {
           weatherCode = effectiveWeatherOverride.overview !== null ? effectiveWeatherOverride.overview : weatherData.weathercode[forecastIndex];
-          console.log(`🧪 測試模式總覽天氣：覆蓋=${effectiveWeatherOverride.overview}, 原始=${weatherData.weathercode[forecastIndex]}, 最終=${weatherCode}, isFrozen=${!!frozenTestWeatherOverride}`);
         } else {
           weatherCode = effectiveWeatherOverride.days[activeDay] !== undefined ? effectiveWeatherOverride.days[activeDay] : weatherData.weathercode[forecastIndex];
-          console.log(`🧪 測試模式 Day ${activeDay + 1} 天氣：覆蓋=${effectiveWeatherOverride.days[activeDay]}, 原始=${weatherData.weathercode[forecastIndex]}, 最終=${weatherCode}, isFrozen=${!!frozenTestWeatherOverride}`);
         }
       } else {
         weatherCode = weatherData.weathercode[forecastIndex];
@@ -3103,11 +2897,10 @@ const ItineraryApp = () => {
         temp: `${minTemp}°C / ${maxTemp}°C`,
         desc: info.text,
         advice: info.advice,
-        code: weatherCode, // 回傳原始代碼給背景特效用
+        code: weatherCode,
       };
     }
 
-    // 預設或抓不到資料的狀態
     return {
       icon: <Cloud className="w-7 h-7 text-stone-300" />,
       temp: "--",
@@ -3116,13 +2909,11 @@ const ItineraryApp = () => {
     };
   }, [activeDay, weatherForecast, getWeatherInfo, isTestMode, testWeatherOverride, frozenTestWeatherOverride, getDailyLocation]);
 
-  // 使用 useMemo 統一 Memo 風格，僅在 isDarkMode 變更時重建
+  // 統一主題風格，根據天氣狀況動態調整環境色
   const theme = React.useMemo(() => {
-    // 取得當前天氣狀況以決定環境色
     const currentCode = activeDay === -1 ? userWeather.weatherCode : displayWeather.code;
     const sky = getSkyCondition(currentCode);
     
-    // 定義環境色 (Ambient Colors)
     const ambientColors = {
       clear: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "rgba(255, 255, 255, 0.8)",
       cloudy: isDarkMode ? "rgba(51, 65, 85, 0.6)" : "rgba(241, 245, 249, 0.85)",
@@ -3135,12 +2926,10 @@ const ItineraryApp = () => {
     const ambient = ambientColors[sky] || ambientColors.clear;
 
     return {
-      // 背景
       bg: isDarkMode
         ? `${currentTheme.bgGradientDark} bg-[image:var(--bg-texture)] bg-fixed`
         : `${currentTheme.bgGradientLight} bg-[image:var(--bg-texture)] bg-fixed`,
 
-      // 文字
       text: isDarkMode
         ? currentTheme.textColors?.dark || `text-${cBase}-100`
         : currentTheme.textColors?.light || `text-${cBase}-800`,
@@ -3149,10 +2938,9 @@ const ItineraryApp = () => {
         ? currentTheme.textColors?.secDark || `text-${cBase}-300`
         : currentTheme.textColors?.secLight || `text-${cBase}-600`,
 
-      // 🌟 卡片質感：夜間改為較亮的深灰玻璃，並根據天氣加入微弱環境色
       cardBg: isDarkMode
-        ? `bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] transform-gpu`
-        : `bg-white/85 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] transform-gpu`,
+        ? currentTheme.glassColors.card.dark
+        : currentTheme.glassColors.card.light,
 
       // 邊框
       cardBorder: isDarkMode ? `border-white/10` : `border-${cBase}-200/40`,
@@ -3174,8 +2962,8 @@ const ItineraryApp = () => {
 
       // 導覽列
       navBg: isDarkMode
-        ? `bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30`
-        : `bg-white/30 backdrop-blur-2xl border-white/15 shadow-lg shadow-${cBase}-500/5`,
+        ? currentTheme.glassColors.nav.dark
+        : currentTheme.glassColors.nav.light,
 
       // 裝飾光暈
       blob1: isDarkMode
@@ -3240,13 +3028,13 @@ const ItineraryApp = () => {
     !isAppReady ||
     (activeDay === -1 ? userWeather?.loading : weatherForecast.loading);
 
-  // --- Lock Screen Render ---
+  // --- 鎖定畫面渲染 (未驗證密碼時) ---
   if (!isVerified) {
     return (
       <div
-        className={`min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500 relative overflow-hidden ${isDarkMode ? "bg-[#1A1A1A] text-neutral-200" : "bg-[#F0F2F5] text-slate-700"}`}
+        className={`min-h-screen flex flex-col items-center justify-center p-6 transition-colors duration-500 relative overflow-hidden ${isDarkMode ? currentTheme.mainBg.dark : currentTheme.mainBg.light}`}
       >
-        {/* Background Decoration */}
+        {/* 背景裝飾：使用模糊圓形營造層次感 */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
           <div
             className={`absolute top-[-20%] left-[-20%] w-[70%] h-[70%] rounded-full blur-3xl animate-blob opacity-20 ${theme.blob1}`}
@@ -3271,7 +3059,7 @@ const ItineraryApp = () => {
             </div>
             <h2 className="text-2xl font-bold mb-2">行程表已鎖定</h2>
             <p className={`text-sm ${theme.textSec}`}>
-              請輸入家族通關密語以解鎖並解密 API Key
+              請輸入通關密語以解鎖並解密 API Key
             </p>
           </div>
 
@@ -3313,7 +3101,7 @@ const ItineraryApp = () => {
             )}
           </form>
 
-          {/* Encryption Tool Toggle */}
+          {/* 加密工具：供開發者或首次使用者生成加密字串 */}
           <div className="mt-8 pt-6 border-t border-dashed border-slate-200/20">
             <button
               onClick={() => setShowEncryptTool(!showEncryptTool)}
@@ -3329,12 +3117,11 @@ const ItineraryApp = () => {
               <div
                 className={`mt-4 p-4 rounded-xl border space-y-3 text-sm ${isDarkMode ? "bg-black/30 border-neutral-700" : "bg-slate-50 border-slate-200"}`}
               >
-                {/* 🔴 新增：切換要加密哪種 Key 的按鈕 */}
                 <div className="flex gap-2 mb-2">
                   <button
                     onClick={() => {
                       setKeyType("gemini");
-                      setToolResult(""); // 切換時清空結果
+                      setToolResult("");
                     }}
                     className={`flex-1 py-1.5 rounded text-xs font-bold transition-colors ${
                       keyType === "gemini"
@@ -3416,14 +3203,13 @@ const ItineraryApp = () => {
     );
   }
 
-  // 🆕 新增：初始化載入畫面 (Splash Screen)
-  // 當已解鎖 (isVerified=true) 但定位還沒跑完 (!isAppReady) 時顯示
+  // --- 初始化載入畫面 (Splash Screen) ---
+  // 當已解鎖但定位或初始資料尚未就緒時顯示
   if (!isAppReady) {
     return (
       <div
-        className={`min-h-screen flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-500 ${isDarkMode ? "bg-[#1A1A1A] text-neutral-200" : "bg-[#F0F2F5] text-slate-700"}`}
+        className={`min-h-screen flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-500 ${isDarkMode ? currentTheme.mainBg.dark : currentTheme.mainBg.light}`}
       >
-        {/* 背景裝飾 (與主畫面一致) */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div
             className={`absolute top-[-20%] left-[-20%] w-[70%] h-[70%] rounded-full blur-3xl animate-blob opacity-20 ${theme.blob1}`}
@@ -3433,12 +3219,10 @@ const ItineraryApp = () => {
           ></div>
         </div>
 
-        {/* 載入中內容 */}
         <div className="relative z-10 flex flex-col items-center gap-6 animate-pulse">
           <div
             className={`p-4 rounded-full shadow-xl ${isDarkMode ? "bg-neutral-800" : "bg-white"}`}
           >
-            {/* 這裡可以換成您喜歡的 Icon，例如飛機 Plane 或地圖 MapPin */}
             <LocateFixed
               className={`w-8 h-8 animate-spin ${isDarkMode ? "text-sky-400" : "text-[#5D737E]"}`}
             />
@@ -3456,23 +3240,18 @@ const ItineraryApp = () => {
     );
   }
 
-  // 取得當前應該顯示的天氣代碼 (總覽用 userWeather，行程用 displayWeather)
+  // 決定當前應顯示的天氣特效代碼
   let currentEffectCode =
     activeDay === -1 ? userWeather.weatherCode : displayWeather.code;
   
-  console.log(`🧪 初始 currentEffectCode=${currentEffectCode}, isTestMode=${isTestMode}, activeDay=${activeDay}, isFrozen=${!!frozenTestWeatherOverride}`);
-  
-  // 🆕 應用天氣覆寫（優先使用凍結設定，不受 isTestMode 影響）
+  // 應用測試模式或凍結的天氣覆寫
   const effectiveWeatherOverride = frozenTestWeatherOverride || testWeatherOverride;
   if (activeDay === -1 && effectiveWeatherOverride.overview !== null) {
-    // 總覽頁面使用 overview 覆蓋
     currentEffectCode = effectiveWeatherOverride.overview;
-    console.log(`🧪 應用${frozenTestWeatherOverride ? '凍結' : ''}總覽天氣覆蓋: ${currentEffectCode}`);
   } else if (activeDay >= 0 && effectiveWeatherOverride.days[activeDay] !== undefined) {
-    // 行程頁面使用對應 day 的覆蓋
     currentEffectCode = effectiveWeatherOverride.days[activeDay];
-    console.log(`🧪 應用${frozenTestWeatherOverride ? '凍結' : ''} Day ${activeDay + 1} 天氣覆蓋: ${currentEffectCode}`);
   }
+
   const particleType = getParticleType(currentEffectCode, isDarkMode);
   const skyCondition = getSkyCondition(currentEffectCode);
   const isDayTime = !isDarkMode;
@@ -3484,37 +3263,27 @@ const ItineraryApp = () => {
     snow: "#94a3b8",
   };
 
+  // 根據天氣狀況動態調整背景色，增強沉浸感
   if (isDayTime) {
-    // 判斷是否下雨（不包括雷雨）
-    const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(
-      currentEffectCode,
-    );
-    // 判斷是否下雪
+    const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(currentEffectCode);
     const isSnowing = [71, 73, 75, 77, 85, 86].includes(currentEffectCode);
-    // 判斷是否多霧
     const isFoggy = [45, 48].includes(currentEffectCode);
-    // 判斷是否雷雨
     const isThunderstorm = [95, 96, 99].includes(currentEffectCode);
-    // 判斷是否多雲
     const isCloudy = [1, 2, 3].includes(currentEffectCode);
 
     if (isThunderstorm) {
-      // 白天且雷雨：背景非常暗 (深灰黑色)
       dynamicBgStyle = { backgroundColor: "#4a5568" };
     } else if (isRaining) {
-      // 白天且下雨：背景顯著變暗 (深藍灰色)
       dynamicBgStyle = { backgroundColor: weatherColors.rain };
     } else if (isSnowing) {
-      // 白天且下雪：背景變暗以突顯白色雪花
       dynamicBgStyle = { backgroundColor: weatherColors.snow };
     } else if (isFoggy) {
-      // 白天且多霧：背景使用霧白色
       dynamicBgStyle = { backgroundColor: "#c7d2e0" };
     } else if (isCloudy) {
-      // 白天且多雲：背景稍微變暗 (淺灰色)
       dynamicBgStyle = { backgroundColor: "#cbd5e1" };
     }
   }
+
   return (
     <div
       style={{ ...containerStyle, ...dynamicBgStyle }}
@@ -3523,7 +3292,7 @@ const ItineraryApp = () => {
       onTouchMove={handleMainTouchMove}
       onTouchEnd={handleMainTouchEnd}
     >
-      {/* Pull to Refresh Indicator */}
+      {/* 下拉重新整理指示器 */}
       <div 
         className="fixed top-0 left-0 w-full flex justify-center pointer-events-none z-[100] transition-opacity duration-300"
         style={{ 
@@ -3536,7 +3305,7 @@ const ItineraryApp = () => {
         </div>
       </div>
 
-      {/* Decorative Blobs - Subtle & Natural */}
+      {/* 背景裝飾球：隨主題與天氣變換顏色 */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div
           className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-3xl animate-blob transition-colors duration-700 ${theme.blob1}`}
@@ -3574,11 +3343,6 @@ const ItineraryApp = () => {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.7; }
       }
-      @keyframes successGlow {
-          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-          50% { box-shadow: 0 0 20px 5px rgba(16, 185, 129, 0.4); }
-          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-      }
       .animate-success-glow { animation: successGlow 0.8s ease-out; }
       .animate-slide-up { animation: slideUp 0.3s ease-out; }
       .animate-fadeInLeft { animation: fadeInLeft 0.2s ease-out; }
@@ -3586,32 +3350,28 @@ const ItineraryApp = () => {
       .animate-scale-in { animation: scaleIn 0.25s ease-out; }
       .animate-shimmer { animation: shimmer 2s ease-in-out infinite; }
       `}</style>
+      
       <SkyObjects isDay={!isDarkMode} condition={skyCondition} />
       <WeatherParticles type={particleType} isDay={!isDarkMode} />
-      {/* 雷雨時同時顯示雨和閃電 */}
+      {/* 雷雨時疊加雨滴特效 */}
       {particleType === "lightning" && (
         <WeatherParticles type="rain" isDay={!isDarkMode} />
       )}
 
       <div className="max-w-md mx-auto relative min-h-screen flex flex-col z-10">
-        {/* Header Title with Material Glass */}
-        {/* 1. items-end: 讓左邊標題卡片與右邊匯率卡片的「底部」對齊 */}
-        {/* 2. gap-4: 拉開左右兩邊的距離，創造呼吸感 */}
+        {/* 頂部標題與功能列 */}
         <div className="flex justify-between items-end px-4 pt-5 pb-2 relative z-20 gap-4">
-          {/* 左側：標題卡片 - 添加點擊邏輯 */}
-          {/* 3. min-w-0: 允許 flex item 縮小，防止破版 */}
+          {/* 左側：行程標題 (點擊觸發測試模式彩蛋) */}
           <div
             className={`px-3 py-2.5 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 cursor-pointer select-none active:scale-95 ${theme.cardBg} ${theme.cardBorder}`}
             onClick={handleTitleClick}
           >
-            {/* 4. text-base + whitespace-nowrap: 字體改回 base，增加易讀性 */}
             <h1
               className={`text-base font-bold tracking-wide transition-colors whitespace-nowrap drop-shadow-sm ${theme.text}`}
               style={{ textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.5)' : '0 1px 1px rgba(255,255,255,0.5)' }}
             >
               {tripConfig.title}
             </h1>
-            {/* 5. text-[10px]: 副標題改為 10px，視覺層次更好 */}
             <p
               className={`text-[10px] mt-0.5 font-medium tracking-widest whitespace-nowrap opacity-70 ${theme.textSec}`}
             >
@@ -3619,10 +3379,8 @@ const ItineraryApp = () => {
             </p>
           </div>
 
-          {/* 右側：按鈕組 + 匯率卡片 */}
-          {/* flex-shrink-0: 防止右側被擠壓變形 */}
+          {/* 右側：功能按鈕與匯率卡片 */}
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {/* 第一排：功能按鈕 (維持原樣) */}
             <div className="flex gap-2">
               <button
                 onClick={(e) => {
@@ -3631,7 +3389,6 @@ const ItineraryApp = () => {
                 }}
                 className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
                 title={testModeClickCount === 10 ? "進入測試模式" : "鎖定行程"}
-                aria-label="鎖定或解鎖行程"
               >
                 {testModeClickCount === 10 ? (
                   <Key className="w-4 h-4 fill-current text-pink-500 animate-bounce" />
@@ -3648,7 +3405,6 @@ const ItineraryApp = () => {
                 }}
                 className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
                 aria-label={`切換到${isDarkMode ? "亮色" : "深色"}模式`}
-                title={isDarkMode ? "切換為亮色模式" : "切換為深色模式"}
               >
                 {isDarkMode ? (
                   <Moon className="w-4 h-4 fill-current" />
@@ -3658,7 +3414,6 @@ const ItineraryApp = () => {
               </button>
             </div>
 
-            {/* 第二排：匯率資訊 */}
             <CurrencyWidget
               isDarkMode={isDarkMode}
               theme={theme}
@@ -3668,16 +3423,16 @@ const ItineraryApp = () => {
           </div>
         </div>
 
-        {/* --- Tab Content --- */}
+        {/* --- 分頁內容 --- */}
 
-        {/* 1. 行程分頁 (Itinerary Tab) - 完整動畫版 */}
+        {/* 1. 行程分頁 (Itinerary Tab) */}
         {activeTab === "itinerary" && (
           <div
             className="flex-1 space-y-5 px-4 pb-32 overflow-x-hidden relative"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             ref={scrollContainerRef}
-            // 🆕 優化：應用 GPU 加速容器類名
+            // 應用 GPU 加速，確保在行動裝置上滑動順暢
             style={{
               willChange: "scroll-position",
               transform: "translateZ(0)",
@@ -3685,18 +3440,14 @@ const ItineraryApp = () => {
               perspective: "1000px",
             }}
           >
-            {/* Navigation Buttons */}
+            {/* 天數導覽列 */}
             <div
-              // ✅ 1. 綁定容器 Ref
               ref={navContainerRef}
               className="flex space-x-2 overflow-x-auto pb-1 scrollbar-hide py-1 px-1 relative z-10"
             >
-              {/* Overview Button (Index = -1) */}
               <button
-                // ✅ 2. 綁定按鈕 Ref (Key 為 -1)
                 ref={(el) => (navItemsRef.current[-1] = el)}
                 onClick={() => changeDay(-1)}
-                aria-label="查看行程總覽"
                 className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-sm flex items-center gap-1.5 shadow-sm active:scale-95 hover:scale-105
                   ${
                     activeDay === -1
@@ -3749,16 +3500,15 @@ const ItineraryApp = () => {
                     exit="exit"
                     className="space-y-5"
                   >
-                    {/* === 總覽頁面：天氣與預報卡片 (放大字體與緊湊版) === */}
+                    {/* --- 總覽頁面：即時天氣與預報卡片 --- */}
                     <div
                       className={`backdrop-blur-xl border rounded-[1.5rem] p-4 ${theme.cardShadow} transition-colors duration-300 relative overflow-hidden ${theme.cardBg} ${theme.cardBorder}`}
                       style={theme.ambientStyle}
                     >
-                      {/* 上半部：目前天氣與地點 */}
+                      {/* 上半部：目前天氣與地點資訊 */}
                       <div className="flex justify-between items-center mb-3">
-                        {/* 左側：水平排列的溫度與資訊 */}
                         <div className="flex items-center gap-4">
-                          {/* 1. 大溫度 (保持 5xl 但稍微加粗) */}
+                          {/* 目前氣溫 */}
                           <div
                             className={`text-5xl font-medium tracking-tighter drop-shadow-sm ${theme.text}`}
                             style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
@@ -3769,7 +3519,7 @@ const ItineraryApp = () => {
                             °
                           </div>
 
-                          {/* 2. 資訊堆疊 (字體全面放大) */}
+                          {/* 地點與天氣描述 */}
                           <div className="flex flex-col justify-center gap-0.5">
                             <div
                               className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide opacity-90 ${theme.textSec}`}
@@ -3782,13 +3532,12 @@ const ItineraryApp = () => {
                                 <button
                                   onClick={() => setShowWeatherDetail(true)}
                                   className={`p-2 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
-                                  title="查看此位置的詳細氣象資訊"
+                                  title="查看詳細氣象資訊"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </button>
                               </span>
                             </div>
-                            {/* 天氣狀況與高低溫 */}
                             <div className="flex flex-col">
                               <span
                                 className={`text-base font-bold leading-tight drop-shadow-sm ${theme.text}`}
@@ -3806,7 +3555,7 @@ const ItineraryApp = () => {
                           </div>
                         </div>
 
-                        {/* 右側：更新按鈕 */}
+                        {/* 手動更新位置與天氣 */}
                         <button
                           onClick={() =>
                             getUserLocationWeather({
@@ -3825,14 +3574,12 @@ const ItineraryApp = () => {
                           </button>
                       </div>
 
-                      {/* 中間：每 2 小時預報共 7 個時段（緊湊版） */}
+                      {/* 中間：每 2 小時預報 (緊湊版) */}
                       <div
                         className={`w-full overflow-x-auto pb-1 mb-1 scrollbar-hide`}
                       >
-                        {/* 緊湊佈局，移除 min-w 限制 */}
                         <div className="flex justify-between items-center px-0.5">
                           {[0, 2, 4, 6, 8, 10, 12].map((offset, i) => {
-                            // 🆕 測試模式：使用 testDateTime
                             const displayTime = isTestMode ? new Date(testDateTime) : new Date();
                             const currentHour = displayTime.getHours();
                             const targetIndex = currentHour + offset;
@@ -3856,19 +3603,16 @@ const ItineraryApp = () => {
                                 key={i}
                                 className="flex flex-col items-center gap-0.5 min-w-0 px-0.5 py-1 rounded-lg hover:bg-black/5 transition-colors group flex-1"
                               >
-                                {/* 時間：縮小字體 */}
                                 <span
                                   className={`text-[9px] font-bold opacity-70 group-hover:opacity-100 whitespace-nowrap ${theme.textSec}`}
                                 >
                                   {timeLabel}
                                 </span>
 
-                                {/* 圖示：縮小尺寸 */}
                                 <div className="transform transition-transform group-hover:scale-110 drop-shadow-sm scale-90">
                                   {icon}
                                 </div>
 
-                                {/* 溫度：縮小字體 */}
                                 <span
                                   className={`text-xs font-bold ${theme.text}`}
                                 >
@@ -3882,13 +3626,12 @@ const ItineraryApp = () => {
                         </div>
                       </div>
 
-                      {/* 下半部：智慧行程預報 (動態地名 + 介面置中優化版) */}
+                      {/* 下半部：智慧行程預報 (溫差比對與穿著建議) */}
                       <div
                         className={`mt-2 pt-2.5 border-t flex flex-col justify-center min-h-[36px] ${isDarkMode ? "border-white/15" : "border-black/5"}`}
                       >
                         {userWeather.temp !== null ? (
                           (() => {
-                            // 1. 決定比較對象
                             let targetDayIndex = 0;
                             let targetName = "抵達首站";
 
@@ -3909,7 +3652,6 @@ const ItineraryApp = () => {
                               targetName = "明天";
                             } else if (tripStatus === "before") {
                               targetDayIndex = 0;
-                              // ✅ 修改 1：動態抓取第一天的地點名稱 (如：輕井澤)
                               const firstLocKey = getDailyLocation(0);
                               const locObj = tripConfig.locations.find(
                                 (l) => l.key === firstLocKey,
@@ -3925,7 +3667,6 @@ const ItineraryApp = () => {
                               );
                             }
 
-                            // 2. 取得資料
                             const targetLoc = getDailyLocation(targetDayIndex);
                             const forecast = weatherForecast[targetLoc];
 
@@ -3947,13 +3688,11 @@ const ItineraryApp = () => {
                             const destCode =
                               forecast.weathercode[targetDayIndex];
 
-                            // 3. 計算差異 (已移除未使用的 isHotter)
                             const diff = destAvg - userWeather.temp;
                             const absDiff = Math.abs(diff).toFixed(0);
                             const isColder = diff < 0;
                             const weatherInfo = getWeatherData(destCode);
 
-                            // 4. 生成智慧建議文案
                             let advicePart = "";
                             const isRainy = [
                               51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99,
@@ -3973,18 +3712,14 @@ const ItineraryApp = () => {
                             if (isRainy) advicePart += "並攜帶雨具";
                             else if (isSnowy) advicePart += "並穿著防滑鞋";
 
-                            // 5. 渲染 UI
                             return (
-                              // ✅ 修改 2：改用 items-center 讓標籤與文字垂直置中，視覺更整齊
                               <div className="flex items-center gap-2.5 animate-fadeIn">
-                                {/* 左側標籤：移除了 mt-0.5，讓 flexbox 自動置中 */}
                                 <div
                                   className={`px-1.5 py-0.5 rounded text-xs font-bold whitespace-nowrap tracking-wide ${isDarkMode ? "bg-white/10 text-neutral-300" : "bg-black/5 text-stone-600"}`}
                                 >
                                   {targetName}
                                 </div>
 
-                                {/* 右側：整合資訊 */}
                                 <p
                                   className={`text-xs leading-relaxed font-medium ${theme.textSec}`}
                                 >
@@ -4017,12 +3752,11 @@ const ItineraryApp = () => {
                     </div>
 
 
-                    {/* 2. Flight & Emergency Info */}
+                    {/* --- 航班與緊急資訊卡片 --- */}
                     <div
                       className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
                       style={theme.ambientStyle}
                     >
-                      {/* Header：點擊可切換收折狀態 */}
                       <div
                         onClick={() =>
                           setIsFlightInfoExpanded(!isFlightInfoExpanded)
@@ -4031,13 +3765,6 @@ const ItineraryApp = () => {
                         role="button"
                         tabIndex={0}
                         aria-expanded={isFlightInfoExpanded}
-                        aria-controls="flight-info-content"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setIsFlightInfoExpanded(!isFlightInfoExpanded);
-                          }
-                        }}
                       >
                         <h3
                           className={`text-sm font-bold flex items-center gap-2 drop-shadow-sm ${theme.text}`}
@@ -4058,11 +3785,10 @@ const ItineraryApp = () => {
                         </div>
                       </div>
 
-                      {/* Content：只在展開時顯示 */}
                       {isFlightInfoExpanded && (
                         <div id="flight-info-content" className="animate-fadeIn">
                           <div className="grid grid-cols-2 gap-4 mb-4">
-                            {/* Flight Info */}
+                            {/* 航班資訊 */}
                             <div
                               className={`rounded-xl p-3 border flex flex-col gap-2 transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
                             >
@@ -4091,7 +3817,7 @@ const ItineraryApp = () => {
                               </div>
                             </div>
 
-                            {/* Hotel Info (包含地址複製功能) */}
+                            {/* 飯店資訊與地址複製 */}
                             <div
                               className={`rounded-xl p-3 border flex flex-col justify-center gap-2 transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
                             >
@@ -4125,7 +3851,6 @@ const ItineraryApp = () => {
                                       </span>
                                     </button>
                                   </div>
-                                  {/* 如果不是最後一個，就加分隔線 */}
                                   {index < tripConfig.hotels.length - 1 && (
                                     <div
                                       className={`w-full h-px my-0.5 ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
@@ -4136,6 +3861,7 @@ const ItineraryApp = () => {
                             </div>
                           </div>
 
+                          {/* 緊急聯絡資訊 */}
                           <div
                             className={`rounded-xl p-3 border flex items-start gap-2.5 ${isDarkMode ? "bg-red-900/10 border-red-900/20" : "bg-red-50/40 border-red-100"}`}
                           >
@@ -4156,8 +3882,7 @@ const ItineraryApp = () => {
                       )}
                     </div>
 
-                    {/* 3. Trip Status & Checklist */}
-                    {/* STATUS: BEFORE TRIP */}
+                    {/* --- 旅程狀態與檢查清單 --- */}
                     {tripStatus === "before" && (
                       <div
                         className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
@@ -4185,21 +3910,23 @@ const ItineraryApp = () => {
                         <div
                           className={`rounded-2xl p-4 border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
                         >
-                          <h3
-                            className={`text-sm font-bold mb-3 flex items-center gap-2 ${theme.text}`}
-                          >
-                            <ListTodo className={`w-4 h-4 ${colors.pink}`} />{" "}
-                            出發前檢查清單
-                          </h3>
-                          {/* 重置按鈕 */}
-                          <button
-                            onClick={handleResetChecklist}
-                            className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}
-                            title="還原預設值"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" /> 重置
-                          </button>
-                          {/* 輸入框區域 */}
+                          <div className="flex justify-between items-center mb-3">
+                            <h3
+                              className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}
+                            >
+                              <ListTodo className={`w-4 h-4 ${colors.pink}`} />{" "}
+                              出發前檢查清單
+                            </h3>
+                            <button
+                              onClick={handleResetChecklist}
+                              className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}
+                              title="還原預設值"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" /> 重置
+                            </button>
+                          </div>
+
+                          {/* 新增項目輸入框 */}
                           <div className="flex gap-2 mb-4">
                             <input
                               type="text"
@@ -4220,6 +3947,7 @@ const ItineraryApp = () => {
                             </button>
                           </div>
 
+                          {/* 清單列表 */}
                           <div className="space-y-1">
                             {checklist.map((item) => (
                               <div
@@ -4237,7 +3965,6 @@ const ItineraryApp = () => {
                                   ${glowId === item.id ? "animate-success-glow ring-2 ring-emerald-500/50" : ""}
                                 `}
                               >
-                                {/* 點擊文字或 Checkbox 觸發切換 */}
                                 <div
                                   onClick={() => toggleCheckItem(item.id)}
                                   className="flex items-center gap-3 flex-1 cursor-pointer select-none"
@@ -4282,7 +4009,7 @@ const ItineraryApp = () => {
                       </div>
                     )}
 
-                    {/* STATUS: DURING TRIP */}
+                    {/* --- 旅程狀態：旅途中 (顯示今日重點) --- */}
                     {tripStatus === "during" && currentTripDayIndex >= 0 && (
                       <div
                         className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
@@ -4309,6 +4036,7 @@ const ItineraryApp = () => {
                         </div>
 
                         <div className="space-y-4">
+                          {/* 今日主題卡片 */}
                           <div
                             className={`bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white p-4 rounded-2xl shadow-lg relative overflow-hidden`}
                           >
@@ -4326,6 +4054,7 @@ const ItineraryApp = () => {
                             </div>
                           </div>
 
+                          {/* 今日亮點摘要 */}
                           <div
                             className={`p-4 rounded-2xl border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}
                           >
@@ -4378,7 +4107,7 @@ const ItineraryApp = () => {
                       </div>
                     )}
 
-                    {/* STATUS: AFTER TRIP */}
+                    {/* --- 旅程狀態：旅程結束 (回顧) --- */}
                     {tripStatus === "after" && (
                       <div
                         className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
@@ -4425,7 +4154,7 @@ const ItineraryApp = () => {
                     )}
                   </motion.div>
                 ) : (
-                  // === 分支 2: 每日行程頁面 (activeDay >= 0) ===
+                  // === 分頁：每日行程詳情 (activeDay >= 0) ===
                   <motion.div
                     key={`day-${activeDay}`}
                     custom={direction}
@@ -4437,7 +4166,7 @@ const ItineraryApp = () => {
                   >
                     {current && (
                       <>
-                        {/* Weather Card */}
+                        {/* 該日天氣預報卡片 */}
                         <div
                           className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
                           style={theme.ambientStyle}
@@ -4454,7 +4183,7 @@ const ItineraryApp = () => {
                                 <button
                                   onClick={() => setShowWeatherDetail(true)}
                                   className={`p-2 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
-                                  title="查看此位置的詳細氣象資訊"
+                                  title="查看詳細氣象資訊"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </button>
@@ -4466,7 +4195,7 @@ const ItineraryApp = () => {
                                 className={`p-2.5 rounded-full shadow-inner ${isDarkMode ? "bg-black/30" : "bg-white/40"}`}
                               >
                                 <motion.div
-                                  key={`${activeDay}-${displayWeather.desc}`} // 當天數改變，觸發小動畫
+                                  key={`${activeDay}-${displayWeather.desc}`}
                                   initial={{ opacity: 0, scale: 0.8 }}
                                   animate={{ opacity: 1, scale: 1 }}
                                   transition={{ duration: 0.2 }}
@@ -4513,12 +4242,12 @@ const ItineraryApp = () => {
                           </div>
                         </div>
 
-                        {/* Main Itinerary Content */}
+                        {/* 行程內容主卡片 */}
                         <div
                           className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] relative transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
                           style={theme.ambientStyle}
                         >
-                          {/* Day Header */}
+                          {/* 標題與日期 */}
                           <div
                             className={`mb-5 border-b pb-4 ${isDarkMode ? "border-neutral-700/50" : "border-stone-200/50"}`}
                           >
@@ -4538,7 +4267,7 @@ const ItineraryApp = () => {
                               {current.title}
                             </h2>
 
-                            {/* Hotel Info Inline */}
+                            {/* 住宿資訊 (附 Google Maps 連結) */}
                             {!current.stay.includes("溫暖的家") && (
                               <div className={`text-xs font-medium flex items-center gap-1.5 mt-2 ${theme.textSec}`}>
                                 <Hotel className={`w-3.5 h-3.5 ${theme.accent}`} />
@@ -4553,9 +4282,9 @@ const ItineraryApp = () => {
                             )}
                           </div>
 
-                          {/* Timeline Events */}
+                          {/* 時間軸事件列表 */}
                           <div className="space-y-3.5 relative">
-                            {/* 垂直串接線 (Timeline Line) */}
+                            {/* 垂直時間軸虛線 */}
                             <div 
                               className={`absolute left-[35px] top-10 bottom-10 w-0.5 border-l-2 border-dashed ${isDarkMode ? "border-white/10" : "border-black/10"} z-0`}
                             />
@@ -4572,7 +4301,7 @@ const ItineraryApp = () => {
                                       : (isDarkMode ? "bg-neutral-800/30 border-white/5 hover:bg-neutral-800/50" : "bg-white/60 border-white/20 hover:bg-white/80 hover:shadow-md")
                                     }`}
                                 >
-                                  {/* Header Row */}
+                                  {/* 事件標題列 (點擊展開) */}
                                   <div
                                     className={`${isTransport ? 'p-3' : 'p-4'} flex gap-4 cursor-pointer`}
                                     onClick={() => toggleExpand(activeDay, idx)}
@@ -4583,11 +4312,11 @@ const ItineraryApp = () => {
                                         ${
                                           event.title.includes("交通")
                                             ? isDarkMode
-                                              ? "bg-emerald-900/20 text-emerald-400"
-                                              : "bg-[#F0F5E5] text-[#556B2F]"
+                                              ? currentTheme.tagColors.food.dark
+                                              : currentTheme.tagColors.food.light
                                             : isDarkMode
-                                              ? "bg-sky-900/20 text-sky-400"
-                                              : "bg-[#E8F0FE] text-[#3B5998]"
+                                              ? currentTheme.tagColors.transport.dark
+                                              : currentTheme.tagColors.transport.light
                                         }`}
                                       >
                                         {React.cloneElement(event.icon, {
@@ -4605,7 +4334,7 @@ const ItineraryApp = () => {
                                             <Clock className="w-2.5 h-2.5" />{" "}
                                             {event.time}
                                           </div>
-                                          {/* Title and Map Link */}
+                                          {/* 標題與地圖連結 */}
                                           <div className="flex items-center gap-2 mb-1">
                                             <h3
                                               className={`${isTransport ? 'text-sm' : 'text-base'} font-bold leading-tight ${theme.text}`}
@@ -4644,9 +4373,10 @@ const ItineraryApp = () => {
                                         {event.desc}
                                       </p>
 
+                                      {/* 未展開時顯示交通方式簡述 */}
                                       {!isOpen && event.transport && (
                                         <div
-                                          className={`mt-2.5 flex items-center gap-1.5 text-xs w-fit px-2.5 py-1 rounded-lg border ${isDarkMode ? "bg-emerald-900/10 text-emerald-400 border-emerald-800/30" : "bg-[#F0F5E5] text-[#556B2F] border-[#E2E8D5]"}`}
+                                          className={`mt-2.5 flex items-center gap-1.5 text-xs w-fit px-2.5 py-1 rounded-lg border ${isDarkMode ? currentTheme.tagColors.food.dark + " border-emerald-800/30" : currentTheme.tagColors.food.light + " border-[#E2E8D5]"}`}
                                         >
                                           <Train className="w-3 h-3" />
                                           <span className="font-medium">
@@ -4657,14 +4387,17 @@ const ItineraryApp = () => {
                                     </div>
                                   </div>
 
-                                  {/* Expanded Details */}
+                                  {/* 展開後的詳細資訊 (交通、亮點、提醒)
+                                  </div>
+
+                                  {/* 展開後的詳細資訊 (交通、亮點、提醒) */}
                                   {isOpen && (
                                     <div
                                       className={`px-5 pb-5 pt-1 space-y-3 border-t ${isDarkMode ? "bg-black/20 border-neutral-700" : "bg-white/40 border-stone-200/50"}`}
                                     >
                                       {event.transport && (
                                         <div
-                                          className={`mt-2 p-3 rounded-xl border ${isDarkMode ? "bg-emerald-900/10 border-emerald-800/30" : "bg-[#F0F5E5] border-[#E2E8D5]"}`}
+                                          className={`mt-2 p-3 rounded-xl border ${isDarkMode ? currentTheme.tagColors.food.dark + " border-emerald-800/30" : currentTheme.tagColors.food.light + " border-[#E2E8D5]"}`}
                                         >
                                           <h4
                                             className={`text-xs font-bold flex items-center gap-1.5 mb-2 ${isDarkMode ? "text-emerald-400" : "text-[#556B2F]"}`}
@@ -4775,7 +4508,7 @@ const ItineraryApp = () => {
                             })}
                           </div>
 
-                          {/* Route Map Section */}
+                          {/* --- 當日路線地圖與導航 --- */}
                           {current.routeInfo && (
                             <div
                               className={`mt-6 backdrop-blur-md rounded-2xl border p-4 shadow-sm transition-colors ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/40 border-stone-200"}`}
@@ -4792,6 +4525,8 @@ const ItineraryApp = () => {
                                   當日路線導航
                                 </h3>
                               </div>
+                              
+                              {/* 互動式地圖組件 */}
                               <Suspense
                                 fallback={
                                   <div
@@ -4807,7 +4542,9 @@ const ItineraryApp = () => {
                                   isDarkMode={isDarkMode}
                                 />
                               </Suspense>
+
                               <div className="flex flex-col gap-3">
+                                {/* 路線摘要說明 */}
                                 <div
                                   className={`text-xs p-3 rounded-xl border leading-relaxed ${isDarkMode ? "bg-black/20 border-neutral-700 text-neutral-300" : "bg-white/50 border-stone-200 text-stone-600"}`}
                                 >
@@ -4818,10 +4555,10 @@ const ItineraryApp = () => {
                                   </span>
                                   {current.routeInfo.summary}
                                 </div>
+                                
+                                {/* 外部導航連結 */}
                                 <a
                                   href={current.routeInfo.mapUrl}
-                                  // target="_blank"
-                                  // rel="noopener noreferrer"
                                   className={`flex items-center justify-center gap-2 w-full py-3 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 ${isDarkMode ? "bg-gradient-to-r from-sky-800 to-blue-900" : "bg-gradient-to-r from-[#5D737E] to-[#3F5561]"}`}
                                 >
                                   <Navigation className="w-4 h-4" />
@@ -4832,7 +4569,7 @@ const ItineraryApp = () => {
                           )}
 
 
-                          {/* Notice */}
+                          {/* --- 當日特別提醒 (如：預約時間、票券) --- */}
                           {current.notice && (
                             <div
                               className={`mt-5 rounded-xl p-3.5 text-xs flex gap-2.5 items-start shadow-sm border 
@@ -4864,10 +4601,7 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* ... (Guides, Shops, Resources Tab - content same as before but wrapped in if (!isVerified) else) ... */}
-        {/* 為了節省長度，這裡隱含了 Guides, Shops, Resources 的渲染邏輯，它們會在 isVerified 為 true 時正常顯示 */}
-
-        {/* 2. 參考指南 (Guides Tab) */}
+        {/* --- 頁籤：實用指南 (Guides Tab) --- */}
         {activeTab === "guides" && (
           <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
@@ -4894,7 +4628,7 @@ const ItineraryApp = () => {
                       key={idx}
                       className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/40 border-white/5" : "bg-white/70 border-white/20"}`}
                     >
-                      {/* Guide Header - Clickable */}
+                      {/* 指南標題列 (點擊展開) */}
                       <div
                         className="flex items-center gap-3 p-4 cursor-pointer"
                         onClick={() => toggleGuide(idx)}
@@ -4939,7 +4673,7 @@ const ItineraryApp = () => {
                         )}
                       </div>
 
-                      {/* Collapsible Content */}
+                      {/* 展開後的詳細內容 */}
                       {isGuideOpen && (
                         <div id={`guide-${idx}-content`} className="px-5 pb-5 animate-fadeIn">
                           <p
@@ -4947,6 +4681,8 @@ const ItineraryApp = () => {
                           >
                             {guide.summary}
                           </p>
+                          
+                          {/* 操作步驟 */}
                           <div
                             className={`rounded-xl p-3.5 my-3 border ${isDarkMode ? "bg-black/20 border-neutral-700" : "bg-[#F9F9F6] border-stone-200"}`}
                           >
@@ -4965,12 +4701,14 @@ const ItineraryApp = () => {
                               ))}
                             </ol>
                           </div>
+
+                          {/* 相關連結與部落格教學 */}
                           <div className="space-y-3">
                             <a
                               href={guide.link.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`block w-full text-center text-sm font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 ${isDarkMode ? "bg-sky-900/20 text-sky-300 hover:bg-sky-900/30" : "bg-[#E8F0FE] text-[#3B5998] hover:bg-[#D0E0FC]"}`}
+                              className={`block w-full text-center text-sm font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 ${isDarkMode ? currentTheme.tagColors.transport.dark + " hover:bg-sky-900/30" : currentTheme.tagColors.transport.light + " hover:bg-[#D0E0FC]"}`}
                             >
                               {guide.link.text}
                               <ExternalLink className="w-3.5 h-3.5" />
@@ -5022,7 +4760,7 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* 3. 商家導覽 (Shops Tab) */}
+        {/* --- 頁籤：商家導覽 (Shops Tab) --- */}
         {activeTab === "shops" && (
           <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
@@ -5055,7 +4793,7 @@ const ItineraryApp = () => {
                       key={idx}
                       className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
                     >
-                      {/* Shop Header - Clickable */}
+                      {/* 區域標題列 (點擊展開) */}
                       <div
                         className="flex items-center justify-between p-4 cursor-pointer"
                         onClick={() => toggleShop(idx)}
@@ -5089,14 +4827,14 @@ const ItineraryApp = () => {
                         )}
                       </div>
 
-                      {/* Collapsible Content */}
+                      {/* 展開後的商家列表 */}
                       {isShopOpen && (
                         <div id={`shop-${idx}-content`} className="px-5 pb-5 animate-fadeIn">
                           <p className={`text-sm mb-4 ${theme.textSec}`}>
                             {areaData.desc}
                           </p>
 
-                          {/* 重點商家 */}
+                          {/* 重點商家 (行程相關) */}
                           <div className="mb-5">
                             <h4
                               className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
@@ -5116,8 +4854,6 @@ const ItineraryApp = () => {
                                     href={getMapLink(
                                       `${shop.name} ${areaData.mapQuerySuffix}`,
                                     )}
-                                    // target="_blank"
-                                    // rel="noopener noreferrer"
                                     className="flex items-center gap-3 group flex-1"
                                   >
                                     <MapPin
@@ -5148,7 +4884,7 @@ const ItineraryApp = () => {
                             </div>
                           </div>
 
-                          {/* 童裝與文具 */}
+                          {/* 特別推薦 (如：童裝、文具) */}
                           {areaData.specialShops && (
                             <div className="mb-5">
                               <h4
@@ -5169,8 +4905,6 @@ const ItineraryApp = () => {
                                       href={getMapLink(
                                         `${shop.name} ${areaData.mapQuerySuffix}`,
                                       )}
-                                      // target="_blank"
-                                      // rel="noopener noreferrer"
                                       className="flex items-center gap-3 group flex-1"
                                     >
                                       <MapPin
@@ -5202,7 +4936,7 @@ const ItineraryApp = () => {
                             </div>
                           )}
 
-                          {/* 周邊連鎖 */}
+                          {/* 周邊連鎖店 (便利商店、咖啡廳) */}
                           <div>
                             <h4
                               className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
@@ -5217,8 +4951,6 @@ const ItineraryApp = () => {
                                   href={getMapLink(
                                     `${chain.name} ${areaData.mapQuerySuffix}`,
                                   )}
-                                  // target="_blank"
-                                  // rel="noopener noreferrer"
                                   className={`text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 shadow-sm transition-all ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-sky-300 hover:border-sky-800" : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50 hover:text-[#5D737E] hover:border-[#5D737E]/30"}`}
                                 >
                                   <span className="font-bold">
@@ -5250,16 +4982,15 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* 4. AI 導遊 (AI Tab) */}
+        {/* --- 頁籤：AI 導遊 (AI Tab) --- */}
         {activeTab === "ai" && (
           <div className="flex-1 px-4 pb-32 space-y-5 flex flex-col h-[calc(100vh-130px)] animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden max-w-full transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
             >
-              {/* Chat Header (修改：加入導遊/翻譯模式切換) */}
+              {/* 對話視窗標題與模式切換 */}
               <div
                 className={`p-4 border-b backdrop-blur-sm flex flex-col gap-3 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/60 border-stone-200/50"}
-                ${/* 🆕 新增：根據模式改變底部邊框顏色，加強提示 */ ""}
                 ${
                   aiMode === "translate"
                     ? isDarkMode
@@ -5273,20 +5004,20 @@ const ItineraryApp = () => {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {/* 🆕 修改：頭像與背景色隨模式改變 */}
+                    {/* 模式頭像：隨導遊/口譯模式切換顏色與圖示 */}
                     <div
                       className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-500
                         ${
                           aiMode === "translate"
-                            ? "bg-gradient-to-br from-sky-400 to-blue-500" // 口譯：藍色系
+                            ? "bg-gradient-to-br from-sky-400 to-blue-500"
                             : "bg-gradient-to-br from-amber-200 to-orange-300"
-                        } // 導遊：橘黃系
+                        }
                       `}
                     >
                       {aiMode === "translate" ? (
-                        <Languages className="w-5 h-5 text-white" /> // 口譯 Icon
+                        <Languages className="w-5 h-5 text-white" />
                       ) : (
-                        <Sparkles className="w-5 h-5 text-white" /> // 導遊 Icon
+                        <Sparkles className="w-5 h-5 text-white" />
                       )}
                     </div>
 
@@ -5314,7 +5045,7 @@ const ItineraryApp = () => {
                     </div>
                   </div>
 
-                  {/* 新增：清除紀錄按鈕 (垃圾桶 icon) */}
+                  {/* 清除紀錄按鈕 */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleClearChat}
@@ -5329,7 +5060,7 @@ const ItineraryApp = () => {
                     </button>
                   </div>
 
-                  {/* 🆕 模式切換開關 (使用 handleSwitchMode) */}
+                  {/* 模式切換開關 */}
                   <div
                     className={`flex p-1 rounded-lg border ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-stone-100 border-stone-200"}`}
                   >
@@ -5348,7 +5079,7 @@ const ItineraryApp = () => {
                   </div>
                 </div>
 
-                {/* 停止朗讀按鈕 (移到這裡比較整齊) */}
+                {/* 停止朗讀控制項 */}
                 {isSpeaking && (
                   <button
                     onClick={() => {
@@ -5362,7 +5093,7 @@ const ItineraryApp = () => {
                 )}
               </div>
 
-              {/* Chat Messages */}
+              {/* 聊天訊息列表 */}
               <Suspense
                 fallback={
                   <div
@@ -5376,6 +5107,7 @@ const ItineraryApp = () => {
                   messages={messages}
                   isDarkMode={isDarkMode}
                   theme={theme}
+                  currentTheme={currentTheme}
                   renderMessage={renderMessage}
                   handleSpeak={handleSpeak}
                   isLoading={isLoading}
@@ -5385,11 +5117,10 @@ const ItineraryApp = () => {
                 />
               </Suspense>
 
-              {/* Quick Suggestions */}
+              {/* 快速建議問題：根據當前模式動態切換 */}
               <div
                 className={`px-4 py-3 border-t flex gap-2.5 overflow-x-auto scrollbar-hide backdrop-blur-sm ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/60 border-stone-200/50"}`}
               >
-                {/* 根據 aiMode 切換顯示的問題列表 */}
                 {(aiMode === "translate"
                   ? tripConfig.translationQuestions || [
                       "翻譯「謝謝」",
@@ -5411,7 +5142,7 @@ const ItineraryApp = () => {
                 ))}
               </div>
 
-              {/* Input Area */}
+              {/* 訊息輸入區 */}
               <ChatInput
                 inputMessage={inputMessage}
                 setInputMessage={setInputMessage}
@@ -5435,7 +5166,7 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* 5. 實用連結 (Resources Tab) */}
+        {/* --- 頁籤：實用連結 (Resources Tab) --- */}
         {activeTab === "resources" && (
           <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
@@ -5507,11 +5238,9 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* Bottom Navigation (Dynamic Theme + Tailwind Safe List) */}
+        {/* --- 底部導覽列 (Bottom Navigation) --- */}
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto">
           <div
-            // 容器：基礎色系通常較固定，這裡使用 style 變數輔助或是保留原樣 (若 cBase 是 stone/neutral 通常沒問題)
-            // 若發現容器背景也消失，建議同樣改用查表法，但目前主要問題在 AI 按鈕
             className={`flex items-center gap-1 px-2 py-2 rounded-full backdrop-blur-2xl border shadow-2xl transition-all duration-300
             ${
               isDarkMode
@@ -5569,7 +5298,7 @@ const ItineraryApp = () => {
               )}
             </button>
 
-            {/* 3. AI 核心按鈕 (修正版：使用完整 Class 名稱) */}
+            {/* 3. AI 核心按鈕 (使用查表法確保 Tailwind 類名完整) */}
             <button
               onClick={() => {
                 handleInterruptClick();
@@ -5582,17 +5311,14 @@ const ItineraryApp = () => {
                     : "hover:scale-105"
                 }
                 ${
-                  /* 🌟 修正點：這裡使用 IIFE 或查表法回傳完整的 Class 字串 */
                   (() => {
-                    // 定義顏色對應表 (包含日間/夜間)
                     const styles = {
                       amber: isDarkMode
                         ? "bg-gradient-to-tr from-amber-600/90 to-amber-500/90 ring-amber-500/40 border-amber-400/20 shadow-amber-900/40"
-                        : "bg-gradient-to-tr from-amber-400 to-amber-500 ring-amber-400/40 border-amber-300/40 shadow-amber-500/40", // 日間：金黃漸層
+                        : "bg-gradient-to-tr from-amber-400 to-amber-500 ring-amber-400/40 border-amber-300/40 shadow-amber-500/40",
                       sky: isDarkMode
                         ? "bg-gradient-to-tr from-sky-600/90 to-sky-500/90 ring-sky-500/40 border-sky-400/20 shadow-sky-900/40"
                         : "bg-gradient-to-tr from-sky-400 to-sky-500 ring-sky-400/40 border-sky-300/40 shadow-sky-500/40",
-                      // 預設 fallback (避免設定檔打錯字時全白)
                       default: isDarkMode
                         ? "bg-gradient-to-tr from-stone-600 to-stone-500 ring-stone-500/40 border-stone-400/20"
                         : "bg-gradient-to-tr from-stone-400 to-stone-500 ring-stone-400/40 border-stone-300/40",
@@ -5657,7 +5383,7 @@ const ItineraryApp = () => {
           </div>
         </div>
 
-        {/* Floating Location Button (透明度優化版) */}
+        {/* 分享位置按鈕 (透明度優化) */}
         <button
           onClick={handleShareLocation}
           title={`分享位置（來源：${locationSource === "cache" ? "快取" : locationSource === "low" ? "低精度" : locationSource === "high" ? "高精度" : "未知"}）`}
@@ -5687,7 +5413,7 @@ const ItineraryApp = () => {
           )}
         </button>
 
-        {/* 🆕 計算機按鈕：取代全螢幕切換 */}
+        {/* 計算機按鈕 (僅行動裝置顯示) */}
         {isMobile && (
           <button
             onClick={() => setIsCalculatorOpen(true)}
@@ -5703,6 +5429,7 @@ const ItineraryApp = () => {
           </button>
         )}
 
+        {/* 匯率計算機彈窗 */}
         <CalculatorModal
           isOpen={isCalculatorOpen}
           onClose={() => setIsCalculatorOpen(false)}
@@ -5712,7 +5439,7 @@ const ItineraryApp = () => {
           currencyTarget={tripConfig.currency.target}
         />
 
-        {/* 🆕 測試模式面板 */}
+        {/* 測試模式面板 (開發與測試用) */}
         <TestModePanel
           isOpen={isTestMode}
           onClose={() => setIsTestMode(false)}
@@ -5727,7 +5454,7 @@ const ItineraryApp = () => {
             console.log(`🧪 更新位置: (${testLatitude}, ${testLongitude}) -> (${coords.lat}, ${coords.lon})`);
             setTestLatitude(coords.lat);
             setTestLongitude(coords.lon);
-            // 🆕 在測試模式下，主動抓取新座標的天氣資料
+            // 測試模式下主動抓取新座標的天氣
             getUserLocationWeather({
               isSilent: false,
               coords: { latitude: coords.lat, longitude: coords.lon }
@@ -5742,13 +5469,12 @@ const ItineraryApp = () => {
           isDarkMode={isDarkMode}
           itineraryData={itineraryData}
           currentUserWeather={userWeather}
-          // 🔒 凍結相關的 props
           isFrozen={!!frozenTestDateTime || !!frozenTestWeatherOverride}
           onFreeze={freezeTestSettings}
           onUnfreeze={unfreezeTestSettings}
         />
 
-        {/* Toast Notification */}
+        {/* Toast 通知提示 */}
         {toast.show && (
           <div
             className={`fixed top-24 left-1/2 transform -translate-x-1/2 px-5 py-2.5 rounded-full shadow-xl z-[60] flex items-center gap-2 animate-bounce backdrop-blur-md border 
@@ -5772,6 +5498,7 @@ const ItineraryApp = () => {
             </span>
           </div>
         )}
+
         {/* 圖片放大預覽遮罩 */}
         <AnimatePresence>
           {fullPreviewImage && (
@@ -5806,7 +5533,8 @@ const ItineraryApp = () => {
             </motion.div>
           )}
         </AnimatePresence>
-        {/* 🆕 新增：圖片上傳確認視窗 (Modal) */}
+
+        {/* 圖片上傳確認視窗 */}
         <AnimatePresence>
           {tempImage && (
             <motion.div
@@ -5815,7 +5543,6 @@ const ItineraryApp = () => {
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4"
             >
-              {/* 圖片預覽區 */}
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -5828,12 +5555,10 @@ const ItineraryApp = () => {
                 />
               </motion.div>
 
-              {/* 提示文字 */}
               <p className="text-white/70 text-sm mt-6 mb-8 font-medium tracking-wide">
                 照片清楚嗎？請確認是否使用此圖片
               </p>
 
-              {/* 操作按鈕 */}
               <div className="flex gap-6 w-full max-w-xs">
                 <button
                   onClick={handleCancelImage}
@@ -5852,24 +5577,18 @@ const ItineraryApp = () => {
           )}
         </AnimatePresence>
 
-      {/* Weather Detail Modal */}
+      {/* 天氣詳情彈窗 (Weather Detail Modal) */}
       {showWeatherDetail && detailWeatherData && (
         <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-          {/* 隱形遮罩 */}
           <div className="absolute inset-0" onClick={() => setShowWeatherDetail(false)} />
           
           <div className="relative z-10 w-full max-w-[400px]">
-            {/* ⚠️ 這裡原本的外部 <button> 已經移除，不需要了 ⚠️ */}
-
             <WeatherDetail
               weather={detailWeatherData}
               loading={weatherDetailLoading}
               isDarkMode={isDarkMode}
-              
-              // 1. 🆕 傳入關閉功能
+              theme={currentTheme}
               onClose={() => setShowWeatherDetail(false)}
-              
-              // 2. 更新功能
               onRefresh={() => {
                 if (activeDay === -1) {
                   getUserLocationWeather({ isSilent: false });
@@ -5877,8 +5596,6 @@ const ItineraryApp = () => {
                   showToast("已更新預報資訊");
                 }
               }}
-              
-              // 3. 建議內容
               advice={(() => {
                 if (!userWeather?.temp || !detailWeatherData.temp) return null;
                 const targetTemp = detailWeatherData.daily?.temperature_2m_max?.[0] || detailWeatherData.temp;
@@ -5887,7 +5604,6 @@ const ItineraryApp = () => {
                 const isColder = diff < 0;
                 const code = detailWeatherData.weatherCode;
                 
-                // 簡易判斷
                 const isRainy = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code);
                 const isSnowy = [71, 73, 75, 77, 85, 86].includes(code);
                 

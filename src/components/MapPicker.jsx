@@ -3,17 +3,32 @@ import { MapPin, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+/**
+ * MapPicker Component
+ * 
+ * An interactive map tool for selecting geographic coordinates.
+ * Features:
+ * 1. Click-to-pick: Select coordinates by clicking anywhere on the map.
+ * 2. Real-time marker: Visual feedback for the selected location.
+ * 3. Zoom & Reset controls: Custom buttons for map navigation.
+ * 4. Coordinate display: Shows precise latitude and longitude.
+ * 5. Theme-aware styling: Adapts to Light/Dark mode.
+ */
 const MapPicker = ({
   latitude,
   longitude,
   onLocationChange,
-  theme,
+  theme, // currentTheme object from App.jsx
   isDarkMode,
 }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
 
+  /**
+   * Updates the marker position on the map.
+   * Creates the marker if it doesn't exist.
+   */
   const updateMarker = useCallback((lat, lng) => {
     if (markerRef.current) {
       markerRef.current.setLatLng([lat, lng]);
@@ -48,11 +63,11 @@ const MapPicker = ({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // 創建地圖實例
+    // Initialize Leaflet map instance
     if (!mapInstanceRef.current) {
       const map = L.map(mapRef.current).setView([latitude, longitude], 13);
 
-      // 添加 OpenStreetMap 圖層
+      // Add OpenStreetMap tile layer
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19,
@@ -60,7 +75,7 @@ const MapPicker = ({
 
       mapInstanceRef.current = map;
 
-      // 添加點擊事件監聽
+      // Add click event listener for coordinate selection
       map.on("click", (e) => {
         const { lat, lng } = e.latlng;
         updateMarker(lat, lng);
@@ -68,19 +83,18 @@ const MapPicker = ({
       });
     }
 
-    // 更新視圖到當前坐標
+    // Sync map view with current coordinates
     mapInstanceRef.current.setView([latitude, longitude], 13);
 
-    // 更新或創建標記
+    // Sync marker with current coordinates
     updateMarker(latitude, longitude);
 
     return () => {
-      // 清理地圖實例
-      if (mapInstanceRef.current) {
-        // 不要在這裡銷毀地圖，因為我們需要保持實例
-      }
+      // Cleanup logic if needed (currently keeping instance for performance)
     };
   }, [latitude, longitude, updateMarker, onLocationChange]);
+
+  // --- Map Control Handlers ---
 
   const handleZoomIn = () => {
     if (mapInstanceRef.current) {

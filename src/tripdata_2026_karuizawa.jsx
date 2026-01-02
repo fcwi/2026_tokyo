@@ -1272,6 +1272,69 @@ export const tripConfig = {
       cloud: "#cbd5e1", // 自訂多雲底色
       snow: "#94a3b8", // 自訂雪天底色
     },
+
+    // 語義化配色 (用於圖示、標籤等)
+    semanticColors: {
+      blue: { light: "text-[#5D737E]", dark: "text-sky-300" },
+      green: { light: "text-[#556B2F]", dark: "text-emerald-300" },
+      red: { light: "text-[#A04040]", dark: "text-red-300" },
+      orange: { light: "text-[#CD853F]", dark: "text-amber-300" },
+      pink: { light: "text-[#BC8F8F]", dark: "text-rose-300" },
+    },
+
+    // 天氣圖示專用色
+    weatherIconColors: {
+      sun: "text-amber-400",
+      moon: "text-indigo-300",
+      cloud: "text-gray-400",
+      fog: "text-slate-400",
+      rain: "text-blue-400",
+      snow: "text-cyan-300",
+      lightning: "text-yellow-500",
+    },
+
+    // 毛玻璃與背景色
+    glassColors: {
+      card: {
+        light: "bg-white/85 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]",
+        dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
+      },
+      nav: {
+        light: "bg-white/30 backdrop-blur-2xl border-white/15 shadow-lg",
+        dark: "bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30"
+      },
+    },
+
+    // 標籤與分類顏色
+    tagColors: {
+      transport: { light: "bg-[#E8F0FE] text-[#3B5998]", dark: "bg-sky-900/30 text-sky-200" },
+      food: { light: "bg-[#F0F5E5] text-[#556B2F]", dark: "bg-emerald-900/30 text-emerald-200" },
+      shopping: { light: "bg-[#FFF8E1] text-[#8B6B23]", dark: "bg-amber-900/30 text-amber-200" },
+      hotel: { light: "bg-[#E6E6FA] text-[#6A5ACD]", dark: "bg-purple-900/30 text-purple-200" },
+      spot: { light: "bg-[#FFF0F5] text-[#BC8F8F]", dark: "bg-rose-900/30 text-rose-200" },
+    },
+
+    // 聊天介面顏色
+    chatColors: {
+      userBubble: {
+        light: "bg-[#5D737E] text-white border-[#4A606A]",
+        dark: "bg-sky-800 text-white border-sky-700"
+      },
+      modelBubble: {
+        light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
+        dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700"
+      },
+      bg: {
+        light: "bg-[#F9F9F6]/50",
+        dark: "bg-black/20"
+      }
+    },
+
+    // 主背景色
+    mainBg: {
+      light: "bg-[#F0F2F5] text-slate-700",
+      dark: "bg-[#1A1A1A] text-neutral-200"
+    },
   },
 
   // ========== 語言與語音設定 ==========

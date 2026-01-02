@@ -13,14 +13,24 @@ const formatDay = (iso) => {
 };
 
 // ... (getWeatherStatus 函式保持不變) ...
-const getWeatherStatus = (code, isDay = true) => {
+const getWeatherStatus = (code, isDay = true, theme) => {
+  const colors = theme?.weatherIconColors || {
+    sun: "text-amber-400",
+    moon: "text-indigo-300",
+    cloud: "text-gray-400",
+    fog: "text-slate-400",
+    rain: "text-blue-400",
+    snow: "text-cyan-300",
+    lightning: "text-yellow-500",
+  };
+
   if (code === undefined || code === null) return { icon: <Cloud size={24} />, label: "未知" };
-  if (code === 0) return { icon: isDay ? <Sun size={24} className="text-amber-400" /> : <Moon size={24} className="text-indigo-300" />, label: "晴朗" };
-  if ([1, 2, 3].includes(code)) return { icon: <Cloud size={24} className="text-gray-400" />, label: "多雲" };
-  if ([45, 48].includes(code)) return { icon: <CloudFog size={24} className="text-slate-400" />, label: "有霧" };
-  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return { icon: <CloudRain size={24} className="text-blue-400" />, label: "降雨" };
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { icon: <Snowflake size={24} className="text-cyan-300" />, label: "降雪" };
-  if ([95, 96, 99].includes(code)) return { icon: <CloudLightning size={24} className="text-yellow-500" />, label: "雷雨" };
+  if (code === 0) return { icon: isDay ? <Sun size={24} className={colors.sun} /> : <Moon size={24} className={colors.moon} />, label: "晴朗" };
+  if ([1, 2, 3].includes(code)) return { icon: <Cloud size={24} className={colors.cloud} />, label: "多雲" };
+  if ([45, 48].includes(code)) return { icon: <CloudFog size={24} className={colors.fog} />, label: "有霧" };
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return { icon: <CloudRain size={24} className={colors.rain} />, label: "降雨" };
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { icon: <Snowflake size={24} className={colors.snow} />, label: "降雪" };
+  if ([95, 96, 99].includes(code)) return { icon: <CloudLightning size={24} className={colors.lightning} />, label: "雷雨" };
   return { icon: <Cloud size={24} />, label: "陰天" };
 };
 
@@ -34,10 +44,12 @@ const WeatherDetail = ({
   onRefresh, 
   onClose, 
   advice,
-  isDarkMode = false
+  isDarkMode = false,
+  theme // 外部傳入的主題配置
 }) => {
   const isLoading = loading || weather?.loading;
 
+  // 格式化當前天氣數據
   const current = useMemo(() => {
     if (!weather) return null;
     const idx = 0; 
@@ -57,23 +69,19 @@ const WeatherDetail = ({
     };
   }, [weather]);
 
+  // 處理每小時預報列表 (從當前小時開始抓取 12 筆)
   const hourlyItems = useMemo(() => {
     if (!weather?.hourly?.time) return [];
     const { time, temperature_2m, precipitation_probability, weathercode } = weather.hourly;
     
-    // 1. 找到「目前時間」在陣列中的 index
     const now = new Date();
     const currentHourIndex = time.findIndex(t => {
       const d = new Date(t);
       return d.getDate() === now.getDate() && d.getHours() === now.getHours();
     });
     
-    // 2. 如果找到了，從該時間點開始；找不到則回退到 0
-    //    Open-Meteo 通常提供 7 天 hourly，所以不用擔心 index 超出範圍
     const startIndex = currentHourIndex !== -1 ? currentHourIndex : 0;
     
-    // 3. 從 startIndex 往後抓 12 筆
-    //    注意：這裡 map 的 index (i) 是 0~11，但取值要用 (startIndex + i)
     return time.slice(startIndex, startIndex + 12).map((t, i) => {
       const originalIndex = startIndex + i;
       
@@ -81,24 +89,24 @@ const WeatherDetail = ({
       const hour = hourDate.getHours();
       const isDay = hour >= 6 && hour < 18;
       
-      const status = getWeatherStatus(weathercode?.[originalIndex], isDay);
+      const status = getWeatherStatus(weathercode?.[originalIndex], isDay, theme);
 
       return {
-        // 第一筆強制顯示「現在」，其餘顯示「XX時」
         time: i === 0 ? "現在" : `${hour}時`,
         temp: Math.round(temperature_2m[originalIndex]),
         pop: precipitation_probability?.[originalIndex] || 0,
         status: status
       };
     });
-  }, [weather]);
+  }, [weather, theme]);
 
+  // 處理未來 7 天預報列表
   const dailyItems = useMemo(() => {
     if (!weather?.daily?.time) return [];
     const { time, temperature_2m_max, temperature_2m_min, weathercode, precipitation_probability_max } = weather.daily;
 
     return time.slice(0, 7).map((t, i) => {
-      const status = getWeatherStatus(weathercode?.[i], true);
+      const status = getWeatherStatus(weathercode?.[i], true, theme);
       return {
         day: i === 0 ? "今天" : formatDay(t),
         max: Math.round(temperature_2m_max[i]),
@@ -107,14 +115,14 @@ const WeatherDetail = ({
         status: status
       };
     });
-  }, [weather]);
+  }, [weather, theme]);
 
   const themeClass = isDarkMode ? "theme-dark" : "theme-light";
 
   return (
     <div className={`weather-card ${themeClass}`}>
       
-      {/* --- Header: Compact Layout --- */}
+      {/* --- 標題區域：地點與當前氣溫 --- */}
       <div className="wc-header-compact">
         <div className="wc-header-main">
           <div className="wc-location-row">
@@ -127,10 +135,9 @@ const WeatherDetail = ({
             </div>
             <div className="wc-temp-meta">
                <div className="wc-desc">{current?.desc}</div>
-               {/* 🆕 修正：H/L 改為 高溫/低溫 並上色 */}
                <div className="wc-hl">
-                  <span style={{color: '#ef4444'}}>高溫:{current?.max}°</span>
-                  <span style={{color: '#3b82f6'}}>低溫:{current?.min}°</span>
+                  <span className={theme?.semanticColors?.red?.[isDarkMode ? 'dark' : 'light'] || 'text-red-500'}>高溫:{current?.max}°</span>
+                  <span className={theme?.semanticColors?.blue?.[isDarkMode ? 'dark' : 'light'] || 'text-blue-500'}>低溫:{current?.min}°</span>
                </div>
             </div>
           </div>
@@ -146,7 +153,7 @@ const WeatherDetail = ({
         </div>
       </div>
 
-      {/* --- Grid: 詳細資訊 (4欄位) --- */}
+      {/* --- 詳細數據網格 (體感、降雨、紫外線、風速) --- */}
       <div className="wc-grid">
         <div className="wc-grid-item">
           <div className="wc-grid-label"><Activity size={12} /> 體感</div>
@@ -166,7 +173,7 @@ const WeatherDetail = ({
         </div>
       </div>
 
-      {/* --- Hourly --- */}
+      {/* --- 每小時預報橫向滾動列表 --- */}
       <div>
         <div className="wc-section-title"><Activity size={12} /> 每小時預報</div>
         <div className="wc-hourly-scroll">
@@ -189,7 +196,7 @@ const WeatherDetail = ({
         </div>
       </div>
 
-      {/* --- Daily --- */}
+      {/* --- 未來 7 天預報列表 --- */}
       <div>
         <div className="wc-section-title"><Sun size={12} /> 未來 7 天</div>
         <div className="wc-daily-list">
@@ -216,6 +223,7 @@ const WeatherDetail = ({
         </div>
       </div>
 
+      {/* --- 底部穿著與活動建議 --- */}
       <div className="wc-footer">
         {advice || "暫無特別建議。"}
       </div>

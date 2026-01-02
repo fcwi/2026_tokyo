@@ -11,6 +11,15 @@ import {
 } from "lucide-react";
 import MapPicker from "./MapPicker.jsx";
 
+/**
+ * TestModePanel Component
+ * 
+ * A developer-only panel for simulating different scenarios:
+ * 1. Time/Date: Test itinerary logic for different days/times.
+ * 2. Location: Test weather and landmark detection for different coordinates.
+ * 3. Weather: Override real-time weather data with specific codes.
+ * 4. Freeze: Lock settings to prevent them from being overwritten by real data.
+ */
 const TestModePanel = ({
   isOpen,
   onClose,
@@ -21,12 +30,10 @@ const TestModePanel = ({
   onLocationChange,
   testWeatherOverride,
   onWeatherChange,
-  theme,
+  theme, // currentTheme object from App.jsx
   isDarkMode,
   itineraryData,
-  // 新增：當前實際值
-  currentUserWeather,
-  // 🔒 凍結相關的 props
+  currentUserWeather, // Current real-time weather data for reference
   isFrozen = false,
   onFreeze = () => {},
   onUnfreeze = () => {},

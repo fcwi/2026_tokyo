@@ -5,6 +5,7 @@ const ChatMessageList = ({
   messages,
   isDarkMode,
   theme,
+  currentTheme, // 當前主題配置
   renderMessage,
   handleSpeak,
   isLoading,
@@ -12,10 +13,26 @@ const ChatMessageList = ({
   chatEndRef,
   setFullPreviewImage,
 }) => {
+  // 根據主題配置定義聊天氣泡顏色
+  const chatColors = currentTheme?.chatColors || {
+    userBubble: {
+      light: "bg-[#5D737E] text-white border-[#4A606A]",
+      dark: "bg-sky-800 text-white border-sky-700"
+    },
+    modelBubble: {
+      light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
+      dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700"
+    },
+    bg: {
+      light: "bg-[#F9F9F6]/50",
+      dark: "bg-black/20"
+    }
+  };
+
   return (
     <div
       className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 ${
-        isDarkMode ? "bg-black/20" : "bg-[#F9F9F6]/50"
+        isDarkMode ? chatColors.bg.dark : chatColors.bg.light
       }`}
     >
       {messages.map((msg, idx) => (
@@ -23,7 +40,7 @@ const ChatMessageList = ({
           key={idx}
           className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
         >
-          {/* Avatar Column */}
+          {/* 頭像欄位：區分使用者與 AI */}
           <div className="flex flex-col items-center gap-1 flex-shrink-0">
             <div
               className={`w-9 h-9 rounded-full flex items-center justify-center shadow-sm border
@@ -44,7 +61,7 @@ const ChatMessageList = ({
               )}
             </div>
 
-            {/* Speak Button */}
+            {/* 朗讀按鈕：僅在 AI 回覆時顯示 */}
             {msg.role === "model" && (
               <button
                 onClick={() => handleSpeak(msg.text)}
@@ -60,7 +77,7 @@ const ChatMessageList = ({
             )}
           </div>
 
-          {/* Message Bubble */}
+          {/* 訊息氣泡：包含圖片預覽與文字內容 */}
           <div
             className={`max-w-[75%] group relative transition-all duration-300`}
           >
@@ -69,14 +86,14 @@ const ChatMessageList = ({
                 ${
                   msg.role === "user"
                     ? isDarkMode
-                      ? "bg-sky-800 text-white border-sky-700 rounded-tr-none"
-                      : "bg-[#5D737E] text-white rounded-tr-none border-[#4A606A]"
+                      ? chatColors.userBubble.dark + " rounded-tr-none"
+                      : chatColors.userBubble.light + " rounded-tr-none"
                     : isDarkMode
-                      ? "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700 rounded-tl-none"
-                      : "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200 rounded-tl-none"
+                      ? chatColors.modelBubble.dark + " rounded-tl-none"
+                      : chatColors.modelBubble.light + " rounded-tl-none"
                 }`}
             >
-              {/* 顯示圖片 */}
+              {/* 圖片附件預覽 */}
               {msg.image && (
                 <img
                   src={msg.image}
@@ -85,14 +102,14 @@ const ChatMessageList = ({
                   className="mb-2 max-w-full h-auto rounded-lg border border-white/20 shadow-sm object-cover cursor-zoom-in active:scale-95 transition-transform"
                 />
               )}
-              {/* 顯示文字 */}
+              {/* 渲染文字內容 (支援 Markdown 或特殊格式) */}
               {renderMessage(msg.text)}
             </div>
           </div>
         </div>
       ))}
 
-      {/* Loading Indicator */}
+      {/* 載入中狀態指示器 */}
       {isLoading && (
         <div className="flex gap-3">
           <div

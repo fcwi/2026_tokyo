@@ -5,7 +5,19 @@ import L from "leaflet";
 // 引入鎖定相關圖示
 import { Lock, Unlock, Move } from "lucide-react";
 
-// --- 1. 定義圖標資源 (維持不變) ---
+/**
+ * DayMap Component
+ * 
+ * An interactive map component using React-Leaflet to display itinerary events and user location.
+ * Features:
+ * 1. Displays markers for itinerary events with popups.
+ * 2. Shows real-time user location with a custom animated icon.
+ * 3. Auto-fits map bounds to include all markers.
+ * 4. Interaction Lock: Prevents accidental map movement while scrolling the page.
+ * 5. Theme-aware tile layers (Light/Dark mode).
+ */
+
+// --- 1. Icon Definitions ---
 const redIcon = new L.Icon({
   iconUrl:
     "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
@@ -29,7 +41,10 @@ const userLocationIcon = new L.DivIcon({
   iconAnchor: [10, 10],
 });
 
-// --- 2. 地圖縮放控制器 (維持不變) ---
+// --- 2. Map Bounds Controller ---
+/**
+ * Automatically adjusts the map view to fit all markers (events + user location).
+ */
 const MapController = ({ events, userLocation }) => {
   const map = useMap();
   useEffect(() => {
@@ -49,14 +64,16 @@ const MapController = ({ events, userLocation }) => {
   return null;
 };
 
-// --- 3. 🟢 新增：地圖互動鎖定控制器 ---
-// 這個元件負責直接操作 Leaflet 實例來開關互動功能
+// --- 3. Map Interaction Controller ---
+/**
+ * Manages map interaction states (dragging, zooming) based on the lock status.
+ */
 const MapInteractionController = ({ isLocked }) => {
   const map = useMap();
 
   useEffect(() => {
     if (isLocked) {
-      // 鎖定時：關閉拖曳與縮放，讓手指滑動可以直接穿透地圖捲動網頁
+      // Disable interactions to allow page scrolling through the map area
       map.dragging.disable();
       map.touchZoom.disable();
       map.doubleClickZoom.disable();
@@ -65,11 +82,11 @@ const MapInteractionController = ({ isLocked }) => {
       map.keyboard.disable();
       if (map.tap) map.tap.disable();
     } else {
-      // 解鎖時：恢復所有操作
+      // Enable interactions for map exploration
       map.dragging.enable();
       map.touchZoom.enable();
       map.doubleClickZoom.enable();
-      // map.scrollWheelZoom.enable(); // 選擇性開啟滾輪，通常手機版建議關閉以免誤觸
+      // map.scrollWheelZoom.enable(); // Optional: usually disabled on mobile to prevent accidental zoom
     }
   }, [isLocked, map]);
 
@@ -77,7 +94,7 @@ const MapInteractionController = ({ isLocked }) => {
 };
 
 const DayMap = ({ events, userLocation, isDarkMode }) => {
-  // 🟢 新增：控制鎖定狀態的 State (預設為 true 鎖定)
+  // State for interaction lock (default to locked for better UX during page scroll)
   const [isLocked, setIsLocked] = useState(true);
   const [showHint, setShowHint] = useState(false);
 
@@ -90,10 +107,10 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
 
   return (
     <div className="relative w-full h-64 rounded-2xl overflow-hidden shadow-inner border border-stone-200/50 z-0 group">
-      {/* 🟢 新增：鎖定切換按鈕 */}
+      {/* Interaction Toggle Button */}
       <button
         onClick={(e) => {
-          e.stopPropagation(); // 防止點擊穿透
+          e.stopPropagation(); // Prevent click-through to map
           setIsLocked(!isLocked);
           setShowHint(false);
         }}

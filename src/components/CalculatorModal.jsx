@@ -2,27 +2,41 @@ import React, { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import "./CalculatorModal.css";
 
+/**
+ * CalculatorModal Component
+ * 
+ * A functional calculator with real-time currency conversion capabilities.
+ * Features:
+ * 1. Basic arithmetic (+, -, *, /).
+ * 2. Currency conversion based on provided exchange rates.
+ * 3. Theme-aware styling (Light/Dark mode).
+ * 4. Responsive design for mobile use.
+ */
 const CalculatorModal = ({
   isOpen,
   onClose,
   isDarkMode,
-  rateData,
-  currencyCode,
-  currencyTarget,
+  rateData, // { current: number, loading: boolean, error: string }
+  currencyCode, // Base currency (e.g., 'JPY')
+  currencyTarget, // Target currency (e.g., 'TWD')
 }) => {
   const base = (currencyCode || "").toUpperCase();
   const target = (currencyTarget || "").toUpperCase();
+  
+  // State for calculator logic
   const [displayValue, setDisplayValue] = useState("0");
   const [storedValue, setStoredValue] = useState(null);
   const [pendingOperator, setPendingOperator] = useState(null);
   const [isNewEntry, setIsNewEntry] = useState(true);
+  
+  // State for currency conversion logic
   const [fxDirection, setFxDirection] = useState("baseToTarget");
   const [fxHint, setFxHint] = useState("");
   const [currentUnit, setCurrentUnit] = useState(base);
 
   const rateReady = rateData && !rateData.loading && !rateData.error && rateData.current;
 
-  // Reset when modal opens
+  // Reset state when modal opens
   useEffect(() => {
     if (!isOpen) return;
     // Schedule state updates in a microtask to avoid cascading renders
@@ -41,6 +55,9 @@ const CalculatorModal = ({
 
   if (!isOpen) return null;
 
+  /**
+   * Clamps the length of the display string to prevent overflow.
+   */
   const clampLength = (val) => {
     const str = val.toString();
     if (str.length <= 14) return str;
@@ -49,6 +66,8 @@ const CalculatorModal = ({
   };
 
   const parseDisplay = () => parseFloat(displayValue.replace(/,/g, "")) || 0;
+
+  // --- Input Handlers ---
 
   const inputDigit = (digit) => {
     setFxHint("");
@@ -86,6 +105,8 @@ const CalculatorModal = ({
     const value = parseDisplay();
     setDisplayValue(clampLength(value * -1));
   };
+
+  // --- Calculation Logic ---
 
   const performCalc = (prev, next, op) => {
     switch (op) {
@@ -127,6 +148,9 @@ const CalculatorModal = ({
     setFxHint("");
   };
 
+  /**
+   * Handles currency conversion based on the current display value.
+   */
   const handleFxConvert = () => {
     if (!rateReady) {
       setFxHint(rateData?.error ? "匯率連線失敗，稍後再試" : "匯率更新中" );
