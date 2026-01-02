@@ -25,7 +25,7 @@ const CurrencyWidget = ({ isDarkMode, rateData, isOnline }) => {
       target={isOnline ? "_blank" : "_self"}
       rel="noopener noreferrer"
       title={isOnline ? "點擊查看詳細匯率走勢" : "目前無法連線"}
-      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border backdrop-blur-md shadow-sm transition-all duration-300 whitespace-nowrap 
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border backdrop-blur-md shadow-sm transition-all duration-300 whitespace-nowrap 
       ${isOnline ? "cursor-pointer hover:scale-105 active:scale-95 hover:shadow-md" : "cursor-not-allowed opacity-80"}
       ${
         isDarkMode

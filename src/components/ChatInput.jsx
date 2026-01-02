@@ -1,5 +1,5 @@
-import React from "react";
-import { Camera, X, MicOff, Send, MapPin } from "lucide-react";
+import React, { useState } from "react";
+import { Camera, X, MicOff, Send, MapPin, Plus } from "lucide-react";
 
 const ChatInput = ({
   inputMessage,
@@ -15,6 +15,8 @@ const ChatInput = ({
   isDarkMode,
   tripConfig,
 }) => {
+  const [showActions, setShowActions] = useState(false);
+
   return (
     <div
       className={`p-2 border-t backdrop-blur-md transition-colors duration-300 flex-shrink-0 z-10 
@@ -49,63 +51,88 @@ const ChatInput = ({
 
       {/* 主要輸入區 */}
       <div className="flex items-end gap-2">
-        {/* 語音 + 圖片 */}
-        <div className="flex gap-1 pb-0.5">
-          {/* 中文語音 */}
+        {/* 收納功能選單 (Collapsible Actions) */}
+        <div className="flex items-center gap-1 pb-0.5 relative">
           <button
-            onClick={() => toggleListening("zh-TW")}
-            className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
-              ${
-                listeningLang === "zh-TW"
-                  ? "bg-[#5D737E] text-white animate-pulse shadow-md border-[#4A606A]"
-                  : isDarkMode
-                    ? "bg-neutral-800 text-sky-400 hover:bg-neutral-700 border-neutral-600"
-                    : "bg-white text-[#5D737E] hover:bg-stone-50 border-stone-200"
+            onClick={() => setShowActions(!showActions)}
+            className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95 z-20
+              ${showActions 
+                ? (isDarkMode ? "bg-neutral-700 border-neutral-600 text-white rotate-45" : "bg-stone-100 border-stone-300 text-stone-600 rotate-45")
+                : (isDarkMode ? "bg-neutral-800 border-neutral-700 text-sky-400" : "bg-white border-stone-200 text-[#5D737E]")
               }`}
-            title="中文語音輸入"
+            title="展開/收納功能"
           >
-            {listeningLang === "zh-TW" ? (
-              <MicOff className="w-5 h-5" />
-            ) : (
-              <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
-                中
-              </div>
-            )}
+            <Plus className="w-5 h-5" />
           </button>
 
-          {/* 外語語音（僅口譯模式顯示，交由父層控制）*/}
-          {tripConfig?.language?.code && (
-            <button
-              onClick={() => toggleListening(tripConfig.language.code)}
-              className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
-                ${
-                  listeningLang === tripConfig.language.code
-                    ? "bg-rose-400 text-white animate-pulse shadow-md border-rose-500"
-                    : isDarkMode
-                      ? "bg-neutral-800 text-rose-300 hover:bg-neutral-700 border-neutral-600"
-                      : "bg-white text-[#BC8F8F] hover:bg-stone-50 border-stone-200"
-                }`}
-              title={`${tripConfig.language.name}語音輸入`}
-            >
-              {listeningLang === tripConfig.language.code ? (
-                <MicOff className="w-5 h-5" />
-              ) : (
-                <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
-                  {tripConfig.language.label}
-                </div>
+          {showActions && (
+            <div className="flex gap-1 animate-fadeInLeft absolute left-12 bottom-0 bg-inherit p-1 rounded-xl border shadow-lg z-10 backdrop-blur-md">
+              {/* 中文語音 */}
+              <button
+                onClick={() => {
+                  toggleListening("zh-TW");
+                  setShowActions(false);
+                }}
+                className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
+                  ${
+                    listeningLang === "zh-TW"
+                      ? "bg-[#5D737E] text-white animate-pulse shadow-md border-[#4A606A]"
+                      : isDarkMode
+                        ? "bg-neutral-800 text-sky-400 hover:bg-neutral-700 border-neutral-600"
+                        : "bg-white text-[#5D737E] hover:bg-stone-50 border-stone-200"
+                  }`}
+                title="中文語音輸入"
+              >
+                {listeningLang === "zh-TW" ? (
+                  <MicOff className="w-5 h-5" />
+                ) : (
+                  <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
+                    中
+                  </div>
+                )}
+              </button>
+
+              {/* 外語語音（僅口譯模式顯示，交由父層控制）*/}
+              {tripConfig?.language?.code && (
+                <button
+                  onClick={() => {
+                    toggleListening(tripConfig.language.code);
+                    setShowActions(false);
+                  }}
+                  className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
+                    ${
+                      listeningLang === tripConfig.language.code
+                        ? "bg-rose-400 text-white animate-pulse shadow-md border-rose-500"
+                        : isDarkMode
+                          ? "bg-neutral-800 text-rose-300 hover:bg-neutral-700 border-neutral-600"
+                          : "bg-white text-[#BC8F8F] hover:bg-stone-50 border-stone-200"
+                    }`}
+                  title={`${tripConfig.language.name}語音輸入`}
+                >
+                  {listeningLang === tripConfig.language.code ? (
+                    <MicOff className="w-5 h-5" />
+                  ) : (
+                    <div className="flex items-center justify-center w-5 h-5 font-bold text-xs">
+                      {tripConfig.language.label}
+                    </div>
+                  )}
+                </button>
               )}
-            </button>
-          )}
 
-          {/* 圖片上傳 */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
-              ${isDarkMode ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-600" : "bg-white text-stone-500 hover:bg-stone-50 border-stone-200"}`}
-            title="上傳圖片"
-          >
-            <Camera className="w-5 h-5" />
-          </button>
+              {/* 圖片上傳 */}
+              <button
+                onClick={() => {
+                  fileInputRef.current?.click();
+                  setShowActions(false);
+                }}
+                className={`p-2.5 rounded-xl transition-all shadow-sm border flex-shrink-0 active:scale-95
+                  ${isDarkMode ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-600" : "bg-white text-stone-500 hover:bg-stone-50 border-stone-200"}`}
+                title="上傳圖片"
+              >
+                <Camera className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 文字輸入框 */}

@@ -79,6 +79,7 @@ const MapInteractionController = ({ isLocked }) => {
 const DayMap = ({ events, userLocation, isDarkMode }) => {
   // 🟢 新增：控制鎖定狀態的 State (預設為 true 鎖定)
   const [isLocked, setIsLocked] = useState(true);
+  const [showHint, setShowHint] = useState(false);
 
   const validEvents = events.filter((e) => e.lat && e.lon);
   const defaultCenter = [35.6895, 139.6917];
@@ -94,8 +95,9 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
         onClick={(e) => {
           e.stopPropagation(); // 防止點擊穿透
           setIsLocked(!isLocked);
+          setShowHint(false);
         }}
-        className={`absolute top-3 right-3 z-[1000] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md shadow-md border transition-all duration-300 active:scale-95
+        className={`absolute top-3 right-3 z-[1001] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md shadow-md border transition-all duration-300 active:scale-95
           ${
             isLocked
               ? "bg-white/80 text-stone-600 border-stone-200 hover:bg-white" // 鎖定樣式
@@ -117,8 +119,22 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
         )}
       </button>
 
-      {/* 🟢 新增：提示遮罩 (僅在鎖定且手指嘗試在上面滑動時顯示，這需要額外 CSS，這裡先做簡單版提示) */}
-      {/* 這裡我們用一個簡單的視覺提示：當鎖定時，地圖稍微暗一點點，或不做任何事 */}
+      {/* 🟢 新增：提示遮罩 (當鎖定時點擊地圖顯示提示) */}
+      {isLocked && (
+        <div 
+          className="absolute inset-0 z-[1000] flex items-center justify-center bg-black/0 active:bg-black/20 transition-colors duration-300 cursor-pointer"
+          onClick={() => {
+            setShowHint(true);
+            setTimeout(() => setShowHint(false), 2000);
+          }}
+        >
+          {showHint && (
+            <div className="bg-black/70 text-white px-4 py-2 rounded-full text-xs font-bold backdrop-blur-md animate-fadeIn shadow-lg border border-white/20">
+              🔒 點擊右上角解鎖地圖
+            </div>
+          )}
+        </div>
+      )}
 
       <MapContainer
         center={defaultCenter}
