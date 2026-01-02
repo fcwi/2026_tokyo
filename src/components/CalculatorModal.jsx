@@ -205,22 +205,6 @@ const CalculatorModal = ({
 
         {/* Content */}
         <div className="calc-content">
-          {/* Rate Info */}
-          <div className="calc-rate-info">
-            <span className="calc-rate-label">1 {base} ~ {formattedRate} {target}</span>
-            <button
-              onClick={handleFxConvert}
-              className="calc-convert-btn"
-            >
-              轉{fxLabel}
-            </button>
-          </div>
-
-          {/* Hint */}
-          {fxHint && (
-            <div className="calc-hint">{fxHint}</div>
-          )}
-
           {/* Display */}
           <div
             className="calc-display"
@@ -233,18 +217,18 @@ const CalculatorModal = ({
           <div className="calc-keypad">
             <button className="calc-btn calc-btn-muted" onClick={clearAll}>AC</button>
             <button className="calc-btn calc-btn-muted" onClick={toggleSign}>+/-</button>
-            <button className="calc-btn calc-btn-muted" onClick={handleFxConvert}>
+            <button className="calc-btn calc-btn-muted calc-btn-fx" onClick={handleFxConvert}>
               轉{fxLabel}
             </button>
             <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("/")}>
-              /
+              ÷
             </button>
 
             <button className="calc-btn" onClick={() => inputDigit("7")}>7</button>
             <button className="calc-btn" onClick={() => inputDigit("8")}>8</button>
             <button className="calc-btn" onClick={() => inputDigit("9")}>9</button>
             <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("*")}>
-              *
+              ×
             </button>
 
             <button className="calc-btn" onClick={() => inputDigit("4")}>4</button>

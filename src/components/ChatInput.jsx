@@ -169,7 +169,7 @@ const ChatInput = ({
                 ? `輸入中文或${tripConfig.language.name}...`
                 : "輸入問題或上傳照片..."
           }
-          className={`flex-1 min-w-0 border rounded-2xl px-3 py-3 text-xs focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-50 resize-none max-h-[120px] leading-relaxed tracking-wide
+          className={`flex-1 min-w-0 border rounded-2xl px-3 py-3 text-base focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-50 resize-none max-h-[120px] leading-relaxed tracking-wide
             ${
               isDarkMode
                 ? "bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500"

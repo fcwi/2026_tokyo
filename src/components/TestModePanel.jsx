@@ -149,7 +149,7 @@ const TestModePanel = ({
                   type="date"
                   value={dateStr}
                   onChange={handleDateChange}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
+                  className={`w-full px-3 py-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
                 />
               </div>
               <div>
@@ -160,7 +160,7 @@ const TestModePanel = ({
                   type="time"
                   value={timeStr}
                   onChange={handleTimeChange}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
+                  className={`w-full px-3 py-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
                 />
               </div>
             </div>
@@ -185,7 +185,7 @@ const TestModePanel = ({
                   step="0.0001"
                   value={tempLatitude}
                   onChange={handleLatChange}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
+                  className={`w-full px-3 py-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
                 />
               </div>
               <div>
@@ -197,7 +197,7 @@ const TestModePanel = ({
                   step="0.0001"
                   value={tempLongitude}
                   onChange={handleLonChange}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
+                  className={`w-full px-3 py-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
                 />
               </div>
             </div>

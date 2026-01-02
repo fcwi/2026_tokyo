@@ -3171,14 +3171,14 @@ const ItineraryApp = () => {
                   }
                   value={toolKey}
                   onChange={(e) => setToolKey(e.target.value)}
-                  className={`w-full p-2 rounded-lg border text-xs ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
+                  className={`w-full p-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
                 />
                 <input
                   type="text"
                   placeholder="設定您的通關密碼"
                   value={toolPwd}
                   onChange={(e) => setToolPwd(e.target.value)}
-                  className={`w-full p-2 rounded-lg border text-xs ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
+                  className={`w-full p-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
                 />
                 <button
                   onClick={generateEncryptedString}
@@ -3943,7 +3943,7 @@ const ItineraryApp = () => {
                               value={newItemText}
                               onChange={(e) => setNewItemText(e.target.value)}
                               placeholder="新增檢查項目..."
-                              className={`flex-1 px-3 py-2 rounded-xl text-sm border focus:outline-none focus:ring-2 transition-all ${isDarkMode ? "bg-neutral-900 border-neutral-600 focus:border-sky-500 focus:ring-sky-500/20" : "bg-white border-stone-200 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
+                              className={`flex-1 px-3 py-2 rounded-xl text-base border focus:outline-none focus:ring-2 transition-all ${isDarkMode ? "bg-neutral-900 border-neutral-600 focus:border-sky-500 focus:ring-sky-500/20" : "bg-white border-stone-200 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
                               onKeyPress={(e) =>
                                 e.key === "Enter" && handleAddItem()
                               }

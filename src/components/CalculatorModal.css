@@ -156,10 +156,10 @@
 /* Display */
 .calc-display {
   text-align: right;
-  font-size: 40px;
-  font-weight: 400;
+  font-size: 48px;
+  font-weight: 500;
   font-family: -apple-system-ui-monospace, monospace;
-  padding: 12px;
+  padding: 16px;
   border-radius: 16px;
   background: var(--calc-panel-bg);
   border: 1px solid var(--calc-border);
@@ -174,14 +174,14 @@
 .calc-keypad {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 10px;
   padding: 0;
 }
 
 /* Button Base */
 .calc-btn {
-  padding: 12px;
-  font-size: 16px;
+  padding: 14px;
+  font-size: 20px;
   font-weight: 600;
   border-radius: 12px;
   border: 1px solid var(--calc-border);
@@ -224,6 +224,12 @@
 
 .calc-modal.theme-dark .calc-btn-muted:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* FX Conversion Button Specific */
+.calc-btn-fx {
+  font-size: 15px;
+  line-height: 1.2;
 }
 
 /* Operator Buttons */
