@@ -3900,7 +3900,7 @@ const ItineraryApp = () => {
                       >
                         <div className="text-center mb-5">
                           <div
-                            className={`text-xs font-medium mb-1 ${theme.textSec}`}
+                            className={`text-base font-bold mb-1 tracking-wide drop-shadow-sm ${theme.text}`}
                           >
                             距離{tripConfig.title}還有
                           </div>
