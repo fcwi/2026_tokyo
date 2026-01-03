@@ -4553,7 +4553,7 @@ const ItineraryApp = () => {
                                 />
                               </Suspense>
 
-                              <div className="flex flex-col gap-3">
+                              <div className="flex flex-col gap-3 mt-4">
                                 {/* 路線摘要說明 */}
                                 <div
                                   className={`text-xs p-3 rounded-xl border leading-relaxed ${isDarkMode ? "bg-black/20 border-neutral-700 text-neutral-300" : "bg-white/50 border-stone-200 text-stone-600"}`}

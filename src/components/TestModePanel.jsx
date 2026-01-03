@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   X,
   Calendar,
@@ -45,6 +45,12 @@ const TestModePanel = ({
   const [tempLatitude, setTempLatitude] = useState(testLatitude);
   const [tempLongitude, setTempLongitude] = useState(testLongitude);
   const [tempWeatherOverride, setTempWeatherOverride] = useState(testWeatherOverride);
+
+  // 🆕 Memoize location change handler to prevent MapPicker re-renders
+  const handleMapLocationChange = useCallback((loc) => {
+    setTempLatitude(loc.lat);
+    setTempLongitude(loc.lon);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -215,10 +221,7 @@ const TestModePanel = ({
             <MapPicker
               latitude={tempLatitude}
               longitude={tempLongitude}
-              onLocationChange={(loc) => {
-                setTempLatitude(loc.lat);
-                setTempLongitude(loc.lon);
-              }}
+              onLocationChange={handleMapLocationChange}
               theme={theme}
               isDarkMode={isDarkMode}
             />
