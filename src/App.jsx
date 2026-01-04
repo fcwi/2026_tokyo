@@ -497,6 +497,7 @@ const ItineraryApp = () => {
 
   const [isMobile, setIsMobile] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false); // 新增：追蹤地圖彈窗狀態
   const [rateData, setRateData] = useState({
     current: null,
     trend: "neutral",
@@ -1084,6 +1085,12 @@ const ItineraryApp = () => {
 
   const onTouchEnd = (e) => {
     if (!touchStart) return;
+    
+    // 如果任何全螢幕彈窗開啟中，則完全停用滑動換頁功能
+    if (showWeatherDetail || isCalculatorOpen || isMapModalOpen) {
+      setTouchStart(null);
+      return;
+    }
 
     const endX = e.changedTouches[0].clientX;
     const endY = e.changedTouches[0].clientY;
@@ -4550,6 +4557,8 @@ const ItineraryApp = () => {
                                   events={current.events}
                                   userLocation={userWeather}
                                   isDarkMode={isDarkMode}
+                                  theme={theme}
+                                  onModalToggle={setIsMapModalOpen}
                                 />
                               </Suspense>
 

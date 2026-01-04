@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Lock, Unlock, Loader2 } from "lucide-react";
+import MapModal from "./MapModal.jsx";
 
 /**
  * DayMap Component with Route (OSRM)
@@ -92,28 +94,17 @@ const MapController = ({ events, userLocation, routeCoords }) => {
   return null;
 };
 
-const MapInteractionController = ({ isLocked }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (isLocked) {
-      map.dragging.disable();
-      map.touchZoom.disable();
-      map.doubleClickZoom.disable();
-      map.scrollWheelZoom.disable();
-      map.boxZoom.disable();
-    } else {
-      map.dragging.enable();
-      map.touchZoom.enable();
-      map.doubleClickZoom.enable();
-    }
-  }, [isLocked, map]);
-  return null;
-};
-
 // --- 3. 主組件 ---
-const DayMap = ({ events, userLocation, isDarkMode }) => {
-  const [isLocked, setIsLocked] = useState(true);
+const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showHint, setShowHint] = useState(false);
+
+  // 當彈窗狀態改變時，通知父組件 (App.jsx)
+  useEffect(() => {
+    if (onModalToggle) {
+      onModalToggle(isModalOpen);
+    }
+  }, [isModalOpen, onModalToggle]);
   const [routeCoords, setRouteCoords] = useState([]);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
@@ -168,34 +159,23 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
         : "border-stone-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-[#fdfdfd]"
       }`}
     >
-      {/* 鎖定按鈕 */}
+      {/* 鎖定按鈕 (改為啟動互動模式) */}
       <button
         onClick={(e) => {
           e.stopPropagation();
-          setIsLocked(!isLocked);
+          setIsModalOpen(true);
           setShowHint(false);
         }}
-        className={`absolute top-4 right-4 z-[1001] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg border transition-all duration-300 active:scale-95
+        className={`absolute top-4 right-4 z-[1001] flex items-center gap-1.5 px-4 py-2 rounded-full backdrop-blur-md shadow-lg border transition-all duration-300 active:scale-95
           ${
-            isLocked
-              ? isDarkMode 
-                ? "bg-black/40 text-neutral-300 border-neutral-700 hover:bg-black/60"
-                : "bg-white/60 text-stone-600 border-white/40 hover:bg-white/80"
-              : "bg-blue-500 text-white border-blue-400 ring-4 ring-blue-500/20"
+            isDarkMode 
+              ? "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
+              : "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
           }
         `}
       >
-        {isLocked ? (
-          <>
-            <Lock className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold tracking-wide">地圖已鎖定</span>
-          </>
-        ) : (
-          <>
-            <Unlock className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold tracking-wide">互動模式</span>
-          </>
-        )}
+        <Unlock className="w-3.5 h-3.5" />
+        <span className="text-[11px] font-black tracking-wider uppercase">開啟互動地圖</span>
       </button>
 
       {/* 載入中動畫 (位於左上角) */}
@@ -206,30 +186,30 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
         </div>
       )}
 
-      {/* 提示遮罩 */}
-      {isLocked && (
-        <div 
-          className="absolute inset-0 z-[1000] flex items-center justify-center bg-transparent cursor-pointer"
-          onClick={() => {
-            setShowHint(true);
-            setTimeout(() => setShowHint(false), 2000);
-          }}
-        >
-          {showHint && (
-            <div className="bg-black/80 text-white px-4 py-2 rounded-full text-xs font-bold backdrop-blur-md shadow-2xl border border-white/10 animate-scale-in">
-              🔒 點擊右上角解鎖地圖
-            </div>
-          )}
-        </div>
-      )}
+      {/* 點擊遮罩 (點擊地圖任何地方皆可開啟彈窗) */}
+      <div 
+        className="absolute inset-0 z-[1000] flex items-center justify-center bg-transparent cursor-pointer"
+        onClick={() => setIsModalOpen(true)}
+        onMouseEnter={() => setShowHint(true)}
+        onMouseLeave={() => setShowHint(false)}
+      >
+        {showHint && (
+          <div className="bg-black/80 text-white px-4 py-2 rounded-full text-xs font-bold backdrop-blur-md shadow-2xl border border-white/10 animate-scale-in">
+            🔍 點擊開啟互動地圖
+          </div>
+        )}
+      </div>
 
       <MapContainer
         center={defaultCenter}
         zoom={10}
         style={{ height: "100%", width: "100%" }}
         scrollWheelZoom={false}
-        dragging={!isLocked}
+        dragging={false}
         zoomControl={false}
+        touchZoom={false}
+        doubleClickZoom={false}
+        boxZoom={false}
       >
         <TileLayer
           attribution='&copy; CARTO & OSRM'
@@ -237,7 +217,6 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
         />
 
         <MapController events={validEvents} userLocation={userLocation} routeCoords={routeCoords} />
-        <MapInteractionController isLocked={isLocked} />
 
         {/* 1. 繪製路線 (Polyline) */}
         {routeCoords.length > 0 && (
@@ -322,7 +301,29 @@ const DayMap = ({ events, userLocation, isDarkMode }) => {
           transform: scale(1.1);
           z-index: 1000 !important;
         }
+
+        @keyframes modal-in {
+          from { opacity: 0; transform: scale(0.95) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-modal-in {
+          animation: modal-in 0.3s ease-out forwards;
+        }
       `}</style>
+
+      {/* 互動式地圖彈窗 (使用 Portal 確保在最上層) */}
+      {isModalOpen && createPortal(
+        <MapModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          isDarkMode={isDarkMode}
+          events={events}
+          userLocation={userLocation}
+          routeCoords={routeCoords}
+          theme={theme}
+        />,
+        document.body
+      )}
     </div>
   );
 };
