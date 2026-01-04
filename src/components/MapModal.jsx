@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useMemo } from "react";
-import { X, Navigation, RotateCcw } from "lucide-react";
+import { X, RotateCcw } from "lucide-react";
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -102,9 +102,8 @@ const MapModal = ({
 
   if (!isOpen) return null;
 
-  const tileLayerUrl = isDarkMode
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  // 始終使用日間模式地圖磚層，夜間模式僅調暗亮度
+  const tileLayerUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
   // 使用主題設定或回退預設值
   const glassClass = isDarkMode 
@@ -123,8 +122,8 @@ const MapModal = ({
           position: relative;
           width: 32px;
           height: 32px;
-          background: ${isDark ? 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'};
-          border: 2px solid white;
+          background: ${isDark ? 'linear-gradient(135deg, #60a5fa 0%, #0ea5e9 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'};
+          border: 3px solid white;
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -132,7 +131,7 @@ const MapModal = ({
           color: white;
           font-weight: bold;
           font-size: 14px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          box-shadow: ${isDark ? '0 0 16px rgba(96, 165, 250, 0.5), 0 3px 10px rgba(0, 0, 0, 0.4)' : '0 3px 10px rgba(0, 0, 0, 0.2)'};
         ">
           ${number + 1}
         </div>
@@ -146,13 +145,13 @@ const MapModal = ({
   const userLocationIcon = new L.DivIcon({
     className: "custom-user-icon",
     html: `
-      <div style="position: relative; width: 24px; height: 24px; background-color: #10b981; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.4); z-index: 1000;">
-        <div style="position: absolute; top: -12px; left: -12px; width: 42px; height: 42px; background-color: rgba(16, 185, 129, 0.3); border-radius: 50%; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+      <div style="position: relative; width: 20px; height: 20px; background-color: #10b981; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5), 0 2px 6px rgba(0,0,0,0.3); z-index: 1000;">
+        <div style="position: absolute; top: -10px; left: -10px; width: 40px; height: 40px; background-color: rgba(16, 185, 129, 0.25); border-radius: 50%; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
       </div>
       <style> @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } } </style>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
   });
 
   return (
@@ -223,7 +222,7 @@ const MapModal = ({
             bounceAtZoomLimits={false}
           >
             <TileLayer
-              attribution='&copy; CARTO & OSRM'
+              attribution='&copy; CARTO, &copy; OpenStreetMap'
               url={tileLayerUrl}
               updateWhenIdle={false}
               keepBuffer={3}
@@ -241,20 +240,33 @@ const MapModal = ({
                 <Polyline 
                   positions={routeCoords} 
                   pathOptions={{ 
-                    color: isDarkMode ? 'rgba(0,0,0,0.3)' : 'white', 
-                    weight: 8, 
-                    opacity: 0.5 
+                    color: isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'white', 
+                    weight: 10, 
+                    opacity: 0.6 
                   }} 
                 />
                 <Polyline 
                   positions={routeCoords} 
                   pathOptions={{ 
-                    color: '#3b82f6', 
-                    weight: 5, 
-                    opacity: 0.9,
-                    lineCap: 'round'
+                    color: isDarkMode ? '#00d4ff' : '#3b82f6', 
+                    weight: isDarkMode ? 6 : 5, 
+                    opacity: isDarkMode ? 1 : 0.9,
+                    lineCap: 'round',
+                    lineJoin: 'round'
                   }} 
                 />
+                {isDarkMode && (
+                  <Polyline 
+                    positions={routeCoords} 
+                    pathOptions={{ 
+                      color: '#00d4ff', 
+                      weight: 6, 
+                      opacity: 0.3,
+                      lineCap: 'round',
+                      lineJoin: 'round'
+                    }} 
+                  />
+                )}
               </>
             )}
 
@@ -301,7 +313,7 @@ const MapModal = ({
         </div>
 
         {/* Footer / Controls */}
-        <div className={`p-5 border-t flex items-center justify-between ${
+        <div className={`p-5 border-t flex items-center ${
           isDarkMode ? "border-white/5 bg-white/5" : "border-stone-200/50 bg-stone-50/30"
         }`}>
           <div className="flex items-center gap-2">
@@ -309,18 +321,6 @@ const MapModal = ({
             <div className={`text-xs font-medium ${textSecClass}`}>
               點擊標記查看詳細資訊
             </div>
-          </div>
-          <div className="flex gap-3">
-             <button
-              onClick={() => {
-                const url = `https://www.google.com/maps/dir/?api=1&origin=${userLocation?.lat},${userLocation?.lon}&destination=${validEvents[validEvents.length-1]?.lat},${validEvents[validEvents.length-1]?.lon}&waypoints=${validEvents.slice(0, -1).map(e => `${e.lat},${e.lon}`).join('|')}&travelmode=driving`;
-                window.open(url, '_blank');
-              }}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-bold text-white transition-all active:scale-95 bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20`}
-            >
-              <Navigation className="w-4 h-4" />
-              開啟導航
-            </button>
           </div>
         </div>
       </div>

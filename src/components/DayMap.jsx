@@ -19,22 +19,23 @@ const createNumberedIcon = (index, isDarkMode) => {
   return new L.DivIcon({
     className: "custom-numbered-marker",
     html: `
-      <div style="position: relative; width: 28px; height: 28px;">
+      <div style="position: relative; width: 32px; height: 32px;">
         <div style="
           position: absolute;
           inset: 0;
-          background-color: ${isDarkMode ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.2)'};
+          background: ${isDarkMode ? 'linear-gradient(135deg, #60a5fa 0%, #0ea5e9 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'};
           border-radius: 50%;
-          transform: scale(1.2);
+          opacity: 0.2;
+          transform: scale(1.5);
         "></div>
         <div style="
           position: relative;
           width: 100%;
           height: 100%;
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          border: 2px solid white;
+          background: ${isDarkMode ? 'linear-gradient(135deg, #60a5fa 0%, #0ea5e9 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'};
+          border: 3px solid white;
           border-radius: 50%;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+          box-shadow: ${isDarkMode ? '0 0 16px rgba(96, 165, 250, 0.5), 0 3px 10px rgba(0, 0, 0, 0.4)' : '0 3px 10px rgba(0, 0, 0, 0.2)'};
           display: flex;
           align-items: center;
           justify-content: center;
@@ -47,8 +48,8 @@ const createNumberedIcon = (index, isDarkMode) => {
         </div>
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
     popupAnchor: [0, -16],
   });
 };
@@ -56,8 +57,8 @@ const createNumberedIcon = (index, isDarkMode) => {
 const userLocationIcon = new L.DivIcon({
   className: "custom-user-icon",
   html: `
-    <div style="position: relative; width: 20px; height: 20px; background-color: #10b981; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 1000;">
-      <div style="position: absolute; top: -10px; left: -10px; width: 34px; height: 34px; background-color: rgba(16, 185, 129, 0.3); border-radius: 50%; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+    <div style="position: relative; width: 20px; height: 20px; background-color: #10b981; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 12px rgba(16, 185, 129, 0.5), 0 2px 6px rgba(0,0,0,0.3); z-index: 1000;">
+      <div style="position: absolute; top: -10px; left: -10px; width: 40px; height: 40px; background-color: rgba(16, 185, 129, 0.25); border-radius: 50%; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
     </div>
     <style> @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } } </style>
   `,
@@ -112,9 +113,8 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
   const validEvents = useMemo(() => events.filter((e) => e.lat && e.lon), [events]);
   const defaultCenter = [35.6895, 139.6917];
 
-  const tileLayerUrl = isDarkMode
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  // 始終使用日間模式地圖磚層，夜間模式僅調暗亮度
+  const tileLayerUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
   // 🔥 核心邏輯：從 OSRM 獲取路線資料
   useEffect(() => {
@@ -212,7 +212,7 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
         boxZoom={false}
       >
         <TileLayer
-          attribution='&copy; CARTO & OSRM'
+          attribution='&copy; CARTO, &copy; OpenStreetMap'
           url={tileLayerUrl}
         />
 
@@ -225,22 +225,34 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
             <Polyline 
               positions={routeCoords} 
               pathOptions={{ 
-                color: isDarkMode ? 'rgba(0,0,0,0.5)' : 'white', 
-                weight: 6, 
-                opacity: 0.8 
+                color: isDarkMode ? 'rgba(0,0,0,0.4)' : 'white', 
+                weight: 8, 
+                opacity: 0.6 
               }} 
             />
             {/* 主路線 */}
             <Polyline 
               positions={routeCoords} 
               pathOptions={{ 
-                color: '#3b82f6', // blue-500
-                weight: 4, 
-                opacity: 0.9,
-                dashArray: '1, 6', // 如果想要虛線效果，可以取消註解這行
-                lineCap: 'round'
+                color: isDarkMode ? '#00d4ff' : '#3b82f6',
+                weight: isDarkMode ? 5 : 4, 
+                opacity: isDarkMode ? 1 : 0.9,
+                lineCap: 'round',
+                lineJoin: 'round'
               }} 
             />
+            {isDarkMode && (
+              <Polyline 
+                positions={routeCoords} 
+                pathOptions={{ 
+                  color: '#00d4ff', 
+                  weight: 5, 
+                  opacity: 0.3,
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                }} 
+              />
+            )}
           </>
         )}
 
