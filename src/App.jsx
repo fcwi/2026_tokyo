@@ -1590,7 +1590,8 @@ const ItineraryApp = () => {
 
       // 避免短時間內重複觸發定位請求，減少 API 消耗與效能負擔
       const now = Date.now();
-      const minGapMs = isSilent ? 3000 : 1500;
+      // 放寬冷卻時間，避免短時間重複刷新造成過多外部請求
+      const minGapMs = isSilent ? 10000 : 30000;
       if (!highAccuracy) {
         if (
           isFetchingLocationRef.current ||
@@ -1826,9 +1827,9 @@ const ItineraryApp = () => {
 
       // 若當前非高精度請求且已過一段時間，則在背景嘗試獲取一次高精度位置
       if (!highAccuracy) {
-        const twoMinutes = 2 * 60 * 1000;
+        const tenMinutes = 10 * 60 * 1000;
         const last = lastHighPrecisionAtRef.current || 0;
-        if (Date.now() - last > twoMinutes && navigator.geolocation) {
+        if (Date.now() - last > tenMinutes && navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             async (pos) => {
               try {
@@ -2882,6 +2883,11 @@ const ItineraryApp = () => {
 
   // --- 天氣狀態判定 ---
   const current = activeDay === -1 ? null : itineraryData[activeDay];
+  // 固定傳給 DayMap 的 events 參考，避免每次 render 觸發額外 fetch
+  const dayMapEvents = React.useMemo(
+    () => (current?.events ? current.events : []),
+    [current?.events],
+  );
   const currentLocation = getDailyLocation(activeDay);
 
   // 使用 useMemo 鎖定天氣資料，優化滑動效能並處理測試模式覆蓋
@@ -4554,7 +4560,7 @@ const ItineraryApp = () => {
                                 }
                               >
                                 <DayMap
-                                  events={current.events}
+                                  events={dayMapEvents}
                                   userLocation={userWeather}
                                   isDarkMode={isDarkMode}
                                   theme={theme}
