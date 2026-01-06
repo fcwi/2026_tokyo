@@ -105,13 +105,13 @@ const MapModal = ({
   // 始終使用日間模式地圖磚層，夜間模式僅調暗亮度
   const tileLayerUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
-  // 使用主題設定或回退預設值 - 統一與計算機卡片樣式
+  // 使用主題設定或回退預設值 - 統一與主卡片樣式
   const glassClass = isDarkMode 
-    ? (theme?.glassColors?.card?.dark || "bg-[rgba(28,28,30,0.85)] backdrop-blur-[30px] border-white/12")
-    : (theme?.glassColors?.card?.light || "bg-white/75 backdrop-blur-[30px] border-white/60");
+    ? (theme?.glassColors?.card?.dark || "bg-[#262626]/90 backdrop-blur-md border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]")
+    : (theme?.glassColors?.card?.light || "bg-white/90 backdrop-blur-md border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]" );
 
-  const textClass = isDarkMode ? "text-white" : "text-stone-800";
-  const textSecClass = isDarkMode ? "text-neutral-400" : "text-stone-500";
+  const textClass = isDarkMode ? theme?.textColors?.dark || "text-stone-100" : theme?.textColors?.light || "text-stone-800";
+  const textSecClass = isDarkMode ? theme?.textColors?.secDark || "text-stone-300" : theme?.textColors?.secLight || "text-stone-500";
 
   // Custom Icons
   const createNumberedIcon = (number, isDark) => {
@@ -177,7 +177,7 @@ const MapModal = ({
       />
       
       {/* Modal Content */}
-      <div className={`relative w-full max-w-4xl h-[85vh] rounded-[24px] overflow-hidden border shadow-2xl flex flex-col animate-modal-in ${glassClass}`}>
+      <div className={`relative w-full max-w-4xl h-[85vh] rounded-[32px] overflow-hidden border shadow-2xl flex flex-col animate-modal-in ${glassClass}`}>
         
         {/* Header (Calculator Style) */}
         <div 

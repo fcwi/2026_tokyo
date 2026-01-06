@@ -112,7 +112,7 @@ const TestModePanel = ({
   const timeStr = `${String(tempDateTime.getHours()).padStart(2, "0")}:${String(tempDateTime.getMinutes()).padStart(2, "0")}`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md flex items-end">
       <div
         className={`w-full rounded-t-3xl max-h-[90vh] overflow-y-auto transition-all duration-300 ${theme.cardBg} ${theme.cardBorder} border-t border-l border-r`}
       >
