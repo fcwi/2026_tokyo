@@ -4759,9 +4759,11 @@ const ItineraryApp = () => {
           <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              style={theme.ambientStyle}
             >
               <h2
                 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
+                style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
               >
                 <div
                   className={`p-1.5 rounded-xl ${isDarkMode ? "bg-purple-900/20" : "bg-[#E6E6FA]/50"}`}
@@ -4797,7 +4799,7 @@ const ItineraryApp = () => {
                         }}
                       >
                         <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
+                          className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border shadow-inner ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
                         >
                           {guide.icon}
                         </div>
@@ -4918,9 +4920,11 @@ const ItineraryApp = () => {
           <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
               className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              style={theme.ambientStyle}
             >
               <h2
-                className={`text-lg font-bold mb-1.5 flex items-center gap-2 ${theme.text}`}
+                className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
+                style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
               >
                 <div
                   className={`p-1.5 rounded-xl ${isDarkMode ? "bg-orange-900/20" : "bg-[#FFF8E1]/60"}`}
