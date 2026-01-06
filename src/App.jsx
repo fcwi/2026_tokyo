@@ -161,6 +161,7 @@ class Particle {
     if (!this.ctx) return;
     this.ctx.beginPath();
     if (this.type === "rain") {
+      // 使用 particleColors (因為 Particle 類別沒有直接訪問 currentTheme，保持原樣)
       if (this.isDay) {
         this.ctx.strokeStyle = "rgba(100, 149, 237, 0.6)";
       } else {
@@ -281,28 +282,48 @@ const CloudSVG = ({ style, color }) => (
   </svg>
 );
 
+const getThemeConfig = () => {
+  const theme = tripConfig.theme || {};
+  return {
+    cloudColors: theme.cloudColors || {
+      heavy: "#bdc3c7",
+      medium: "#d1d5db",
+      light: "#ecf0f1"
+    },
+    celestialColors: theme.celestialColors || {
+      sun: "#f1c40f",
+      sunGlow: "#f39c12",
+      moon: "#f5f6fa",
+      moonShadow: "rgba(245, 246, 250, 0.4)"
+    }
+  };
+};
+
 const SkyObjects = ({ isDay, condition }) => {
   const showCelestial = condition === "clear";
   const isCloudy = condition !== "clear";
+  const themeConfig = getThemeConfig();
+  const cloudColors = themeConfig.cloudColors;
   let cloudColor;
   if (condition === "rain" || condition === "snow") {
-    cloudColor = "#bdc3c7";
+    cloudColor = cloudColors.heavy;
   } else if (condition === "cloudy" && isDay) {
-    cloudColor = "#d1d5db";
+    cloudColor = cloudColors.medium;
   } else {
-    cloudColor = "#ecf0f1";
+    cloudColor = cloudColors.light;
   }
 
+  const celestial = themeConfig.celestialColors;
   const celestialStyle = {
     top: "10%",
     right: "10%",
     width: "120px",
     height: "120px",
     borderRadius: "50%",
-    background: isDay ? "#f1c40f" : "transparent",
+    background: isDay ? celestial.sun : "transparent",
     boxShadow: isDay
-      ? "0 0 60px #f39c12"
-      : "-30px 10px 0 0 #f5f6fa, -30px 10px 15px 2px rgba(245, 246, 250, 0.4)",
+      ? `0 0 60px ${celestial.sunGlow}`
+      : `-30px 10px 0 0 ${celestial.moon}, -30px 10px 15px 2px ${celestial.moonShadow}`,
     transform: showCelestial
       ? isDay
         ? "scale(1)"
@@ -823,12 +844,12 @@ const ItineraryApp = () => {
         },
         glassColors: theme.glassColors || {
           card: {
-            light: "bg-white/85 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]",
-            dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
+            light: "bg-white/90 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]",
+            dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]"
           },
           nav: {
-            light: "bg-white/30 backdrop-blur-2xl border-white/15 shadow-lg",
-            dark: "bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30"
+            light: "bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border-white/20 shadow-lg",
+            dark: "bg-[#2A2A2A]/60 backdrop-blur-2xl backdrop-saturate-150 border-white/10 shadow-2xl shadow-black/30"
           },
         },
         tagColors: theme.tagColors || {
@@ -855,6 +876,61 @@ const ItineraryApp = () => {
         mainBg: theme.mainBg || {
           light: "bg-[#F0F2F5] text-slate-700",
           dark: "bg-[#1A1A1A] text-neutral-200"
+        },
+        particleColors: theme.particleColors || {
+          rain: { light: "rgba(100, 149, 237, 0.6)", dark: "rgba(255, 255, 255, 0.5)" },
+          snow: "rgba(255, 255, 255, 0.8)",
+          stars: "rgba(255, 255, 255, ALPHA)",
+          fog: "rgba(200, 200, 200, ALPHA)",
+          lightning: "rgba(255, 255, 200, BRIGHTNESS)"
+        },
+        cloudColors: theme.cloudColors || {
+          heavy: "#bdc3c7",
+          medium: "#d1d5db",
+          light: "#ecf0f1"
+        },
+        celestialColors: theme.celestialColors || {
+          sun: "#f1c40f",
+          sunGlow: "#f39c12",
+          moon: "#f5f6fa",
+          moonShadow: "rgba(245, 246, 250, 0.4)"
+        },
+        ambientColors: theme.ambientColors || {
+          clear: { light: "rgba(255, 255, 255, 0.8)", dark: "rgba(30, 41, 59, 0.5)" },
+          cloudy: { light: "rgba(241, 245, 249, 0.85)", dark: "rgba(51, 65, 85, 0.6)" },
+          rain: { light: "rgba(219, 234, 254, 0.85)", dark: "rgba(30, 58, 138, 0.4)" },
+          snow: { light: "rgba(248, 250, 252, 0.9)", dark: "rgba(71, 85, 105, 0.5)" },
+          thunderstorm: { light: "rgba(200, 200, 220, 0.85)", dark: "rgba(30, 30, 50, 0.7)" },
+          fog: { light: "rgba(226, 232, 240, 0.85)", dark: "rgba(71, 85, 105, 0.4)" }
+        },
+        dynamicBg: theme.dynamicBg || {
+          rain: { light: "#c7d2e0", dark: "#4a5568" },
+          cloud: "#cbd5e1"
+        },
+        buttonGradients: theme.buttonGradients || {
+          primary: { light: "from-[#5D737E] to-[#3F5561]", dark: "from-sky-800 to-blue-900" }
+        },
+        inputColors: theme.inputColors || {
+          focusBorder: { light: "#5D737E", dark: "sky-500" },
+          focusRing: { light: "rgba(93, 115, 126, 0.2)", dark: "rgba(14, 165, 233, 0.2)" }
+        },
+        linkColors: theme.linkColors || {
+          hover: { light: "#5D737E", dark: "sky-300" }
+        },
+        textShadow: theme.textShadow || {
+          light: "0 1px 1px rgba(255,255,255,0.5)",
+          dark: "0 2px 4px rgba(0,0,0,0.3)"
+        },
+        borderRadius: theme.borderRadius || {
+          small: "rounded-xl",
+          card: "rounded-2xl",
+          modal: "rounded-3xl",
+          full: "rounded-full"
+        },
+        spacing: theme.spacing || {
+          cardSmall: "p-3",
+          card: "p-4",
+          cardLarge: "p-5"
         }
       };
     },
@@ -1056,9 +1132,9 @@ const ItineraryApp = () => {
       zIndex: 1,
       willChange: "auto",
       transition: {
-        duration: 0.35,
+        duration: 0.3,
         ease: [0.23, 1, 0.32, 1],
-        opacity: { duration: 0.3, ease: "easeOut" },
+        opacity: { duration: 0.3, ease: [0.23, 1, 0.32, 1] },
       },
     },
     exit: (direction) => ({
@@ -2994,12 +3070,12 @@ const ItineraryApp = () => {
     const sky = getSkyCondition(currentCode);
     
     const ambientColors = {
-      clear: isDarkMode ? "rgba(30, 41, 59, 0.5)" : "rgba(255, 255, 255, 0.8)",
-      cloudy: isDarkMode ? "rgba(51, 65, 85, 0.6)" : "rgba(241, 245, 249, 0.85)",
-      rain: isDarkMode ? "rgba(30, 58, 138, 0.4)" : "rgba(219, 234, 254, 0.85)",
-      snow: isDarkMode ? "rgba(71, 85, 105, 0.5)" : "rgba(248, 250, 252, 0.9)",
-      thunderstorm: isDarkMode ? "rgba(30, 30, 50, 0.7)" : "rgba(200, 200, 220, 0.85)",
-      fog: isDarkMode ? "rgba(71, 85, 105, 0.4)" : "rgba(226, 232, 240, 0.85)",
+      clear: isDarkMode ? currentTheme.ambientColors.clear.dark : currentTheme.ambientColors.clear.light,
+      cloudy: isDarkMode ? currentTheme.ambientColors.cloudy.dark : currentTheme.ambientColors.cloudy.light,
+      rain: isDarkMode ? currentTheme.ambientColors.rain.dark : currentTheme.ambientColors.rain.light,
+      snow: isDarkMode ? currentTheme.ambientColors.snow.dark : currentTheme.ambientColors.snow.light,
+      thunderstorm: isDarkMode ? currentTheme.ambientColors.thunderstorm.dark : currentTheme.ambientColors.thunderstorm.light,
+      fog: isDarkMode ? currentTheme.ambientColors.fog.dark : currentTheme.ambientColors.fog.light,
     };
 
     const ambient = ambientColors[sky] || ambientColors.clear;
@@ -3174,7 +3250,7 @@ const ItineraryApp = () => {
               )}
             </button>
             {authError && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center font-medium animate-shake">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center font-medium animate-shake">
                 {authError}
               </div>
             )}
@@ -3240,18 +3316,18 @@ const ItineraryApp = () => {
                   }
                   value={toolKey}
                   onChange={(e) => setToolKey(e.target.value)}
-                  className={`w-full p-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
+                  className={`w-full p-2 rounded-xl border text-base ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
                 />
                 <input
                   type="text"
                   placeholder="設定您的通關密碼"
                   value={toolPwd}
                   onChange={(e) => setToolPwd(e.target.value)}
-                  className={`w-full p-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
+                  className={`w-full p-2 rounded-xl border text-base ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
                 />
                 <button
                   onClick={generateEncryptedString}
-                  className={`w-full py-2 rounded-lg text-xs font-bold text-white ${isDarkMode ? "bg-sky-600" : "bg-indigo-500"}`}
+                  className={`w-full py-2 rounded-xl text-xs font-bold text-white ${isDarkMode ? "bg-sky-600" : "bg-indigo-500"}`}
                 >
                   生成加密字串
                 </button>
@@ -3303,7 +3379,7 @@ const ItineraryApp = () => {
             className={`p-4 rounded-full shadow-xl ${isDarkMode ? "bg-neutral-800" : "bg-white"}`}
           >
             <LocateFixed
-              className={`w-8 h-8 animate-spin ${isDarkMode ? "text-sky-400" : "text-[#5D737E]"}`}
+              className={`w-8 h-8 animate-spin ${colors.blue}`}
             />
           </div>
           <div className="text-center">
@@ -3336,11 +3412,7 @@ const ItineraryApp = () => {
   const isDayTime = !isDarkMode;
   let dynamicBgStyle = {};
 
-  const weatherColors = tripConfig.theme.weatherColors || {
-    rain: "#94a3b8",
-    cloud: "#cbd5e1",
-    snow: "#94a3b8",
-  };
+  const weatherColors = currentTheme.weatherColors;
 
   // 根據天氣狀況動態調整背景色，增強沉浸感
   if (isDayTime) {
@@ -3351,15 +3423,15 @@ const ItineraryApp = () => {
     const isCloudy = [1, 2, 3].includes(currentEffectCode);
 
     if (isThunderstorm) {
-      dynamicBgStyle = { backgroundColor: "#4a5568" };
+      dynamicBgStyle = { backgroundColor: currentTheme.dynamicBg.rain.dark };
     } else if (isRaining) {
       dynamicBgStyle = { backgroundColor: weatherColors.rain };
     } else if (isSnowing) {
       dynamicBgStyle = { backgroundColor: weatherColors.snow };
     } else if (isFoggy) {
-      dynamicBgStyle = { backgroundColor: "#c7d2e0" };
+      dynamicBgStyle = { backgroundColor: currentTheme.dynamicBg.rain.light };
     } else if (isCloudy) {
-      dynamicBgStyle = { backgroundColor: "#cbd5e1" };
+      dynamicBgStyle = { backgroundColor: currentTheme.dynamicBg.cloud };
     }
   }
 
@@ -3610,7 +3682,7 @@ const ItineraryApp = () => {
                                 {userWeather.locationName}
                                 <button
                                   onClick={() => setShowWeatherDetail(true)}
-                                  className={`p-2 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
+                                  className={`p-2 rounded-xl transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
                                   title="查看詳細氣象資訊"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
@@ -3680,7 +3752,7 @@ const ItineraryApp = () => {
                             return (
                               <div
                                 key={i}
-                                className="flex flex-col items-center gap-0.5 min-w-0 px-0.5 py-1 rounded-lg hover:bg-black/5 transition-colors group flex-1"
+                                className="flex flex-col items-center gap-0.5 min-w-0 px-0.5 py-1 rounded-xl hover:bg-black/5 transition-colors group flex-1"
                               >
                                 <span
                                   className={`text-[9px] font-bold opacity-70 group-hover:opacity-100 whitespace-nowrap ${theme.textSec}`}
@@ -3998,7 +4070,7 @@ const ItineraryApp = () => {
                             </h3>
                             <button
                               onClick={handleResetChecklist}
-                              className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}
+                              className={`p-1.5 rounded-xl transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}
                               title="還原預設值"
                             >
                               <RotateCcw className="w-3.5 h-3.5" /> 重置
@@ -4076,7 +4148,7 @@ const ItineraryApp = () => {
                                     e.stopPropagation();
                                     handleDeleteItem(item.id);
                                   }}
-                                  className={`p-1.5 rounded-lg opacity-0 group-hover/item:opacity-100 transition-opacity ${isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"}`}
+                                  className={`p-1.5 rounded-xl opacity-0 group-hover/item:opacity-100 transition-opacity ${isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"}`}
                                   title="刪除"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -4117,7 +4189,7 @@ const ItineraryApp = () => {
                         <div className="space-y-4">
                           {/* 今日主題卡片 */}
                           <div
-                            className={`bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white p-4 rounded-2xl shadow-lg relative overflow-hidden`}
+                            className={`bg-gradient-to-r ${isDarkMode ? currentTheme.buttonGradients.primary.dark : currentTheme.buttonGradients.primary.light} text-white p-4 rounded-2xl shadow-lg relative overflow-hidden`}
                           >
                             <div className="relative z-10">
                               <h3 className="text-lg font-bold mb-1 drop-shadow-md">
@@ -4220,7 +4292,7 @@ const ItineraryApp = () => {
                                 (spot, i) => (
                                   <span
                                     key={i}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg border shadow-sm ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-neutral-300" : "bg-white border-stone-200 text-stone-600"}`}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-xl border shadow-sm ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-neutral-300" : "bg-white border-stone-200 text-stone-600"}`}
                                   >
                                     {spot}
                                   </span>
@@ -4261,7 +4333,7 @@ const ItineraryApp = () => {
                                 )?.name || "當地"}
                                 <button
                                   onClick={() => setShowWeatherDetail(true)}
-                                  className={`p-2 rounded-md transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
+                                  className={`p-2 rounded-xl transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
                                   title="查看詳細氣象資訊"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
@@ -4334,7 +4406,7 @@ const ItineraryApp = () => {
                               className={`text-xs font-semibold mb-1.5 flex items-center gap-2 ${theme.textSec}`}
                             >
                               <span
-                                className={`px-2.5 py-0.5 rounded-md ${isDarkMode ? "bg-neutral-800" : "bg-white/50"}`}
+                                className={`px-2.5 py-0.5 rounded-xl ${isDarkMode ? "bg-neutral-800" : "bg-white/50"}`}
                               >
                                 {current.date}
                               </span>
@@ -4455,7 +4527,7 @@ const ItineraryApp = () => {
                                       {/* 未展開時顯示交通方式簡述 */}
                                       {!isOpen && event.transport && (
                                         <div
-                                          className={`mt-2.5 flex items-center gap-1.5 text-xs w-fit px-2.5 py-1 rounded-lg border ${isDarkMode ? currentTheme.tagColors.food.dark + " border-emerald-800/30" : currentTheme.tagColors.food.light + " border-[#E2E8D5]"}`}
+                                          className={`mt-2.5 flex items-center gap-1.5 text-xs w-fit px-2.5 py-1 rounded-xl border ${isDarkMode ? currentTheme.tagColors.food.dark + " border-emerald-800/30" : currentTheme.tagColors.food.light + " border-[#E2E8D5]"}`}
                                         >
                                           <Train className="w-3 h-3" />
                                           <span className="font-medium">
@@ -4544,7 +4616,7 @@ const ItineraryApp = () => {
                                                 className={`text-[11px] flex gap-2 items-start leading-relaxed ${theme.textSec}`}
                                               >
                                                 <span
-                                                  className={`${isDarkMode ? "text-rose-300" : "text-[#BC8F8F]"} mt-1`}
+                                                  className={`${colors.pink} mt-1`}
                                                 >
                                                   •
                                                 </span>
@@ -4570,7 +4642,7 @@ const ItineraryApp = () => {
                                                 className={`text-[11px] flex gap-2 items-start leading-relaxed ${theme.textSec}`}
                                               >
                                                 <span
-                                                  className={`${isDarkMode ? "text-amber-300" : "text-[#CD853F]"} mt-1`}
+                                                  className={`${colors.orange} mt-1`}
                                                 >
                                                   •
                                                 </span>
@@ -4594,7 +4666,7 @@ const ItineraryApp = () => {
                             >
                               <div className="flex items-center gap-2 mb-2.5">
                                 <div
-                                  className={`p-1.5 rounded-lg ${theme.accentBg}`}
+                                  className={`p-1.5 rounded-xl ${theme.accentBg}`}
                                 >
                                   <Map className={`w-4 h-4 ${theme.accent}`} />
                                 </div>
@@ -4640,7 +4712,7 @@ const ItineraryApp = () => {
                                 {/* 外部導航連結 */}
                                 <a
                                   href={current.routeInfo.mapUrl}
-                                  className={`flex items-center justify-center gap-2 w-full py-3 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 ${isDarkMode ? "bg-gradient-to-r from-sky-800 to-blue-900" : "bg-gradient-to-r from-[#5D737E] to-[#3F5561]"}`}
+                                  className={`flex items-center justify-center gap-2 w-full py-3 text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95 bg-gradient-to-r ${isDarkMode ? currentTheme.buttonGradients.primary.dark : currentTheme.buttonGradients.primary.light}`}
                                 >
                                   <Navigation className="w-4 h-4" />
                                   開啟 Google Maps 查看路線
@@ -4773,7 +4845,7 @@ const ItineraryApp = () => {
                               <FileText className="w-3.5 h-3.5" /> 操作重點
                             </h4>
                             <ol
-                              className={`list-decimal list-inside text-sm space-y-2 pl-1 ${theme.textSec} ${isDarkMode ? "marker:text-sky-300" : "marker:text-[#5D737E]"} marker:font-bold`}
+                              className={`list-decimal list-inside text-sm space-y-2 pl-1 ${theme.textSec} ${isDarkMode ? "marker:text-sky-300" : `marker:${colors.blue}`} marker:font-bold`}
                             >
                               {guide.steps.map((step, i) => (
                                 <li key={i} className="leading-relaxed pl-1">
@@ -4810,7 +4882,7 @@ const ItineraryApp = () => {
                                       href={blog.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className={`flex items-center gap-2 text-xs transition-colors p-1.5 rounded-lg ${isDarkMode ? "text-neutral-400 hover:text-sky-300 hover:bg-neutral-700/50" : "text-stone-500 hover:text-[#3B5998] hover:bg-stone-100"}`}
+                                      className={`flex items-center gap-2 text-xs transition-colors p-1.5 rounded-xl ${isDarkMode ? "text-neutral-400 hover:text-sky-300 hover:bg-neutral-700/50" : "text-stone-500 hover:text-[#3B5998] hover:bg-stone-100"}`}
                                     >
                                       <span
                                         className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? "bg-neutral-600" : "bg-stone-300"}`}
@@ -4948,7 +5020,7 @@ const ItineraryApp = () => {
                                           {shop.name}
                                         </span>
                                         <span
-                                          className={`text-[11px] px-1.5 py-0.5 rounded-md border shadow-sm ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700" : "bg-white text-stone-500 border-stone-200"}`}
+                                          className={`text-[11px] px-1.5 py-0.5 rounded-xl border shadow-sm ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700" : "bg-white text-stone-500 border-stone-200"}`}
                                         >
                                           {shop.tag}
                                         </span>
@@ -4999,7 +5071,7 @@ const ItineraryApp = () => {
                                             {shop.name}
                                           </span>
                                           <span
-                                            className={`text-[11px] px-1.5 py-0.5 rounded-md border shadow-sm ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700" : "bg-white text-stone-500 border-stone-200"}`}
+                                            className={`text-[11px] px-1.5 py-0.5 rounded-xl border shadow-sm ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700" : "bg-white text-stone-500 border-stone-200"}`}
                                           >
                                             {shop.tag}
                                           </span>
@@ -5032,7 +5104,7 @@ const ItineraryApp = () => {
                                   href={getMapLink(
                                     `${chain.name} ${areaData.mapQuerySuffix}`,
                                   )}
-                                  className={`text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 shadow-sm transition-all ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-sky-300 hover:border-sky-800" : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50 hover:text-[#5D737E] hover:border-[#5D737E]/30"}`}
+                                  className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-sm transition-all ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-sky-300 hover:border-sky-800" : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50 hover:text-[#5D737E] hover:border-[#5D737E]/30"}`}
                                 >
                                   <span className="font-bold">
                                     {chain.name}
@@ -5130,7 +5202,7 @@ const ItineraryApp = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleClearChat}
-                      className={`p-2.5 rounded-lg border transition-all active:scale-95 ${
+                      className={`p-2.5 rounded-xl border transition-all active:scale-95 ${
                         isDarkMode
                           ? "bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-red-400 hover:bg-neutral-800"
                           : "bg-stone-100 border-stone-200 text-stone-400 hover:text-red-500 hover:bg-red-50"
@@ -5143,17 +5215,17 @@ const ItineraryApp = () => {
 
                   {/* 模式切換開關 */}
                   <div
-                    className={`flex p-1 rounded-lg border ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-stone-100 border-stone-200"}`}
+                    className={`flex p-1 rounded-xl border ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-stone-100 border-stone-200"}`}
                   >
                     <button
                       onClick={() => handleSwitchMode("guide")}
-                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${aiMode === "guide" ? (isDarkMode ? "bg-neutral-700 text-white shadow-sm" : "bg-white text-stone-800 shadow-sm") : isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${aiMode === "guide" ? (isDarkMode ? "bg-neutral-700 text-white shadow-sm" : "bg-white text-stone-800 shadow-sm") : isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
                     >
                       導遊
                     </button>
                     <button
                       onClick={() => handleSwitchMode("translate")}
-                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${aiMode === "translate" ? (isDarkMode ? "bg-sky-700 text-white shadow-sm" : "bg-white text-sky-600 shadow-sm") : isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${aiMode === "translate" ? (isDarkMode ? "bg-sky-700 text-white shadow-sm" : "bg-white text-sky-600 shadow-sm") : isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
                     >
                       口譯
                     </button>
@@ -5167,7 +5239,7 @@ const ItineraryApp = () => {
                       window.speechSynthesis.cancel();
                       setIsSpeaking(false);
                     }}
-                    className="w-full py-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors border border-red-100 flex items-center justify-center gap-2 text-xs font-bold"
+                    className="w-full py-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors border border-red-100 flex items-center justify-center gap-2 text-xs font-bold"
                   >
                     <StopCircle className="w-4 h-4" /> 停止朗讀
                   </button>
@@ -5271,7 +5343,7 @@ const ItineraryApp = () => {
                   usefulLinks.map((section, idx) => (
                   <div key={idx}>
                     <h3
-                      className={`text-xs font-bold mb-2.5 px-3 py-1.5 rounded-lg w-fit border ${isDarkMode ? "text-blue-300 bg-blue-900/20 border-blue-800/30" : "text-[#3B5998] bg-[#E8F0FE] border-blue-100"}`}
+                      className={`text-xs font-bold mb-2.5 px-3 py-1.5 rounded-xl w-fit border ${isDarkMode ? "text-blue-300 bg-blue-900/20 border-blue-800/30" : "text-[#3B5998] bg-[#E8F0FE] border-blue-100"}`}
                     >
                       {section.category}
                     </h3>
@@ -5599,7 +5671,7 @@ const ItineraryApp = () => {
                 <img
                   src={fullPreviewImage}
                   alt="Full Preview"
-                  className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                  className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
                 />
                 <button
                   onClick={(e) => {

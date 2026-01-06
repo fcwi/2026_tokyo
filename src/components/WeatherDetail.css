@@ -2,7 +2,7 @@
 
 :root {
   --wc-bg-glass: rgba(255, 255, 255, 0.75);
-  --wc-border: rgba(255, 255, 255, 0.2);
+  --wc-border: rgba(255, 255, 255, 0.6);
   --wc-text-primary: #1d1d1f;
   --wc-text-secondary: #6e6e73;
   --wc-panel-bg: rgba(255, 255, 255, 0.5);
@@ -12,7 +12,7 @@
 
 .weather-card.theme-dark {
   --wc-bg-glass: rgba(28, 28, 30, 0.85);
-  --wc-border: rgba(255, 255, 255, 0.08);
+  --wc-border: rgba(255, 255, 255, 0.12);
   --wc-text-primary: #ffffff;
   --wc-text-secondary: #98989d;
   --wc-panel-bg: rgba(255, 255, 255, 0.1);
@@ -32,7 +32,7 @@
   max-width: 360px; /* 寬度稍微縮窄，讓視覺更集中 */
   max-height: 85vh; 
   overflow-y: auto;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   color: var(--wc-text-primary);
   display: flex;

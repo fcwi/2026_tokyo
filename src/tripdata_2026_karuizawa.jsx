@@ -1335,6 +1335,98 @@ export const tripConfig = {
       light: "bg-[#F0F2F5] text-slate-700",
       dark: "bg-[#1A1A1A] text-neutral-200"
     },
+
+    // 粒子系統顏色
+    particleColors: {
+      rain: {
+        light: "rgba(100, 149, 237, 0.6)",
+        dark: "rgba(255, 255, 255, 0.5)"
+      },
+      snow: "rgba(255, 255, 255, 0.8)",
+      stars: "rgba(255, 255, 255, ALPHA)", // ALPHA 將在使用時替換
+      fog: "rgba(200, 200, 200, ALPHA)",
+      lightning: "rgba(255, 255, 200, BRIGHTNESS)"
+    },
+
+    // 雲朵顏色
+    cloudColors: {
+      heavy: "#bdc3c7",
+      medium: "#d1d5db",
+      light: "#ecf0f1"
+    },
+
+    // 天體顏色
+    celestialColors: {
+      sun: "#f1c40f",
+      sunGlow: "#f39c12",
+      moon: "#f5f6fa",
+      moonShadow: "rgba(245, 246, 250, 0.4)"
+    },
+
+    // 環境氛圍色
+    ambientColors: {
+      clear: { light: "rgba(255, 255, 255, 0.8)", dark: "rgba(30, 41, 59, 0.5)" },
+      cloudy: { light: "rgba(241, 245, 249, 0.85)", dark: "rgba(51, 65, 85, 0.6)" },
+      rain: { light: "rgba(219, 234, 254, 0.85)", dark: "rgba(30, 58, 138, 0.4)" },
+      snow: { light: "rgba(248, 250, 252, 0.9)", dark: "rgba(71, 85, 105, 0.5)" },
+      thunderstorm: { light: "rgba(200, 200, 220, 0.85)", dark: "rgba(30, 30, 50, 0.7)" },
+      fog: { light: "rgba(226, 232, 240, 0.85)", dark: "rgba(71, 85, 105, 0.4)" }
+    },
+
+    // 動態背景色
+    dynamicBg: {
+      rain: { light: "#c7d2e0", dark: "#4a5568" },
+      cloud: "#cbd5e1"
+    },
+
+    // 按鈕漸層
+    buttonGradients: {
+      primary: {
+        light: "from-[#5D737E] to-[#3F5561]",
+        dark: "from-sky-800 to-blue-900"
+      }
+    },
+
+    // 輸入框顏色
+    inputColors: {
+      focusBorder: {
+        light: "#5D737E",
+        dark: "sky-500"
+      },
+      focusRing: {
+        light: "rgba(93, 115, 126, 0.2)",
+        dark: "rgba(14, 165, 233, 0.2)"
+      }
+    },
+
+    // 連結顏色
+    linkColors: {
+      hover: {
+        light: "#5D737E",
+        dark: "sky-300"
+      }
+    },
+
+    // 文字陰影
+    textShadow: {
+      light: "0 1px 1px rgba(255,255,255,0.5)",
+      dark: "0 2px 4px rgba(0,0,0,0.3)"
+    },
+
+    // 圓角系統
+    borderRadius: {
+      small: "rounded-xl",
+      card: "rounded-2xl",
+      modal: "rounded-3xl",
+      full: "rounded-full"
+    },
+
+    // 間距系統
+    spacing: {
+      cardSmall: "p-3",
+      card: "p-4",
+      cardLarge: "p-5"
+    },
   },
 
   // ========== 語言與語音設定 ==========
