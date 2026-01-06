@@ -1899,7 +1899,7 @@ const ItineraryApp = () => {
             await navigator.share({
               title: "我的位置",
               text: baseMessage,
-              url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+              url: `https://www.google.com/maps?q=${lat},${lng}`,
             });
             showToast(`分享成功 — 來源: ${tag}`);
             return;
@@ -1942,7 +1942,7 @@ const ItineraryApp = () => {
         userWeather.isGeneric,
       );
       const { baseMessage, fullText, tag } = composed;
-      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
 
       if (hasRecentHigh) {
         if (navigator.share) {
@@ -1997,7 +1997,7 @@ const ItineraryApp = () => {
         const shareLat = (newData && newData.lat) || pos.coords.latitude;
         const shareLng = (newData && newData.lon) || pos.coords.longitude;
         const shareLandmark = (newData && newData.landmark) || "";
-        const mapUrl2 = `https://www.google.com/maps/search/?api=1&query=${shareLat},${shareLng}`;
+        const mapUrl2 = `https://www.google.com/maps?q=${shareLat},${shareLng}`;
         const currentGenericStatus =
           newData && newData.isGeneric !== undefined ? newData.isGeneric : true;
         const composed2 = await buildShareText(
@@ -2112,7 +2112,7 @@ const ItineraryApp = () => {
           await navigator.share({
             title: "我的位置",
             text: baseMessage,
-            url: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+            url: `https://www.google.com/maps?q=${lat},${lng}`,
           });
           showToast(`分享成功 — 來源: ${tag}`);
         } catch (err) {
@@ -2636,7 +2636,7 @@ const ItineraryApp = () => {
     debugGroupEnd();
 
     const baseMessage = `我在這裡${finalLandmark ? ` (靠近 ${finalLandmark})` : ""}！`;
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
     return {
       baseMessage,
       fullText: `${baseMessage}\n點擊查看位置：${mapUrl}`,
@@ -4733,7 +4733,7 @@ const ItineraryApp = () => {
                               href={guide.link.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`block w-full text-center text-sm font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 ${isDarkMode ? currentTheme.tagColors.transport.dark + " hover:bg-sky-900/30" : currentTheme.tagColors.transport.light + " hover:bg-[#D0E0FC]"}`}
+                              className={`w-full text-center text-sm font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 ${isDarkMode ? currentTheme.tagColors.transport.dark + " hover:bg-sky-900/30" : currentTheme.tagColors.transport.light + " hover:bg-[#D0E0FC]"}`}
                             >
                               {guide.link.text}
                               <ExternalLink className="w-3.5 h-3.5" />
