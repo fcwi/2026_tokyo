@@ -1273,6 +1273,10 @@ const ItineraryApp = () => {
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
 
   const [isTestMode, setIsTestMode] = useState(false);
+  const isTestModeRef = useRef(false);
+  useEffect(() => {
+    isTestModeRef.current = isTestMode;
+  }, [isTestMode]);
   const [testModeClickCount, setTestModeClickCount] = useState(0);
   const [testDateTime, setTestDateTime] = useState(new Date());
   const [testLatitude, setTestLatitude] = useState(35.4437);
@@ -1604,6 +1608,13 @@ const ItineraryApp = () => {
       isFetchingLocationRef.current = true;
       if (!isSilent && !highAccuracy) setIsUpdatingLocation(true);
 
+      // 測試模式處理：若未提供 explicit coords 則使用測試設定座標
+      let effectiveCoords = coords;
+      if (isTestMode && !effectiveCoords) {
+        effectiveCoords = { latitude: testLatitude, longitude: testLongitude };
+        debugLog("🧪 測試模式：使用設定的測試位置座標");
+      }
+
       const fetchLocalWeather = async (
         latitude,
         longitude,
@@ -1731,7 +1742,7 @@ const ItineraryApp = () => {
       }
 
       // 若無快取且非靜默更新，嘗試使用 IP 定位作為初步位置參考
-      if (!cached && !isSilent && !coords) {
+      if (!cached && !isSilent && !effectiveCoords) {
         try {
           const ipRes = await fetch("https://ipapi.co/json/");
           const ipData = await ipRes.json();
@@ -1753,27 +1764,28 @@ const ItineraryApp = () => {
         }
       }
 
-      if (coords && coords.latitude && coords.longitude) {
+      if (effectiveCoords && effectiveCoords.latitude && effectiveCoords.longitude) {
         try {
           setHasLocationPermission(true);
-          if (highAccuracy) {
+          if (highAccuracy || isTestMode) {
             lastHighPrecisionAtRef.current = Date.now();
             setLocationSource("high");
           } else {
+            // 測試模式下即便是低精度也視同提供有效座標，由呼叫端決定是否需再提升精確度
             setLocationSource("low");
           }
           return await fetchLocalWeather(
-            coords.latitude,
-            coords.longitude,
-            coords.name || null,
+            effectiveCoords.latitude,
+            effectiveCoords.longitude,
+            effectiveCoords.name || null,
           );
         } catch (e) {
           console.error("使用提供的座標抓取失敗", e);
         }
       }
 
-      // 啟動瀏覽器原生定位以獲取更精確的座標
-      if (navigator.geolocation) {
+      // 啟動瀏覽器原生定位以獲取更精確的座標 (測試模式下跳過，除非明確傳入 coords)
+      if (navigator.geolocation && !isTestMode) {
         const geoOptions = {
           enableHighAccuracy: highAccuracy,
           timeout,
@@ -1782,6 +1794,10 @@ const ItineraryApp = () => {
 
         navigator.geolocation.getCurrentPosition(
           (position) => {
+            if (isTestModeRef.current) {
+              debugLog("🚫 略過 GPS 回傳 (處於測試模式中)");
+              return;
+            }
             setHasLocationPermission(true);
             if (highAccuracy) {
               lastHighPrecisionAtRef.current = Date.now();
@@ -1826,12 +1842,13 @@ const ItineraryApp = () => {
       }
 
       // 若當前非高精度請求且已過一段時間，則在背景嘗試獲取一次高精度位置
-      if (!highAccuracy) {
+      if (!highAccuracy && !isTestMode) {
         const tenMinutes = 10 * 60 * 1000;
         const last = lastHighPrecisionAtRef.current || 0;
         if (Date.now() - last > tenMinutes && navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             async (pos) => {
+              if (isTestModeRef.current) return;
               try {
                 const newData = await fetchLocalWeather(
                   pos.coords.latitude,
@@ -1860,7 +1877,7 @@ const ItineraryApp = () => {
         }
       }
     },
-    [getWeatherData, showToast, isAppReady],
+    [getWeatherData, showToast, isAppReady, isTestMode, testLatitude, testLongitude],
   );
 
   useEffect(() => {
@@ -1879,6 +1896,44 @@ const ItineraryApp = () => {
   }, [getUserLocationWeather, userWeather.locationName, userWeather.temp]);
 
   const handleShareLocation = async () => {
+    // 測試模式優先處理：直接使用測試設定的位置分享，不觸發實際定位
+    if (isTestMode) {
+      const shareLat = testLatitude;
+      const shareLng = testLongitude;
+      const shareLandmark = userWeather.landmark || "";
+      const shareLocationName = userWeather.locationName || "測試地點";
+      const shareIsGeneric = userWeather.isGeneric;
+
+      const composed = await buildShareText(
+        shareLat,
+        shareLng,
+        shareLandmark,
+        shareLocationName,
+        shareIsGeneric,
+      );
+      const { baseMessage, fullText, tag } = composed;
+      const mapUrl = `https://www.google.com/maps?q=${shareLat},${shareLng}`;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: "我的位置 (測試模式)",
+            text: baseMessage,
+            url: mapUrl,
+          });
+          showToast(`分享成功 (測試) — 來源: ${tag}`);
+          return;
+        } catch (err) {
+          if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
+            showToast("使用者取消分享", "info");
+            return;
+          }
+        }
+      }
+      await copyToClipboard(fullText, "測試位置已複製到剪貼簿");
+      return;
+    }
+
     if (!navigator.geolocation) {
       const lat = userWeather.lat;
       const lng = userWeather.lon;
@@ -1926,9 +1981,10 @@ const ItineraryApp = () => {
 
     const twoMinutes = 2 * 60 * 1000;
     const hasRecentHigh =
-      locationSource === "high" &&
-      lastHighPrecisionAtRef.current &&
-      Date.now() - lastHighPrecisionAtRef.current <= twoMinutes;
+      isTestMode || // 測試模式下視同擁有精準座標，不重新抓取以免覆蓋
+      (locationSource === "high" &&
+        lastHighPrecisionAtRef.current &&
+        Date.now() - lastHighPrecisionAtRef.current <= twoMinutes);
 
     if (userWeather.lat && userWeather.lon) {
       const lat = userWeather.lat;
