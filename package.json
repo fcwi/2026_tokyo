@@ -15,7 +15,9 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "framer-motion": "^12.23.26",
+    "helmet": "^8.1.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.559.0",
     "react": "^19.2.0",
