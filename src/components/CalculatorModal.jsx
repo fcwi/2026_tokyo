@@ -4,7 +4,7 @@ import "./CalculatorModal.css";
 
 /**
  * CalculatorModal Component
- * 
+ *
  * A functional calculator with real-time currency conversion capabilities.
  * Features:
  * 1. Basic arithmetic (+, -, *, /).
@@ -22,19 +22,20 @@ const CalculatorModal = ({
 }) => {
   const base = (currencyCode || "").toUpperCase();
   const target = (currencyTarget || "").toUpperCase();
-  
+
   // State for calculator logic
   const [displayValue, setDisplayValue] = useState("0");
   const [storedValue, setStoredValue] = useState(null);
   const [pendingOperator, setPendingOperator] = useState(null);
   const [isNewEntry, setIsNewEntry] = useState(true);
-  
+
   // State for currency conversion logic
   const [fxDirection, setFxDirection] = useState("baseToTarget");
   const [fxHint, setFxHint] = useState("");
   const [currentUnit, setCurrentUnit] = useState(base);
 
-  const rateReady = rateData && !rateData.loading && !rateData.error && rateData.current;
+  const rateReady =
+    rateData && !rateData.loading && !rateData.error && rateData.current;
 
   // Reset state when modal opens
   useEffect(() => {
@@ -153,7 +154,7 @@ const CalculatorModal = ({
    */
   const handleFxConvert = () => {
     if (!rateReady) {
-      setFxHint(rateData?.error ? "匯率連線失敗，稍後再試" : "匯率更新中" );
+      setFxHint(rateData?.error ? "匯率連線失敗，稍後再試" : "匯率更新中");
       return;
     }
     const current = parseDisplay();
@@ -181,7 +182,11 @@ const CalculatorModal = ({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+        aria-hidden
+      />
       <div
         className={`calc-modal ${themeClass}`}
         role="dialog"
@@ -206,50 +211,94 @@ const CalculatorModal = ({
         {/* Content */}
         <div className="calc-content">
           {/* Display */}
-          <div
-            className="calc-display"
-            aria-live="polite"
-          >
+          <div className="calc-display" aria-live="polite">
             {displayValue}
           </div>
 
+          {/* Hint Message */}
+          <div className="calc-hint min-h-[1.5rem]">{fxHint}</div>
+
           {/* Keypad */}
           <div className="calc-keypad">
-            <button className="calc-btn calc-btn-muted" onClick={clearAll}>AC</button>
-            <button className="calc-btn calc-btn-muted" onClick={toggleSign}>+/-</button>
-            <button className="calc-btn calc-btn-muted calc-btn-fx" onClick={handleFxConvert}>
+            <button className="calc-btn calc-btn-muted" onClick={clearAll}>
+              AC
+            </button>
+            <button className="calc-btn calc-btn-muted" onClick={toggleSign}>
+              +/-
+            </button>
+            <button
+              className="calc-btn calc-btn-muted calc-btn-fx"
+              onClick={handleFxConvert}
+            >
               轉{fxLabel}
             </button>
-            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("/")}>
+            <button
+              className="calc-btn calc-btn-operator"
+              onClick={() => handleOperator("/")}
+            >
               ÷
             </button>
 
-            <button className="calc-btn" onClick={() => inputDigit("7")}>7</button>
-            <button className="calc-btn" onClick={() => inputDigit("8")}>8</button>
-            <button className="calc-btn" onClick={() => inputDigit("9")}>9</button>
-            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("*")}>
+            <button className="calc-btn" onClick={() => inputDigit("7")}>
+              7
+            </button>
+            <button className="calc-btn" onClick={() => inputDigit("8")}>
+              8
+            </button>
+            <button className="calc-btn" onClick={() => inputDigit("9")}>
+              9
+            </button>
+            <button
+              className="calc-btn calc-btn-operator"
+              onClick={() => handleOperator("*")}
+            >
               ×
             </button>
 
-            <button className="calc-btn" onClick={() => inputDigit("4")}>4</button>
-            <button className="calc-btn" onClick={() => inputDigit("5")}>5</button>
-            <button className="calc-btn" onClick={() => inputDigit("6")}>6</button>
-            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("-")}>
+            <button className="calc-btn" onClick={() => inputDigit("4")}>
+              4
+            </button>
+            <button className="calc-btn" onClick={() => inputDigit("5")}>
+              5
+            </button>
+            <button className="calc-btn" onClick={() => inputDigit("6")}>
+              6
+            </button>
+            <button
+              className="calc-btn calc-btn-operator"
+              onClick={() => handleOperator("-")}
+            >
               -
             </button>
 
-            <button className="calc-btn" onClick={() => inputDigit("1")}>1</button>
-            <button className="calc-btn" onClick={() => inputDigit("2")}>2</button>
-            <button className="calc-btn" onClick={() => inputDigit("3")}>3</button>
-            <button className="calc-btn calc-btn-operator" onClick={() => handleOperator("+")}>
+            <button className="calc-btn" onClick={() => inputDigit("1")}>
+              1
+            </button>
+            <button className="calc-btn" onClick={() => inputDigit("2")}>
+              2
+            </button>
+            <button className="calc-btn" onClick={() => inputDigit("3")}>
+              3
+            </button>
+            <button
+              className="calc-btn calc-btn-operator"
+              onClick={() => handleOperator("+")}
+            >
               +
             </button>
 
-            <button className="calc-btn calc-btn-wide" onClick={() => inputDigit("0")}>
+            <button
+              className="calc-btn calc-btn-wide"
+              onClick={() => inputDigit("0")}
+            >
               0
             </button>
-            <button className="calc-btn" onClick={inputDot}>.</button>
-            <button className="calc-btn calc-btn-accent" onClick={handleEqual}>=</button>
+            <button className="calc-btn" onClick={inputDot}>
+              .
+            </button>
+            <button className="calc-btn calc-btn-accent" onClick={handleEqual}>
+              =
+            </button>
           </div>
         </div>
       </div>
