@@ -1,10 +1,16 @@
 import React from "react";
-import { TrendingUp, TrendingDown, Minus, RefreshCw, WifiOff } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  RefreshCw,
+  WifiOff,
+} from "lucide-react";
 import { tripConfig } from "../tripdata_2026_karuizawa.jsx";
 
 /**
  * CurrencyWidget Component
- * 
+ *
  * A compact widget that displays real-time exchange rates.
  * Features:
  * 1. Displays base currency to target currency rate.
@@ -18,15 +24,19 @@ const CurrencyWidget = ({ isDarkMode, rateData, isOnline }) => {
   const cBase = theme.colorBase || "stone";
   const cAccent = theme.colorAccent || "amber";
 
+  // 🆕 使用主題系統配置
+  const transitions = theme.transitions || {};
+  const interactions = theme.interactions || {};
+  const shadows = theme.shadows || {};
+
   // Default state for rate data to prevent crashes
-  const safeRateData =
-    rateData || {
-      current: null,
-      trend: "neutral",
-      diff: 0,
-      loading: true,
-      error: false,
-    };
+  const safeRateData = rateData || {
+    current: null,
+    trend: "neutral",
+    diff: 0,
+    loading: true,
+    error: false,
+  };
 
   const loading = safeRateData.loading && !safeRateData.error && isOnline;
 
@@ -39,8 +49,8 @@ const CurrencyWidget = ({ isDarkMode, rateData, isOnline }) => {
       target={isOnline ? "_blank" : "_self"}
       rel="noopener noreferrer"
       title={isOnline ? "點擊查看詳細匯率走勢" : "目前無法連線"}
-      className={`flex items-center gap-2 px-3 py-2 rounded-xl border backdrop-blur-md shadow-sm transition-all duration-300 whitespace-nowrap 
-      ${isOnline ? "cursor-pointer hover:scale-105 active:scale-95 hover:shadow-md" : "cursor-not-allowed opacity-80"}
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl border backdrop-blur-md ${shadows.subtle || "shadow-sm"} ${transitions.normal || "transition-all duration-300"} whitespace-nowrap 
+      ${isOnline ? `cursor-pointer ${interactions.hover || "hover:scale-105"} ${interactions.active || "active:scale-95"} hover:shadow-md` : "cursor-not-allowed opacity-80"}
       ${
         isDarkMode
           ? `bg-${cBase}-800/60 border-${cBase}-600 text-${cBase}-200 hover:bg-${cBase}-800/80`

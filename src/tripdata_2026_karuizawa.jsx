@@ -1284,7 +1284,7 @@ export const tripConfig = {
 
     // 天氣圖示專用色
     weatherIconColors: {
-      sun: "text-amber-400",
+      sun: "text-amber-300", // 🆕 提升深色模式對比度（原 text-amber-400）
       moon: "text-indigo-300",
       cloud: "text-gray-400",
       fog: "text-slate-400",
@@ -1296,63 +1296,79 @@ export const tripConfig = {
     // 毛玻璃與背景色
     glassColors: {
       card: {
-        light: "bg-white/85 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]",
-        dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
+        light:
+          "bg-white/85 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]",
+        dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]",
       },
       nav: {
         light: "bg-white/30 backdrop-blur-2xl border-white/15 shadow-lg",
-        dark: "bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30"
+        dark: "bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30",
       },
     },
 
     // 標籤與分類顏色
     tagColors: {
-      transport: { light: "bg-[#E8F0FE] text-[#3B5998]", dark: "bg-sky-900/30 text-sky-200" },
-      food: { light: "bg-[#F0F5E5] text-[#556B2F]", dark: "bg-emerald-900/30 text-emerald-200" },
-      shopping: { light: "bg-[#FFF8E1] text-[#8B6B23]", dark: "bg-amber-900/30 text-amber-200" },
-      hotel: { light: "bg-[#E6E6FA] text-[#6A5ACD]", dark: "bg-purple-900/30 text-purple-200" },
-      spot: { light: "bg-[#FFF0F5] text-[#BC8F8F]", dark: "bg-rose-900/30 text-rose-200" },
+      transport: {
+        light: "bg-[#E8F0FE] text-[#3B5998]",
+        dark: "bg-sky-900/30 text-sky-200",
+      },
+      food: {
+        light: "bg-[#F0F5E5] text-[#556B2F]",
+        dark: "bg-emerald-900/30 text-emerald-200",
+      },
+      shopping: {
+        light: "bg-[#FFF8E1] text-[#8B6B23]",
+        dark: "bg-amber-900/30 text-amber-200",
+      },
+      hotel: {
+        light: "bg-[#E6E6FA] text-[#6A5ACD]",
+        dark: "bg-purple-900/30 text-purple-200",
+      },
+      spot: {
+        light: "bg-[#FFF0F5] text-[#BC8F8F]",
+        dark: "bg-rose-900/30 text-rose-200",
+      },
     },
 
     // 聊天介面顏色
     chatColors: {
       userBubble: {
         light: "bg-[#5D737E] text-white border-[#4A606A]",
-        dark: "bg-sky-800 text-white border-sky-700"
+        dark: "bg-sky-800 text-white border-sky-700",
       },
       modelBubble: {
         light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
-        dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700"
+        dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700",
       },
       bg: {
         light: "bg-[#F9F9F6]/50",
-        dark: "bg-black/20"
-      }
+        dark: "bg-black/20",
+      },
     },
 
     // 主背景色
     mainBg: {
       light: "bg-[#F0F2F5] text-slate-700",
-      dark: "bg-[#1A1A1A] text-neutral-200"
+      dark: "bg-[#1A1A1A] text-neutral-200",
     },
 
     // 粒子系統顏色
     particleColors: {
       rain: {
         light: "rgba(100, 149, 237, 0.6)",
-        dark: "rgba(255, 255, 255, 0.5)"
+        dark: "rgba(255, 255, 255, 0.5)",
       },
       snow: "rgba(255, 255, 255, 0.8)",
       stars: "rgba(255, 255, 255, ALPHA)", // ALPHA 將在使用時替換
       fog: "rgba(200, 200, 200, ALPHA)",
-      lightning: "rgba(255, 255, 200, BRIGHTNESS)"
+      lightning: "rgba(255, 255, 200, BRIGHTNESS)",
     },
 
     // 雲朵顏色
     cloudColors: {
       heavy: "#bdc3c7",
       medium: "#d1d5db",
-      light: "#ecf0f1"
+      light: "#ecf0f1",
     },
 
     // 天體顏色
@@ -1360,57 +1376,75 @@ export const tripConfig = {
       sun: "#f1c40f",
       sunGlow: "#f39c12",
       moon: "#f5f6fa",
-      moonShadow: "rgba(245, 246, 250, 0.4)"
+      moonShadow: "rgba(245, 246, 250, 0.4)",
     },
 
     // 環境氛圍色
     ambientColors: {
-      clear: { light: "rgba(255, 255, 255, 0.8)", dark: "rgba(30, 41, 59, 0.5)" },
-      cloudy: { light: "rgba(241, 245, 249, 0.85)", dark: "rgba(51, 65, 85, 0.6)" },
-      rain: { light: "rgba(219, 234, 254, 0.85)", dark: "rgba(30, 58, 138, 0.4)" },
-      snow: { light: "rgba(248, 250, 252, 0.9)", dark: "rgba(71, 85, 105, 0.5)" },
-      thunderstorm: { light: "rgba(200, 200, 220, 0.85)", dark: "rgba(30, 30, 50, 0.7)" },
-      fog: { light: "rgba(226, 232, 240, 0.85)", dark: "rgba(71, 85, 105, 0.4)" }
+      clear: {
+        light: "rgba(255, 255, 255, 0.8)",
+        dark: "rgba(30, 41, 59, 0.5)",
+      },
+      cloudy: {
+        light: "rgba(241, 245, 249, 0.85)",
+        dark: "rgba(51, 65, 85, 0.6)",
+      },
+      rain: {
+        light: "rgba(219, 234, 254, 0.85)",
+        dark: "rgba(30, 58, 138, 0.4)",
+      },
+      snow: {
+        light: "rgba(248, 250, 252, 0.9)",
+        dark: "rgba(71, 85, 105, 0.5)",
+      },
+      thunderstorm: {
+        light: "rgba(200, 200, 220, 0.85)",
+        dark: "rgba(30, 30, 50, 0.7)",
+      },
+      fog: {
+        light: "rgba(226, 232, 240, 0.85)",
+        dark: "rgba(71, 85, 105, 0.4)",
+      },
     },
 
     // 動態背景色
     dynamicBg: {
       rain: { light: "#c7d2e0", dark: "#4a5568" },
-      cloud: "#cbd5e1"
+      cloud: "#cbd5e1",
     },
 
     // 按鈕漸層
     buttonGradients: {
       primary: {
         light: "from-[#5D737E] to-[#3F5561]",
-        dark: "from-sky-800 to-blue-900"
-      }
+        dark: "from-sky-800 to-blue-900",
+      },
     },
 
     // 輸入框顏色
     inputColors: {
       focusBorder: {
         light: "#5D737E",
-        dark: "sky-500"
+        dark: "sky-500",
       },
       focusRing: {
         light: "rgba(93, 115, 126, 0.2)",
-        dark: "rgba(14, 165, 233, 0.2)"
-      }
+        dark: "rgba(14, 165, 233, 0.2)",
+      },
     },
 
     // 連結顏色
     linkColors: {
       hover: {
         light: "#5D737E",
-        dark: "sky-300"
-      }
+        dark: "sky-300",
+      },
     },
 
     // 文字陰影
     textShadow: {
       light: "0 1px 1px rgba(255,255,255,0.5)",
-      dark: "0 2px 4px rgba(0,0,0,0.3)"
+      dark: "0 2px 4px rgba(0,0,0,0.3)",
     },
 
     // 圓角系統
@@ -1418,14 +1452,126 @@ export const tripConfig = {
       small: "rounded-xl",
       card: "rounded-2xl",
       modal: "rounded-3xl",
-      full: "rounded-full"
+      full: "rounded-full",
     },
 
     // 間距系統
     spacing: {
       cardSmall: "p-3",
       card: "p-4",
-      cardLarge: "p-5"
+      cardLarge: "p-5",
+    },
+
+    // ========== 🆕 字體系統 (Typography System) ==========
+    // 【說明】
+    // 統一的字體層級系統，確保視覺層次清晰一致
+    // 【使用方式】
+    // const typo = tripConfig.theme.typography.h1;
+    // className={typo.class} 或分別使用 typo.size, typo.weight, typo.leading
+    typography: {
+      h1: {
+        size: "text-2xl", // 24px - 主標題
+        weight: "font-bold",
+        leading: "leading-tight",
+        class: "text-2xl font-bold leading-tight",
+      },
+      h2: {
+        size: "text-xl", // 20px - 次標題
+        weight: "font-bold",
+        leading: "leading-snug",
+        class: "text-xl font-bold leading-snug",
+      },
+      h3: {
+        size: "text-lg", // 18px - 卡片標題
+        weight: "font-semibold",
+        leading: "leading-normal",
+        class: "text-lg font-semibold leading-normal",
+      },
+      body: {
+        size: "text-base", // 16px - 內文
+        weight: "font-normal",
+        leading: "leading-relaxed",
+        class: "text-base font-normal leading-relaxed",
+      },
+      caption: {
+        size: "text-sm", // 14px - 輔助文字
+        weight: "font-normal",
+        leading: "leading-normal",
+        class: "text-sm font-normal leading-normal",
+      },
+      label: {
+        size: "text-xs", // 12px - 標籤、極小文字
+        weight: "font-medium",
+        leading: "leading-tight",
+        class: "text-xs font-medium leading-tight",
+      },
+    },
+
+    // ========== 🆕 陰影系統 (Shadow System) ==========
+    // 【說明】
+    // 統一的陰影層級，提供清晰的視覺深度
+    // 【使用方式】
+    // className={tripConfig.theme.shadows.card}
+    shadows: {
+      subtle: "shadow-sm", // 微妙提升 - 小按鈕、標籤
+      card: "shadow-md", // 卡片陰影 - 一般卡片
+      elevated: "shadow-lg", // 懸浮元素 - hover 狀態、浮動按鈕
+      modal: "shadow-xl", // 彈窗陰影 - 對話框、彈出層
+      inner: "shadow-inner", // 內陰影 - 輸入框
+      none: "shadow-none", // 無陰影
+    },
+
+    // ========== 🆕 過渡動畫系統 (Transition System) ==========
+    // 【說明】
+    // 統一的過渡動畫配置，確保動畫流暢一致
+    // 【使用方式】
+    // className={tripConfig.theme.transitions.normal}
+    transitions: {
+      fast: "transition-all duration-150 ease-out", // 快速 - 小元素互動
+      normal: "transition-all duration-300 ease-in-out", // 標準 - 一般過渡
+      slow: "transition-all duration-500 ease-in-out", // 緩慢 - 大型動畫
+      colors: "transition-colors duration-300 ease-in-out", // 顏色 - 主題切換
+    },
+
+    // ========== 🆕 互動狀態系統 (Interaction States) ==========
+    // 【說明】
+    // 統一的互動回饋樣式，提升使用體驗
+    // 【使用方式】
+    // className={`${tripConfig.theme.interactions.hover} ${tripConfig.theme.interactions.active}`}
+    interactions: {
+      hover: "hover:scale-105", // 懸停放大
+      active: "active:scale-95", // 點擊縮小
+      focus: "focus:outline-none focus:ring-2 focus:ring-offset-2", // 焦點環
+      disabled: "disabled:opacity-50 disabled:cursor-not-allowed", // 禁用狀態
+    },
+
+    // ========== 🆕 語音按鈕顏色 (Voice Button Colors) ==========
+    // 【說明】
+    // 語音輸入按鈕的專用顏色配置
+    // 【使用方式】
+    // const voiceBtn = tripConfig.theme.voiceButton.chinese;
+    // className={listeningLang === "zh-TW" ? voiceBtn.active.light : voiceBtn.inactive.light}
+    voiceButton: {
+      chinese: {
+        active: {
+          light: "bg-[#5D737E] border-[#4A606A] text-white",
+          dark: "bg-[#5D737E] border-[#4A606A] text-white",
+        },
+        inactive: {
+          light: "bg-white text-[#5D737E] border-stone-200 hover:bg-stone-50",
+          dark: "bg-stone-800 text-sky-400 border-stone-600 hover:bg-stone-700",
+        },
+      },
+      foreign: {
+        active: {
+          light: "bg-rose-400 border-rose-500 text-white",
+          dark: "bg-rose-400 border-rose-500 text-white",
+        },
+        inactive: {
+          light: "bg-white text-[#BC8F8F] border-stone-200 hover:bg-stone-50",
+          dark: "bg-neutral-800 text-rose-300 border-neutral-600 hover:bg-neutral-700",
+        },
+      },
     },
   },
 

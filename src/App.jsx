@@ -159,30 +159,55 @@ class Particle {
 
   draw() {
     if (!this.ctx) return;
+
+    // 🆕 從主題系統取得粒子顏色配置
+    const particleColors = tripConfig.theme?.particleColors || {};
+
     this.ctx.beginPath();
     if (this.type === "rain") {
-      // 使用 particleColors (因為 Particle 類別沒有直接訪問 currentTheme，保持原樣)
+      // 使用主題配置的雨滴顏色
+      const rainColor = particleColors.rain || {
+        light: "rgba(100, 149, 237, 0.6)",
+        dark: "rgba(255, 255, 255, 0.5)",
+      };
       if (this.isDay) {
-        this.ctx.strokeStyle = "rgba(100, 149, 237, 0.6)";
+        this.ctx.strokeStyle = rainColor.light;
       } else {
-        this.ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        this.ctx.strokeStyle = rainColor.dark;
       }
       this.ctx.lineWidth = 1;
       this.ctx.moveTo(this.x, this.y);
       this.ctx.lineTo(this.x + this.vx, this.y + this.len);
       this.ctx.stroke();
     } else if (this.type === "snow") {
-      this.ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      // 使用主題配置的雪花顏色
+      this.ctx.fillStyle = particleColors.snow || "rgba(255, 255, 255, 0.8)";
       this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       this.ctx.fill();
     } else if (this.type === "stars") {
-      this.ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+      // 使用主題配置的星星顏色（替換 ALPHA）
+      const starsColor = (
+        particleColors.stars || "rgba(255, 255, 255, ALPHA)"
+      ).replace("ALPHA", this.alpha);
+      this.ctx.fillStyle = starsColor;
       this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       this.ctx.fill();
     } else if (this.type === "fog") {
-      const gradient = this.ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
-      gradient.addColorStop(0, `rgba(200, 200, 200, ${this.alpha})`);
-      gradient.addColorStop(1, `rgba(200, 200, 200, 0)`);
+      // 使用主題配置的霧氣顏色（替換 ALPHA）
+      const fogColor = (
+        particleColors.fog || "rgba(200, 200, 200, ALPHA)"
+      ).replace("ALPHA", this.alpha);
+      const fogColorTransparent = fogColor.replace("ALPHA", "0");
+      const gradient = this.ctx.createRadialGradient(
+        this.x,
+        this.y,
+        0,
+        this.x,
+        this.y,
+        this.size,
+      );
+      gradient.addColorStop(0, fogColor);
+      gradient.addColorStop(1, fogColorTransparent);
       this.ctx.fillStyle = gradient;
       this.ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       this.ctx.fill();
@@ -190,23 +215,27 @@ class Particle {
       const elapsed = Date.now() - this.startTime;
       if (elapsed < this.duration) {
         const brightness = Math.max(0, 1 - elapsed / this.duration);
-        this.ctx.strokeStyle = `rgba(255, 255, 200, ${brightness})`;
+        // 使用主題配置的閃電顏色（替換 BRIGHTNESS）
+        const lightningColor = (
+          particleColors.lightning || "rgba(255, 255, 200, BRIGHTNESS)"
+        ).replace("BRIGHTNESS", brightness);
+        this.ctx.strokeStyle = lightningColor;
         this.ctx.lineWidth = 3 + Math.random() * 2;
         this.ctx.lineCap = "round";
-        
+
         const segments = 5;
         let currentX = this.x;
         let currentY = this.y;
-        
+
         this.ctx.beginPath();
         this.ctx.moveTo(currentX, currentY);
-        
+
         for (let i = 0; i < segments; i++) {
           currentX += (Math.random() - 0.5) * 60;
           currentY += this.canvas.height / segments + Math.random() * 20;
           this.ctx.lineTo(currentX, currentY);
         }
-        
+
         this.ctx.stroke();
       }
     }
@@ -232,12 +261,16 @@ const WeatherParticles = ({ type, isDay }) => {
     window.addEventListener("resize", resize);
     resize();
 
-    const count = 
-      type === "rain" ? 150 : 
-      type === "snow" ? 80 : 
-      type === "fog" ? 30 : 
-      type === "lightning" ? 8 : 
-      100;
+    const count =
+      type === "rain"
+        ? 150
+        : type === "snow"
+          ? 80
+          : type === "fog"
+            ? 30
+            : type === "lightning"
+              ? 8
+              : 100;
     for (let i = 0; i < count; i++) {
       particles.push(new Particle(canvas, ctx, type, isDay));
     }
@@ -288,14 +321,14 @@ const getThemeConfig = () => {
     cloudColors: theme.cloudColors || {
       heavy: "#bdc3c7",
       medium: "#d1d5db",
-      light: "#ecf0f1"
+      light: "#ecf0f1",
     },
     celestialColors: theme.celestialColors || {
       sun: "#f1c40f",
       sunGlow: "#f39c12",
       moon: "#f5f6fa",
-      moonShadow: "rgba(245, 246, 250, 0.4)"
-    }
+      moonShadow: "rgba(245, 246, 250, 0.4)",
+    },
   };
 };
 
@@ -786,8 +819,7 @@ const ItineraryApp = () => {
     if (code === 0 && isDark) return "stars";
     if ([45, 48].includes(code)) return "fog";
     if ([95, 96, 99].includes(code)) return "lightning";
-    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code))
-      return "rain";
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return "rain";
     if ([71, 73, 75, 77, 85, 86].includes(code)) return "snow";
     return null;
   };
@@ -802,140 +834,187 @@ const ItineraryApp = () => {
     return "rain";
   };
 
-  const currentTheme = React.useMemo(
-    () => {
-      const theme = tripConfig.theme || {};
-      return {
-        colorBase: theme.colorBase || "stone",
-        colorAccent: theme.colorAccent || "amber",
-        bgTexture: theme.bgTexture || `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
-        bgGradientLight: theme.bgGradientLight || "bg-[#FDFBF7] from-stone-100/50 via-white to-transparent",
-        bgGradientDark: theme.bgGradientDark || "bg-[#1A1A1A] from-[#252525] via-[#1A1A1A]/80 to-transparent",
-        blobs: theme.blobs || {
-          light: ["bg-orange-200/30", "bg-stone-200/30", "bg-amber-100/40"],
-          dark: ["bg-amber-500/10", "bg-purple-500/10", "bg-blue-500/10"],
+  const currentTheme = React.useMemo(() => {
+    const theme = tripConfig.theme || {};
+    return {
+      colorBase: theme.colorBase || "stone",
+      colorAccent: theme.colorAccent || "amber",
+      bgTexture:
+        theme.bgTexture ||
+        `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
+      bgGradientLight:
+        theme.bgGradientLight ||
+        "bg-[#FDFBF7] from-stone-100/50 via-white to-transparent",
+      bgGradientDark:
+        theme.bgGradientDark ||
+        "bg-[#1A1A1A] from-[#252525] via-[#1A1A1A]/80 to-transparent",
+      blobs: theme.blobs || {
+        light: ["bg-orange-200/30", "bg-stone-200/30", "bg-amber-100/40"],
+        dark: ["bg-amber-500/10", "bg-purple-500/10", "bg-blue-500/10"],
+      },
+      textColors: theme.textColors || {
+        light: "text-stone-800",
+        dark: "text-stone-100",
+        secLight: "text-stone-500",
+        secDark: "text-stone-300",
+      },
+      semanticColors: theme.semanticColors || {
+        blue: { light: "text-[#5D737E]", dark: "text-sky-300" },
+        green: { light: "text-[#556B2F]", dark: "text-emerald-300" },
+        red: { light: "text-[#A04040]", dark: "text-red-300" },
+        orange: { light: "text-[#CD853F]", dark: "text-amber-300" },
+        pink: { light: "text-[#BC8F8F]", dark: "text-rose-300" },
+      },
+      weatherIconColors: theme.weatherIconColors || {
+        sun: "text-amber-400",
+        moon: "text-indigo-300",
+        cloud: "text-gray-400",
+        fog: "text-slate-400",
+        rain: "text-blue-400",
+        snow: "text-cyan-300",
+        lightning: "text-yellow-500",
+      },
+      weatherColors: theme.weatherColors || {
+        rain: "#94a3b8",
+        cloud: "#cbd5e1",
+        snow: "#94a3b8",
+      },
+      glassColors: theme.glassColors || {
+        card: {
+          light:
+            "bg-white/90 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]",
+          dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]",
         },
-        textColors: theme.textColors || {
-          light: "text-stone-800",
-          dark: "text-stone-100",
-          secLight: "text-stone-500",
-          secDark: "text-stone-300",
+        nav: {
+          light:
+            "bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border-white/20 shadow-lg",
+          dark: "bg-[#2A2A2A]/60 backdrop-blur-2xl backdrop-saturate-150 border-white/10 shadow-2xl shadow-black/30",
         },
-        semanticColors: theme.semanticColors || {
-          blue: { light: "text-[#5D737E]", dark: "text-sky-300" },
-          green: { light: "text-[#556B2F]", dark: "text-emerald-300" },
-          red: { light: "text-[#A04040]", dark: "text-red-300" },
-          orange: { light: "text-[#CD853F]", dark: "text-amber-300" },
-          pink: { light: "text-[#BC8F8F]", dark: "text-rose-300" },
+      },
+      tagColors: theme.tagColors || {
+        transport: {
+          light: "bg-[#E8F0FE] text-[#3B5998]",
+          dark: "bg-sky-900/30 text-sky-200",
         },
-        weatherIconColors: theme.weatherIconColors || {
-          sun: "text-amber-400",
-          moon: "text-indigo-300",
-          cloud: "text-gray-400",
-          fog: "text-slate-400",
-          rain: "text-blue-400",
-          snow: "text-cyan-300",
-          lightning: "text-yellow-500",
+        food: {
+          light: "bg-[#F0F5E5] text-[#556B2F]",
+          dark: "bg-emerald-900/30 text-emerald-200",
         },
-        weatherColors: theme.weatherColors || {
-          rain: "#94a3b8",
-          cloud: "#cbd5e1",
-          snow: "#94a3b8",
+        shopping: {
+          light: "bg-[#FFF8E1] text-[#8B6B23]",
+          dark: "bg-amber-900/30 text-amber-200",
         },
-        glassColors: theme.glassColors || {
-          card: {
-            light: "bg-white/90 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]",
-            dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]"
-          },
-          nav: {
-            light: "bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border-white/20 shadow-lg",
-            dark: "bg-[#2A2A2A]/60 backdrop-blur-2xl backdrop-saturate-150 border-white/10 shadow-2xl shadow-black/30"
-          },
+        hotel: {
+          light: "bg-[#E6E6FA] text-[#6A5ACD]",
+          dark: "bg-purple-900/30 text-purple-200",
         },
-        tagColors: theme.tagColors || {
-          transport: { light: "bg-[#E8F0FE] text-[#3B5998]", dark: "bg-sky-900/30 text-sky-200" },
-          food: { light: "bg-[#F0F5E5] text-[#556B2F]", dark: "bg-emerald-900/30 text-emerald-200" },
-          shopping: { light: "bg-[#FFF8E1] text-[#8B6B23]", dark: "bg-amber-900/30 text-amber-200" },
-          hotel: { light: "bg-[#E6E6FA] text-[#6A5ACD]", dark: "bg-purple-900/30 text-purple-200" },
-          spot: { light: "bg-[#FFF0F5] text-[#BC8F8F]", dark: "bg-rose-900/30 text-rose-200" },
+        spot: {
+          light: "bg-[#FFF0F5] text-[#BC8F8F]",
+          dark: "bg-rose-900/30 text-rose-200",
         },
-        chatColors: theme.chatColors || {
-          userBubble: {
-            light: "bg-[#5D737E] text-white border-[#4A606A]",
-            dark: "bg-sky-800 text-white border-sky-700"
-          },
-          modelBubble: {
-            light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
-            dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700"
-          },
-          bg: {
-            light: "bg-[#F9F9F6]/50",
-            dark: "bg-black/20"
-          }
+      },
+      chatColors: theme.chatColors || {
+        userBubble: {
+          light: "bg-[#5D737E] text-white border-[#4A606A]",
+          dark: "bg-sky-800 text-white border-sky-700",
         },
-        mainBg: theme.mainBg || {
-          light: "bg-[#F0F2F5] text-slate-700",
-          dark: "bg-[#1A1A1A] text-neutral-200"
+        modelBubble: {
+          light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
+          dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700",
         },
-        particleColors: theme.particleColors || {
-          rain: { light: "rgba(100, 149, 237, 0.6)", dark: "rgba(255, 255, 255, 0.5)" },
-          snow: "rgba(255, 255, 255, 0.8)",
-          stars: "rgba(255, 255, 255, ALPHA)",
-          fog: "rgba(200, 200, 200, ALPHA)",
-          lightning: "rgba(255, 255, 200, BRIGHTNESS)"
+        bg: {
+          light: "bg-[#F9F9F6]/50",
+          dark: "bg-black/20",
         },
-        cloudColors: theme.cloudColors || {
-          heavy: "#bdc3c7",
-          medium: "#d1d5db",
-          light: "#ecf0f1"
+      },
+      mainBg: theme.mainBg || {
+        light: "bg-[#F0F2F5] text-slate-700",
+        dark: "bg-[#1A1A1A] text-neutral-200",
+      },
+      particleColors: theme.particleColors || {
+        rain: {
+          light: "rgba(100, 149, 237, 0.6)",
+          dark: "rgba(255, 255, 255, 0.5)",
         },
-        celestialColors: theme.celestialColors || {
-          sun: "#f1c40f",
-          sunGlow: "#f39c12",
-          moon: "#f5f6fa",
-          moonShadow: "rgba(245, 246, 250, 0.4)"
+        snow: "rgba(255, 255, 255, 0.8)",
+        stars: "rgba(255, 255, 255, ALPHA)",
+        fog: "rgba(200, 200, 200, ALPHA)",
+        lightning: "rgba(255, 255, 200, BRIGHTNESS)",
+      },
+      cloudColors: theme.cloudColors || {
+        heavy: "#bdc3c7",
+        medium: "#d1d5db",
+        light: "#ecf0f1",
+      },
+      celestialColors: theme.celestialColors || {
+        sun: "#f1c40f",
+        sunGlow: "#f39c12",
+        moon: "#f5f6fa",
+        moonShadow: "rgba(245, 246, 250, 0.4)",
+      },
+      ambientColors: theme.ambientColors || {
+        clear: {
+          light: "rgba(255, 255, 255, 0.8)",
+          dark: "rgba(30, 41, 59, 0.5)",
         },
-        ambientColors: theme.ambientColors || {
-          clear: { light: "rgba(255, 255, 255, 0.8)", dark: "rgba(30, 41, 59, 0.5)" },
-          cloudy: { light: "rgba(241, 245, 249, 0.85)", dark: "rgba(51, 65, 85, 0.6)" },
-          rain: { light: "rgba(219, 234, 254, 0.85)", dark: "rgba(30, 58, 138, 0.4)" },
-          snow: { light: "rgba(248, 250, 252, 0.9)", dark: "rgba(71, 85, 105, 0.5)" },
-          thunderstorm: { light: "rgba(200, 200, 220, 0.85)", dark: "rgba(30, 30, 50, 0.7)" },
-          fog: { light: "rgba(226, 232, 240, 0.85)", dark: "rgba(71, 85, 105, 0.4)" }
+        cloudy: {
+          light: "rgba(241, 245, 249, 0.85)",
+          dark: "rgba(51, 65, 85, 0.6)",
         },
-        dynamicBg: theme.dynamicBg || {
-          rain: { light: "#c7d2e0", dark: "#4a5568" },
-          cloud: "#cbd5e1"
+        rain: {
+          light: "rgba(219, 234, 254, 0.85)",
+          dark: "rgba(30, 58, 138, 0.4)",
         },
-        buttonGradients: theme.buttonGradients || {
-          primary: { light: "from-[#5D737E] to-[#3F5561]", dark: "from-sky-800 to-blue-900" }
+        snow: {
+          light: "rgba(248, 250, 252, 0.9)",
+          dark: "rgba(71, 85, 105, 0.5)",
         },
-        inputColors: theme.inputColors || {
-          focusBorder: { light: "#5D737E", dark: "sky-500" },
-          focusRing: { light: "rgba(93, 115, 126, 0.2)", dark: "rgba(14, 165, 233, 0.2)" }
+        thunderstorm: {
+          light: "rgba(200, 200, 220, 0.85)",
+          dark: "rgba(30, 30, 50, 0.7)",
         },
-        linkColors: theme.linkColors || {
-          hover: { light: "#5D737E", dark: "sky-300" }
+        fog: {
+          light: "rgba(226, 232, 240, 0.85)",
+          dark: "rgba(71, 85, 105, 0.4)",
         },
-        textShadow: theme.textShadow || {
-          light: "0 1px 1px rgba(255,255,255,0.5)",
-          dark: "0 2px 4px rgba(0,0,0,0.3)"
+      },
+      dynamicBg: theme.dynamicBg || {
+        rain: { light: "#c7d2e0", dark: "#4a5568" },
+        cloud: "#cbd5e1",
+      },
+      buttonGradients: theme.buttonGradients || {
+        primary: {
+          light: "from-[#5D737E] to-[#3F5561]",
+          dark: "from-sky-800 to-blue-900",
         },
-        borderRadius: theme.borderRadius || {
-          small: "rounded-xl",
-          card: "rounded-2xl",
-          modal: "rounded-3xl",
-          full: "rounded-full"
+      },
+      inputColors: theme.inputColors || {
+        focusBorder: { light: "#5D737E", dark: "sky-500" },
+        focusRing: {
+          light: "rgba(93, 115, 126, 0.2)",
+          dark: "rgba(14, 165, 233, 0.2)",
         },
-        spacing: theme.spacing || {
-          cardSmall: "p-3",
-          card: "p-4",
-          cardLarge: "p-5"
-        }
-      };
-    },
-    [],
-  );
+      },
+      linkColors: theme.linkColors || {
+        hover: { light: "#5D737E", dark: "sky-300" },
+      },
+      textShadow: theme.textShadow || {
+        light: "0 1px 1px rgba(255,255,255,0.5)",
+        dark: "0 2px 4px rgba(0,0,0,0.3)",
+      },
+      borderRadius: theme.borderRadius || {
+        small: "rounded-xl",
+        card: "rounded-2xl",
+        modal: "rounded-3xl",
+        full: "rounded-full",
+      },
+      spacing: theme.spacing || {
+        cardSmall: "p-3",
+        card: "p-4",
+        cardLarge: "p-5",
+      },
+    };
+  }, []);
 
   const cBase = currentTheme.colorBase;
   const cAccent = currentTheme.colorAccent;
@@ -1144,8 +1223,8 @@ const ItineraryApp = () => {
       width: "100%",
       willChange: "transform, opacity",
       backfaceVisibility: "hidden",
-      transition: { 
-        duration: 0.2, 
+      transition: {
+        duration: 0.2,
         ease: "easeIn",
         opacity: { duration: 0.15 },
       },
@@ -1161,7 +1240,7 @@ const ItineraryApp = () => {
 
   const onTouchEnd = (e) => {
     if (!touchStart) return;
-    
+
     // 如果任何全螢幕彈窗開啟中，則完全停用滑動換頁功能
     if (showWeatherDetail || isCalculatorOpen || isMapModalOpen) {
       setTouchStart(null);
@@ -1362,12 +1441,18 @@ const ItineraryApp = () => {
     days: {},
   });
   const [frozenTestDateTime, setFrozenTestDateTime] = useState(null);
-  const [frozenTestWeatherOverride, setFrozenTestWeatherOverride] = useState(null);
+  const [frozenTestWeatherOverride, setFrozenTestWeatherOverride] =
+    useState(null);
 
   const freezeTestSettings = () => {
     setFrozenTestDateTime(new Date(testDateTime));
-    setFrozenTestWeatherOverride(JSON.parse(JSON.stringify(testWeatherOverride)));
-    console.log(`🔒 凍結測試設定 - dateTime=${testDateTime.toLocaleString('zh-TW')}, weather=`, testWeatherOverride);
+    setFrozenTestWeatherOverride(
+      JSON.parse(JSON.stringify(testWeatherOverride)),
+    );
+    console.log(
+      `🔒 凍結測試設定 - dateTime=${testDateTime.toLocaleString("zh-TW")}, weather=`,
+      testWeatherOverride,
+    );
     showToast("✅ 測試設定已凍結，不會被覆蓋", "success");
   };
 
@@ -1627,37 +1712,48 @@ const ItineraryApp = () => {
     return itineraryData[dayIndex].locationKey || tripConfig.locations[0].key;
   }, []);
 
-  const { tripStatus, daysUntilTrip, currentTripDayIndex } = React.useMemo(() => {
-    const tripStartDate = new Date(tripConfig.startDate);
-    const tripEndDate = new Date(tripConfig.endDate);
-    // 優先順序：凍結的測試時間 > 測試模式時間 > 系統當前時間
-    const displayDateTime = frozenTestDateTime || (isTestMode ? testDateTime : new Date());
-    
-    console.log(`🧪 行程狀態計算 - isTestMode=${isTestMode}, isFrozen=${!!frozenTestDateTime}, displayDateTime=${displayDateTime.toLocaleString('zh-TW')}`);
+  const { tripStatus, daysUntilTrip, currentTripDayIndex } =
+    React.useMemo(() => {
+      const tripStartDate = new Date(tripConfig.startDate);
+      const tripEndDate = new Date(tripConfig.endDate);
+      // 優先順序：凍結的測試時間 > 測試模式時間 > 系統當前時間
+      const displayDateTime =
+        frozenTestDateTime || (isTestMode ? testDateTime : new Date());
 
-    let calculatedTripStatus = "before";
-    let calculatedDaysUntilTrip = 0;
-    let calculatedCurrentTripDayIndex = -1;
+      console.log(
+        `🧪 行程狀態計算 - isTestMode=${isTestMode}, isFrozen=${!!frozenTestDateTime}, displayDateTime=${displayDateTime.toLocaleString("zh-TW")}`,
+      );
 
-    if (displayDateTime < tripStartDate) {
-      calculatedTripStatus = "before";
-      const diffTime = Math.abs(tripStartDate - displayDateTime);
-      calculatedDaysUntilTrip = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    } else if (displayDateTime >= tripStartDate && displayDateTime <= tripEndDate) {
-      calculatedTripStatus = "during";
-      const diffTime = Math.abs(displayDateTime - tripStartDate);
-      calculatedCurrentTripDayIndex = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      console.log(`🧪 正在行程中 - currentTripDayIndex=${calculatedCurrentTripDayIndex}`);
-    } else {
-      calculatedTripStatus = "after";
-    }
+      let calculatedTripStatus = "before";
+      let calculatedDaysUntilTrip = 0;
+      let calculatedCurrentTripDayIndex = -1;
 
-    return {
-      tripStatus: calculatedTripStatus,
-      daysUntilTrip: calculatedDaysUntilTrip,
-      currentTripDayIndex: calculatedCurrentTripDayIndex,
-    };
-  }, [isTestMode, testDateTime, frozenTestDateTime]);
+      if (displayDateTime < tripStartDate) {
+        calculatedTripStatus = "before";
+        const diffTime = Math.abs(tripStartDate - displayDateTime);
+        calculatedDaysUntilTrip = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      } else if (
+        displayDateTime >= tripStartDate &&
+        displayDateTime <= tripEndDate
+      ) {
+        calculatedTripStatus = "during";
+        const diffTime = Math.abs(displayDateTime - tripStartDate);
+        calculatedCurrentTripDayIndex = Math.floor(
+          diffTime / (1000 * 60 * 60 * 24),
+        );
+        console.log(
+          `🧪 正在行程中 - currentTripDayIndex=${calculatedCurrentTripDayIndex}`,
+        );
+      } else {
+        calculatedTripStatus = "after";
+      }
+
+      return {
+        tripStatus: calculatedTripStatus,
+        daysUntilTrip: calculatedDaysUntilTrip,
+        currentTripDayIndex: calculatedCurrentTripDayIndex,
+      };
+    }, [isTestMode, testDateTime, frozenTestDateTime]);
 
   const getUserLocationWeather = React.useCallback(
     async (options = {}) => {
@@ -1840,7 +1936,11 @@ const ItineraryApp = () => {
         }
       }
 
-      if (effectiveCoords && effectiveCoords.latitude && effectiveCoords.longitude) {
+      if (
+        effectiveCoords &&
+        effectiveCoords.latitude &&
+        effectiveCoords.longitude
+      ) {
         try {
           setHasLocationPermission(true);
           if (highAccuracy || isTestMode) {
@@ -1953,7 +2053,14 @@ const ItineraryApp = () => {
         }
       }
     },
-    [getWeatherData, showToast, isAppReady, isTestMode, testLatitude, testLongitude],
+    [
+      getWeatherData,
+      showToast,
+      isAppReady,
+      isTestMode,
+      testLatitude,
+      testLongitude,
+    ],
   );
 
   useEffect(() => {
@@ -2000,7 +2107,10 @@ const ItineraryApp = () => {
           showToast(`分享成功 (測試) — 來源: ${tag}`);
           return;
         } catch (err) {
-          if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) {
+          if (
+            err &&
+            (err.name === "AbortError" || err.name === "NotAllowedError")
+          ) {
             showToast("使用者取消分享", "info");
             return;
           }
@@ -2780,7 +2890,7 @@ const ItineraryApp = () => {
   const handleSwitchMode = (newMode) => {
     if (aiMode === newMode) return;
     setAiMode(newMode);
-    
+
     // 切換模式時載入對應的對話紀錄，確保上下文連貫
     const saved = localStorage.getItem(getStorageKey(newMode));
     if (saved) {
@@ -3026,25 +3136,32 @@ const ItineraryApp = () => {
   const displayWeather = React.useMemo(() => {
     const currentLocation = getDailyLocation(activeDay);
     const weatherData = weatherForecast[currentLocation];
-    const effectiveWeatherOverride = frozenTestWeatherOverride || testWeatherOverride;
+    const effectiveWeatherOverride =
+      frozenTestWeatherOverride || testWeatherOverride;
 
     if (!weatherForecast.loading && weatherData && weatherData.time) {
       const dayIndex = activeDay === -1 ? 0 : activeDay;
       const forecastIndex = dayIndex < weatherData.time.length ? dayIndex : 0;
       const maxTemp = Math.round(weatherData.temperature_2m_max[forecastIndex]);
       const minTemp = Math.round(weatherData.temperature_2m_min[forecastIndex]);
-      
+
       let weatherCode;
       if (isTestMode) {
         if (activeDay === -1) {
-          weatherCode = effectiveWeatherOverride.overview !== null ? effectiveWeatherOverride.overview : weatherData.weathercode[forecastIndex];
+          weatherCode =
+            effectiveWeatherOverride.overview !== null
+              ? effectiveWeatherOverride.overview
+              : weatherData.weathercode[forecastIndex];
         } else {
-          weatherCode = effectiveWeatherOverride.days[activeDay] !== undefined ? effectiveWeatherOverride.days[activeDay] : weatherData.weathercode[forecastIndex];
+          weatherCode =
+            effectiveWeatherOverride.days[activeDay] !== undefined
+              ? effectiveWeatherOverride.days[activeDay]
+              : weatherData.weathercode[forecastIndex];
         }
       } else {
         weatherCode = weatherData.weathercode[forecastIndex];
       }
-      
+
       const info = getWeatherInfo(weatherCode);
 
       return {
@@ -3062,20 +3179,41 @@ const ItineraryApp = () => {
       desc: weatherForecast.loading ? "載入中..." : "無資料",
       advice: weatherForecast.loading ? "請稍候" : "無法取得預報，請稍後再試",
     };
-  }, [activeDay, weatherForecast, getWeatherInfo, isTestMode, testWeatherOverride, frozenTestWeatherOverride, getDailyLocation]);
+  }, [
+    activeDay,
+    weatherForecast,
+    getWeatherInfo,
+    isTestMode,
+    testWeatherOverride,
+    frozenTestWeatherOverride,
+    getDailyLocation,
+  ]);
 
   // 統一主題風格，根據天氣狀況動態調整環境色
   const theme = React.useMemo(() => {
-    const currentCode = activeDay === -1 ? userWeather.weatherCode : displayWeather.code;
+    const currentCode =
+      activeDay === -1 ? userWeather.weatherCode : displayWeather.code;
     const sky = getSkyCondition(currentCode);
-    
+
     const ambientColors = {
-      clear: isDarkMode ? currentTheme.ambientColors.clear.dark : currentTheme.ambientColors.clear.light,
-      cloudy: isDarkMode ? currentTheme.ambientColors.cloudy.dark : currentTheme.ambientColors.cloudy.light,
-      rain: isDarkMode ? currentTheme.ambientColors.rain.dark : currentTheme.ambientColors.rain.light,
-      snow: isDarkMode ? currentTheme.ambientColors.snow.dark : currentTheme.ambientColors.snow.light,
-      thunderstorm: isDarkMode ? currentTheme.ambientColors.thunderstorm.dark : currentTheme.ambientColors.thunderstorm.light,
-      fog: isDarkMode ? currentTheme.ambientColors.fog.dark : currentTheme.ambientColors.fog.light,
+      clear: isDarkMode
+        ? currentTheme.ambientColors.clear.dark
+        : currentTheme.ambientColors.clear.light,
+      cloudy: isDarkMode
+        ? currentTheme.ambientColors.cloudy.dark
+        : currentTheme.ambientColors.cloudy.light,
+      rain: isDarkMode
+        ? currentTheme.ambientColors.rain.dark
+        : currentTheme.ambientColors.rain.light,
+      snow: isDarkMode
+        ? currentTheme.ambientColors.snow.dark
+        : currentTheme.ambientColors.snow.light,
+      thunderstorm: isDarkMode
+        ? currentTheme.ambientColors.thunderstorm.dark
+        : currentTheme.ambientColors.thunderstorm.light,
+      fog: isDarkMode
+        ? currentTheme.ambientColors.fog.dark
+        : currentTheme.ambientColors.fog.light,
     };
 
     const ambient = ambientColors[sky] || ambientColors.clear;
@@ -3104,12 +3242,20 @@ const ItineraryApp = () => {
       cardShadow: isDarkMode
         ? "shadow-2xl shadow-black/40"
         : `shadow-xl shadow-${cBase}-500/5`,
-      
+
       // 額外陰影層級
-      shadowSm: isDarkMode ? "shadow-sm shadow-black/30" : "shadow-sm shadow-stone-200/50",
-      shadowMd: isDarkMode ? "shadow-lg shadow-black/35" : `shadow-md shadow-${cBase}-300/30`,
-      shadowLg: isDarkMode ? "shadow-2xl shadow-black/40" : `shadow-lg shadow-${cBase}-400/20`,
-      shadowXl: isDarkMode ? "shadow-2xl shadow-black/50" : `shadow-xl shadow-${cBase}-500/25`,
+      shadowSm: isDarkMode
+        ? "shadow-sm shadow-black/30"
+        : "shadow-sm shadow-stone-200/50",
+      shadowMd: isDarkMode
+        ? "shadow-lg shadow-black/35"
+        : `shadow-md shadow-${cBase}-300/30`,
+      shadowLg: isDarkMode
+        ? "shadow-2xl shadow-black/40"
+        : `shadow-lg shadow-${cBase}-400/20`,
+      shadowXl: isDarkMode
+        ? "shadow-2xl shadow-black/50"
+        : `shadow-xl shadow-${cBase}-500/25`,
 
       // 強調色
       accent: isDarkMode ? `text-${cAccent}-300` : `text-${cAccent}-600`,
@@ -3130,11 +3276,19 @@ const ItineraryApp = () => {
       blob3: isDarkMode
         ? currentTheme.blobs.dark[2]
         : currentTheme.blobs.light[2],
-      
+
       // 環境色樣式
       ambientStyle: { backgroundColor: ambient },
     };
-  }, [isDarkMode, cBase, cAccent, currentTheme, activeDay, userWeather.weatherCode, displayWeather.code]);
+  }, [
+    isDarkMode,
+    cBase,
+    cAccent,
+    currentTheme,
+    activeDay,
+    userWeather.weatherCode,
+    displayWeather.code,
+  ]);
 
   // Weather detail payload for the new page/component
   const detailWeatherData = React.useMemo(() => {
@@ -3153,8 +3307,7 @@ const ItineraryApp = () => {
     const forecast = weatherForecast[locKey];
     if (!forecast) return null;
 
-    const code =
-      forecast.weathercode?.[activeDay] ?? forecast.weathercode?.[0];
+    const code = forecast.weathercode?.[activeDay] ?? forecast.weathercode?.[0];
     const info = code != null ? getWeatherData(code) : null;
     const locName =
       tripConfig.locations.find((l) => l.key === locKey)?.name || locKey;
@@ -3378,9 +3531,7 @@ const ItineraryApp = () => {
           <div
             className={`p-4 rounded-full shadow-xl ${isDarkMode ? "bg-neutral-800" : "bg-white"}`}
           >
-            <LocateFixed
-              className={`w-8 h-8 animate-spin ${colors.blue}`}
-            />
+            <LocateFixed className={`w-8 h-8 animate-spin ${colors.blue}`} />
           </div>
           <div className="text-center">
             <h2 className="text-xl font-bold tracking-widest mb-2">
@@ -3398,12 +3549,16 @@ const ItineraryApp = () => {
   // 決定當前應顯示的天氣特效代碼
   let currentEffectCode =
     activeDay === -1 ? userWeather.weatherCode : displayWeather.code;
-  
+
   // 應用測試模式或凍結的天氣覆寫
-  const effectiveWeatherOverride = frozenTestWeatherOverride || testWeatherOverride;
+  const effectiveWeatherOverride =
+    frozenTestWeatherOverride || testWeatherOverride;
   if (activeDay === -1 && effectiveWeatherOverride.overview !== null) {
     currentEffectCode = effectiveWeatherOverride.overview;
-  } else if (activeDay >= 0 && effectiveWeatherOverride.days[activeDay] !== undefined) {
+  } else if (
+    activeDay >= 0 &&
+    effectiveWeatherOverride.days[activeDay] !== undefined
+  ) {
     currentEffectCode = effectiveWeatherOverride.days[activeDay];
   }
 
@@ -3416,7 +3571,9 @@ const ItineraryApp = () => {
 
   // 根據天氣狀況動態調整背景色，增強沉浸感
   if (isDayTime) {
-    const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(currentEffectCode);
+    const isRaining = [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(
+      currentEffectCode,
+    );
     const isSnowing = [71, 73, 75, 77, 85, 86].includes(currentEffectCode);
     const isFoggy = [45, 48].includes(currentEffectCode);
     const isThunderstorm = [95, 96, 99].includes(currentEffectCode);
@@ -3444,15 +3601,20 @@ const ItineraryApp = () => {
       onTouchEnd={handleMainTouchEnd}
     >
       {/* 下拉重新整理指示器 */}
-      <div 
+      <div
         className="fixed top-0 left-0 w-full flex justify-center pointer-events-none z-[100] transition-opacity duration-300"
-        style={{ 
+        style={{
           transform: `translateY(${pullDistance - 40}px)`,
-          opacity: pullDistance > 20 ? 1 : 0
+          opacity: pullDistance > 20 ? 1 : 0,
         }}
       >
-        <div className={`p-2 rounded-full shadow-lg backdrop-blur-md border ${theme.cardBg} ${theme.cardBorder}`}>
-          <RotateCcw className={`w-5 h-5 ${theme.accent} ${isRefreshing ? 'animate-spin' : ''}`} style={{ transform: `rotate(${pullDistance * 3}deg)` }} />
+        <div
+          className={`p-2 rounded-full shadow-lg backdrop-blur-md border ${theme.cardBg} ${theme.cardBorder}`}
+        >
+          <RotateCcw
+            className={`w-5 h-5 ${theme.accent} ${isRefreshing ? "animate-spin" : ""}`}
+            style={{ transform: `rotate(${pullDistance * 3}deg)` }}
+          />
         </div>
       </div>
 
@@ -3501,7 +3663,7 @@ const ItineraryApp = () => {
       .animate-scale-in { animation: scaleIn 0.25s ease-out; }
       .animate-shimmer { animation: shimmer 2s ease-in-out infinite; }
       `}</style>
-      
+
       <SkyObjects isDay={!isDarkMode} condition={skyCondition} />
       <WeatherParticles type={particleType} isDay={!isDarkMode} />
       {/* 雷雨時疊加雨滴特效 */}
@@ -3519,7 +3681,11 @@ const ItineraryApp = () => {
           >
             <h1
               className={`text-base font-bold tracking-wide transition-colors whitespace-nowrap drop-shadow-sm ${theme.text}`}
-              style={{ textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.5)' : '0 1px 1px rgba(255,255,255,0.5)' }}
+              style={{
+                textShadow: isDarkMode
+                  ? "0 1px 2px rgba(0,0,0,0.5)"
+                  : "0 1px 1px rgba(255,255,255,0.5)",
+              }}
             >
               {tripConfig.title}
             </h1>
@@ -3629,7 +3795,7 @@ const ItineraryApp = () => {
 
             {/* Animation Wrapper */}
             {/* 🆕 優化：添加 GPU 加速容器用於毛玻璃過渡 */}
-            <div 
+            <div
               className="relative w-full h-full"
               style={{
                 // 強制 GPU 加速，確保 backdrop-filter 在動畫中穩定
@@ -3662,7 +3828,11 @@ const ItineraryApp = () => {
                           {/* 目前氣溫 */}
                           <div
                             className={`text-5xl font-medium tracking-tighter drop-shadow-sm ${theme.text}`}
-                            style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
+                            style={{
+                              textShadow: isDarkMode
+                                ? "0 2px 4px rgba(0,0,0,0.3)"
+                                : "none",
+                            }}
                           >
                             {userWeather.temp !== null
                               ? userWeather.temp
@@ -3710,19 +3880,19 @@ const ItineraryApp = () => {
                         <button
                           onClick={() =>
                             getUserLocationWeather({
-                                isSilent: false,
-                                highAccuracy: false,
-                              })
-                            }
-                            disabled={isUpdatingLocation}
-                            className={`p-2 rounded-full border transition-all active:scale-95 flex-shrink-0 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
-                          >
-                            {isUpdatingLocation ? (
-                              <Loader className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <RotateCcw className="w-4 h-4" />
-                            )}
-                          </button>
+                              isSilent: false,
+                              highAccuracy: false,
+                            })
+                          }
+                          disabled={isUpdatingLocation}
+                          className={`p-2 rounded-full border transition-all active:scale-95 flex-shrink-0 ${isUpdatingLocation ? "opacity-50" : ""} ${isDarkMode ? "bg-white/10 border-white/10 hover:bg-white/20 text-white" : "bg-black/5 border-black/5 hover:bg-black/10 text-stone-600"}`}
+                        >
+                          {isUpdatingLocation ? (
+                            <Loader className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <RotateCcw className="w-4 h-4" />
+                          )}
+                        </button>
                       </div>
 
                       {/* 中間：每 2 小時預報 (緊湊版) */}
@@ -3731,7 +3901,9 @@ const ItineraryApp = () => {
                       >
                         <div className="flex justify-between items-center px-0.5">
                           {[0, 2, 4, 6, 8, 10, 12].map((offset, i) => {
-                            const displayTime = isTestMode ? new Date(testDateTime) : new Date();
+                            const displayTime = isTestMode
+                              ? new Date(testDateTime)
+                              : new Date();
                             const currentHour = displayTime.getHours();
                             const targetIndex = currentHour + offset;
                             const hourDataTemp =
@@ -3902,7 +4074,6 @@ const ItineraryApp = () => {
                       </div>
                     </div>
 
-
                     {/* --- 航班與緊急資訊卡片 --- */}
                     <div
                       className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
@@ -3937,7 +4108,10 @@ const ItineraryApp = () => {
                       </div>
 
                       {isFlightInfoExpanded && (
-                        <div id="flight-info-content" className="animate-fadeIn">
+                        <div
+                          id="flight-info-content"
+                          className="animate-fadeIn"
+                        >
                           <div className="grid grid-cols-2 gap-4 mb-4">
                             {/* 航班資訊 */}
                             <div
@@ -4047,7 +4221,11 @@ const ItineraryApp = () => {
                           </div>
                           <div
                             className={`text-5xl font-black tracking-tight drop-shadow-sm flex justify-center items-baseline gap-2 ${theme.accent}`}
-                            style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
+                            style={{
+                              textShadow: isDarkMode
+                                ? "0 2px 4px rgba(0,0,0,0.3)"
+                                : "none",
+                            }}
                           >
                             {daysUntilTrip}{" "}
                             <span
@@ -4175,7 +4353,14 @@ const ItineraryApp = () => {
                             >
                               旅途中
                             </div>
-                            <h2 className={`text-2xl font-bold drop-shadow-sm ${theme.text}`} style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}>
+                            <h2
+                              className={`text-2xl font-bold drop-shadow-sm ${theme.text}`}
+                              style={{
+                                textShadow: isDarkMode
+                                  ? "0 2px 4px rgba(0,0,0,0.3)"
+                                  : "none",
+                              }}
+                            >
                               今天是 Day {currentTripDayIndex + 1}
                             </h2>
                           </div>
@@ -4268,7 +4453,14 @@ const ItineraryApp = () => {
                           <div className="p-3.5 bg-amber-100/30 rounded-full w-14 h-14 mx-auto flex items-center justify-center mb-3 border border-amber-200/50">
                             <History className="w-7 h-7 text-amber-500" />
                           </div>
-                          <h2 className={`text-xl font-bold drop-shadow-sm ${theme.text}`} style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}>
+                          <h2
+                            className={`text-xl font-bold drop-shadow-sm ${theme.text}`}
+                            style={{
+                              textShadow: isDarkMode
+                                ? "0 2px 4px rgba(0,0,0,0.3)"
+                                : "none",
+                            }}
+                          >
                             旅程圓滿結束！
                           </h2>
                           <p className={`text-sm mt-1 ${theme.textSec}`}>
@@ -4357,7 +4549,11 @@ const ItineraryApp = () => {
                                 <div className="flex items-baseline gap-1.5">
                                   <span
                                     className={`text-2xl font-bold drop-shadow-sm ${theme.text}`}
-                                    style={{ textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none' }}
+                                    style={{
+                                      textShadow: isDarkMode
+                                        ? "0 1px 2px rgba(0,0,0,0.3)"
+                                        : "none",
+                                    }}
                                   >
                                     {displayWeather.temp.split("/")[0]}
                                   </span>
@@ -4366,7 +4562,11 @@ const ItineraryApp = () => {
                                   </span>
                                   <span
                                     className={`text-2xl font-bold drop-shadow-sm ${theme.text}`}
-                                    style={{ textShadow: isDarkMode ? '0 1px 2px rgba(0,0,0,0.3)' : 'none' }}
+                                    style={{
+                                      textShadow: isDarkMode
+                                        ? "0 1px 2px rgba(0,0,0,0.3)"
+                                        : "none",
+                                    }}
                                   >
                                     {displayWeather.temp.split("/")[1]}
                                   </span>
@@ -4413,15 +4613,23 @@ const ItineraryApp = () => {
                             </div>
                             <h2
                               className={`text-2xl font-extrabold mb-2 leading-tight drop-shadow-sm ${theme.text}`}
-                              style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
+                              style={{
+                                textShadow: isDarkMode
+                                  ? "0 2px 4px rgba(0,0,0,0.3)"
+                                  : "none",
+                              }}
                             >
                               {current.title}
                             </h2>
 
                             {/* 住宿資訊 (附 Google Maps 連結) */}
                             {!current.stay.includes("溫暖的家") && (
-                              <div className={`text-xs font-medium flex items-center gap-1.5 mt-2 ${theme.textSec}`}>
-                                <Hotel className={`w-3.5 h-3.5 ${theme.accent}`} />
+                              <div
+                                className={`text-xs font-medium flex items-center gap-1.5 mt-2 ${theme.textSec}`}
+                              >
+                                <Hotel
+                                  className={`w-3.5 h-3.5 ${theme.accent}`}
+                                />
                                 <a
                                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(current.stay.split("(")[0])}`}
                                   className={`hover:underline underline-offset-2 ${isDarkMode ? "hover:text-sky-300" : "hover:text-[#5D737E]"}`}
@@ -4436,42 +4644,54 @@ const ItineraryApp = () => {
                           {/* 時間軸事件列表 */}
                           <div className="space-y-3.5 relative">
                             {/* 垂直時間軸虛線 */}
-                            <div 
+                            <div
                               className={`absolute left-[35px] top-10 bottom-10 w-0.5 border-l-2 border-dashed ${isDarkMode ? "border-white/10" : "border-black/10"} z-0`}
                             />
                             {current.events.map((event, idx) => {
-                              const isTransport = event.title.includes("交通") || !!event.transport;
+                              const isTransport =
+                                event.title.includes("交通") ||
+                                !!event.transport;
                               const isOpen =
                                 expandedItems[`${activeDay}-${idx}`];
                               return (
                                 <div
                                   key={idx}
                                   className={`group rounded-2xl border shadow-sm transition-all duration-300 overflow-hidden relative z-10
-                                    ${isTransport 
-                                      ? (isDarkMode ? "bg-neutral-900/20 border-transparent opacity-80 scale-[0.96] mx-4" : "bg-stone-100/40 border-transparent opacity-80 scale-[0.96] mx-4") 
-                                      : (isDarkMode ? "bg-neutral-800/30 border-white/5 hover:bg-neutral-800/50" : "bg-white/60 border-white/20 hover:bg-white/80 hover:shadow-md")
+                                    ${
+                                      isTransport
+                                        ? isDarkMode
+                                          ? "bg-neutral-900/20 border-transparent opacity-80 scale-[0.96] mx-4"
+                                          : "bg-stone-100/40 border-transparent opacity-80 scale-[0.96] mx-4"
+                                        : isDarkMode
+                                          ? "bg-neutral-800/30 border-white/5 hover:bg-neutral-800/50"
+                                          : "bg-white/60 border-white/20 hover:bg-white/80 hover:shadow-md"
                                     }`}
                                 >
                                   {/* 事件標題列 (點擊展開) */}
                                   <div
-                                    className={`${isTransport ? 'p-3' : 'p-4'} flex gap-4 cursor-pointer`}
+                                    className={`${isTransport ? "p-3" : "p-4"} flex gap-4 cursor-pointer`}
                                     onClick={() => toggleExpand(activeDay, idx)}
                                   >
                                     <div className="flex flex-col items-center pt-1">
                                       <div
-                                        className={`${isTransport ? 'w-8 h-8 rounded-xl' : 'w-10 h-10 rounded-2xl'} flex items-center justify-center shadow-sm transition-transform group-hover:scale-105
+                                        className={`${isTransport ? "w-8 h-8 rounded-xl" : "w-10 h-10 rounded-2xl"} flex items-center justify-center shadow-sm transition-transform group-hover:scale-105
                                         ${
                                           event.title.includes("交通")
                                             ? isDarkMode
                                               ? currentTheme.tagColors.food.dark
-                                              : currentTheme.tagColors.food.light
+                                              : currentTheme.tagColors.food
+                                                  .light
                                             : isDarkMode
-                                              ? currentTheme.tagColors.transport.dark
-                                              : currentTheme.tagColors.transport.light
+                                              ? currentTheme.tagColors.transport
+                                                  .dark
+                                              : currentTheme.tagColors.transport
+                                                  .light
                                         }`}
                                       >
                                         {React.cloneElement(event.icon, {
-                                          className: isTransport ? "w-4 h-4" : "w-5 h-5",
+                                          className: isTransport
+                                            ? "w-4 h-4"
+                                            : "w-5 h-5",
                                         })}
                                       </div>
                                     </div>
@@ -4488,7 +4708,7 @@ const ItineraryApp = () => {
                                           {/* 標題與地圖連結 */}
                                           <div className="flex items-center gap-2 mb-1">
                                             <h3
-                                              className={`${isTransport ? 'text-sm' : 'text-base'} font-bold leading-tight ${theme.text}`}
+                                              className={`${isTransport ? "text-sm" : "text-base"} font-bold leading-tight ${theme.text}`}
                                             >
                                               {event.title}
                                             </h3>
@@ -4676,7 +4896,7 @@ const ItineraryApp = () => {
                                   當日路線導航
                                 </h3>
                               </div>
-                              
+
                               {/* 互動式地圖組件 */}
                               <Suspense
                                 fallback={
@@ -4708,7 +4928,7 @@ const ItineraryApp = () => {
                                   </span>
                                   {current.routeInfo.summary}
                                 </div>
-                                
+
                                 {/* 外部導航連結 */}
                                 <a
                                   href={current.routeInfo.mapUrl}
@@ -4720,7 +4940,6 @@ const ItineraryApp = () => {
                               </div>
                             </div>
                           )}
-
 
                           {/* --- 當日特別提醒 (如：預約時間、票券) --- */}
                           {current.notice && (
@@ -4763,7 +4982,9 @@ const ItineraryApp = () => {
             >
               <h2
                 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
-                style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
+                style={{
+                  textShadow: isDarkMode ? "0 2px 4px rgba(0,0,0,0.3)" : "none",
+                }}
               >
                 <div
                   className={`p-1.5 rounded-xl ${isDarkMode ? "bg-purple-900/20" : "bg-[#E6E6FA]/50"}`}
@@ -4777,137 +4998,150 @@ const ItineraryApp = () => {
               <div className="space-y-3">
                 {guidesData && guidesData.length > 0 ? (
                   guidesData.map((guide, idx) => {
-                  const isGuideOpen = expandedGuides[idx];
-                  return (
-                    <div
-                      key={idx}
-                      className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/40 border-white/5" : "bg-white/70 border-white/20"}`}
-                    >
-                      {/* 指南標題列 (點擊展開) */}
+                    const isGuideOpen = expandedGuides[idx];
+                    return (
                       <div
-                        className="flex items-center gap-3 p-4 cursor-pointer"
-                        onClick={() => toggleGuide(idx)}
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={isGuideOpen}
-                        aria-controls={`guide-${idx}-content`}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            toggleGuide(idx);
-                          }
-                        }}
+                        key={idx}
+                        className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/40 border-white/5" : "bg-white/70 border-white/20"}`}
                       >
+                        {/* 指南標題列 (點擊展開) */}
                         <div
-                          className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border shadow-inner ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
+                          className="flex items-center gap-3 p-4 cursor-pointer"
+                          onClick={() => toggleGuide(idx)}
+                          role="button"
+                          tabIndex={0}
+                          aria-expanded={isGuideOpen}
+                          aria-controls={`guide-${idx}-content`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              toggleGuide(idx);
+                            }
+                          }}
                         >
-                          {guide.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3
-                            className={`text-sm font-bold break-words ${theme.text}`}
+                          <div
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border shadow-inner ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
                           >
-                            {guide.title}
-                          </h3>
-                          {!isGuideOpen && (
+                            {guide.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3
+                              className={`text-sm font-bold break-words ${theme.text}`}
+                            >
+                              {guide.title}
+                            </h3>
+                            {!isGuideOpen && (
+                              <p
+                                className={`text-xs mt-0.5 leading-relaxed truncate ${theme.textSec}`}
+                              >
+                                {guide.summary}
+                              </p>
+                            )}
+                          </div>
+                          {isGuideOpen ? (
+                            <ChevronUp
+                              className={`w-4 h-4 flex-shrink-0 ${theme.textSec}`}
+                            />
+                          ) : (
+                            <ChevronDown
+                              className={`w-4 h-4 flex-shrink-0 ${theme.textSec}`}
+                            />
+                          )}
+                        </div>
+
+                        {/* 展開後的詳細內容 */}
+                        {isGuideOpen && (
+                          <div
+                            id={`guide-${idx}-content`}
+                            className="px-5 pb-5 animate-fadeIn"
+                          >
                             <p
-                              className={`text-xs mt-0.5 leading-relaxed truncate ${theme.textSec}`}
+                              className={`text-sm mb-4 leading-relaxed ${theme.textSec}`}
                             >
                               {guide.summary}
                             </p>
-                          )}
-                        </div>
-                        {isGuideOpen ? (
-                          <ChevronUp
-                            className={`w-4 h-4 flex-shrink-0 ${theme.textSec}`}
-                          />
-                        ) : (
-                          <ChevronDown
-                            className={`w-4 h-4 flex-shrink-0 ${theme.textSec}`}
-                          />
+
+                            {/* 操作步驟 */}
+                            <div
+                              className={`rounded-xl p-3.5 my-3 border ${isDarkMode ? "bg-black/20 border-neutral-700" : "bg-[#F9F9F6] border-stone-200"}`}
+                            >
+                              <h4
+                                className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
+                              >
+                                <FileText className="w-3.5 h-3.5" /> 操作重點
+                              </h4>
+                              <ol
+                                className={`list-decimal list-inside text-sm space-y-2 pl-1 ${theme.textSec} ${isDarkMode ? "marker:text-sky-300" : `marker:${colors.blue}`} marker:font-bold`}
+                              >
+                                {guide.steps.map((step, i) => (
+                                  <li key={i} className="leading-relaxed pl-1">
+                                    {step}
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+
+                            {/* 相關連結與部落格教學 */}
+                            <div className="space-y-3">
+                              <a
+                                href={guide.link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`w-full text-center text-sm font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 ${isDarkMode ? currentTheme.tagColors.transport.dark + " hover:bg-sky-900/30" : currentTheme.tagColors.transport.light + " hover:bg-[#D0E0FC]"}`}
+                              >
+                                {guide.link.text}
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                              {guide.blogs && guide.blogs.length > 0 && (
+                                <div
+                                  className={`mt-3 border-t pt-3 ${isDarkMode ? "border-neutral-700" : "border-stone-200"}`}
+                                >
+                                  <h4
+                                    className={`text-[11px] font-bold mb-2 uppercase tracking-wide ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                                  >
+                                    相關圖文教學
+                                  </h4>
+                                  <div className="space-y-1.5">
+                                    {guide.blogs.map((blog, bIdx) => (
+                                      <a
+                                        key={bIdx}
+                                        href={blog.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`flex items-center gap-2 text-xs transition-colors p-1.5 rounded-xl ${isDarkMode ? "text-neutral-400 hover:text-sky-300 hover:bg-neutral-700/50" : "text-stone-500 hover:text-[#3B5998] hover:bg-stone-100"}`}
+                                      >
+                                        <span
+                                          className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? "bg-neutral-600" : "bg-stone-300"}`}
+                                        ></span>
+                                        <span className="truncate underline decoration-stone-300 underline-offset-4 decoration-1">
+                                          {blog.title}
+                                        </span>
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-
-                      {/* 展開後的詳細內容 */}
-                      {isGuideOpen && (
-                        <div id={`guide-${idx}-content`} className="px-5 pb-5 animate-fadeIn">
-                          <p
-                            className={`text-sm mb-4 leading-relaxed ${theme.textSec}`}
-                          >
-                            {guide.summary}
-                          </p>
-                          
-                          {/* 操作步驟 */}
-                          <div
-                            className={`rounded-xl p-3.5 my-3 border ${isDarkMode ? "bg-black/20 border-neutral-700" : "bg-[#F9F9F6] border-stone-200"}`}
-                          >
-                            <h4
-                              className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
-                            >
-                              <FileText className="w-3.5 h-3.5" /> 操作重點
-                            </h4>
-                            <ol
-                              className={`list-decimal list-inside text-sm space-y-2 pl-1 ${theme.textSec} ${isDarkMode ? "marker:text-sky-300" : `marker:${colors.blue}`} marker:font-bold`}
-                            >
-                              {guide.steps.map((step, i) => (
-                                <li key={i} className="leading-relaxed pl-1">
-                                  {step}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-
-                          {/* 相關連結與部落格教學 */}
-                          <div className="space-y-3">
-                            <a
-                              href={guide.link.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`w-full text-center text-sm font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 ${isDarkMode ? currentTheme.tagColors.transport.dark + " hover:bg-sky-900/30" : currentTheme.tagColors.transport.light + " hover:bg-[#D0E0FC]"}`}
-                            >
-                              {guide.link.text}
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                            {guide.blogs && guide.blogs.length > 0 && (
-                              <div
-                                className={`mt-3 border-t pt-3 ${isDarkMode ? "border-neutral-700" : "border-stone-200"}`}
-                              >
-                                <h4
-                                  className={`text-[11px] font-bold mb-2 uppercase tracking-wide ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
-                                >
-                                  相關圖文教學
-                                </h4>
-                                <div className="space-y-1.5">
-                                  {guide.blogs.map((blog, bIdx) => (
-                                    <a
-                                      key={bIdx}
-                                      href={blog.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={`flex items-center gap-2 text-xs transition-colors p-1.5 rounded-xl ${isDarkMode ? "text-neutral-400 hover:text-sky-300 hover:bg-neutral-700/50" : "text-stone-500 hover:text-[#3B5998] hover:bg-stone-100"}`}
-                                    >
-                                      <span
-                                        className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? "bg-neutral-600" : "bg-stone-300"}`}
-                                      ></span>
-                                      <span className="truncate underline decoration-stone-300 underline-offset-4 decoration-1">
-                                        {blog.title}
-                                      </span>
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
+                    );
+                  })
                 ) : (
-                  <div className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}>
-                    <BookOpen className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`} />
-                    <p className={`text-sm font-medium ${theme.textSec}`}>暫無參考指南</p>
-                    <p className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}>敬請期待更多內容</p>
+                  <div
+                    className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}
+                  >
+                    <BookOpen
+                      className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                    />
+                    <p className={`text-sm font-medium ${theme.textSec}`}>
+                      暫無參考指南
+                    </p>
+                    <p
+                      className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}
+                    >
+                      敬請期待更多內容
+                    </p>
                   </div>
                 )}
               </div>
@@ -4924,7 +5158,9 @@ const ItineraryApp = () => {
             >
               <h2
                 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
-                style={{ textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.3)' : 'none' }}
+                style={{
+                  textShadow: isDarkMode ? "0 2px 4px rgba(0,0,0,0.3)" : "none",
+                }}
               >
                 <div
                   className={`p-1.5 rounded-xl ${isDarkMode ? "bg-orange-900/20" : "bg-[#FFF8E1]/60"}`}
@@ -4944,119 +5180,75 @@ const ItineraryApp = () => {
               <div className="space-y-3">
                 {shopGuideData && shopGuideData.length > 0 ? (
                   shopGuideData.map((areaData, idx) => {
-                  const isShopOpen = expandedShops[idx];
-                  return (
-                    <div
-                      key={idx}
-                      className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
-                    >
-                      {/* 區域標題列 (點擊展開) */}
+                    const isShopOpen = expandedShops[idx];
+                    return (
                       <div
-                        className="flex items-center justify-between p-4 cursor-pointer"
-                        onClick={() => toggleShop(idx)}
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={isShopOpen}
-                        aria-controls={`shop-${idx}-content`}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            toggleShop(idx);
-                          }
-                        }}
+                        key={idx}
+                        className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
                       >
-                        <div>
-                          <h3 className={`text-base font-bold ${theme.accent}`}>
-                            {areaData.area}
-                          </h3>
-                          {!isShopOpen && (
-                            <p
-                              className={`text-xs mt-0.5 truncate ${theme.textSec}`}
+                        {/* 區域標題列 (點擊展開) */}
+                        <div
+                          className="flex items-center justify-between p-4 cursor-pointer"
+                          onClick={() => toggleShop(idx)}
+                          role="button"
+                          tabIndex={0}
+                          aria-expanded={isShopOpen}
+                          aria-controls={`shop-${idx}-content`}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              toggleShop(idx);
+                            }
+                          }}
+                        >
+                          <div>
+                            <h3
+                              className={`text-base font-bold ${theme.accent}`}
                             >
-                              {areaData.desc}
-                            </p>
+                              {areaData.area}
+                            </h3>
+                            {!isShopOpen && (
+                              <p
+                                className={`text-xs mt-0.5 truncate ${theme.textSec}`}
+                              >
+                                {areaData.desc}
+                              </p>
+                            )}
+                          </div>
+                          {isShopOpen ? (
+                            <ChevronUp className={`w-4 h-4 ${theme.textSec}`} />
+                          ) : (
+                            <ChevronDown
+                              className={`w-4 h-4 ${theme.textSec}`}
+                            />
                           )}
                         </div>
-                        {isShopOpen ? (
-                          <ChevronUp className={`w-4 h-4 ${theme.textSec}`} />
-                        ) : (
-                          <ChevronDown className={`w-4 h-4 ${theme.textSec}`} />
-                        )}
-                      </div>
 
-                      {/* 展開後的商家列表 */}
-                      {isShopOpen && (
-                        <div id={`shop-${idx}-content`} className="px-5 pb-5 animate-fadeIn">
-                          <p className={`text-sm mb-4 ${theme.textSec}`}>
-                            {areaData.desc}
-                          </p>
+                        {/* 展開後的商家列表 */}
+                        {isShopOpen && (
+                          <div
+                            id={`shop-${idx}-content`}
+                            className="px-5 pb-5 animate-fadeIn"
+                          >
+                            <p className={`text-sm mb-4 ${theme.textSec}`}>
+                              {areaData.desc}
+                            </p>
 
-                          {/* 重點商家 (行程相關) */}
-                          <div className="mb-5">
-                            <h4
-                              className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
-                            >
-                              <Star
-                                className={`w-3.5 h-3.5 ${colors.orange}`}
-                              />{" "}
-                              行程重點商家
-                            </h4>
-                            <div className="grid grid-cols-1 gap-2.5">
-                              {areaData.mainShops.map((shop, i) => (
-                                <div
-                                  key={i}
-                                  className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${isDarkMode ? "bg-amber-900/10 border-amber-800/30 hover:bg-amber-900/20" : "bg-[#FFF8E1]/50 border-amber-100 hover:bg-[#FFF8E1]"}`}
-                                >
-                                  <a
-                                    href={getMapLink(
-                                      `${shop.name} ${areaData.mapQuerySuffix}`,
-                                    )}
-                                    className="flex items-center gap-3 group flex-1"
-                                  >
-                                    <MapPin
-                                      className={`w-4 h-4 ${isDarkMode ? "text-amber-500" : "text-[#CD853F]"} group-hover:scale-125 transition-transform`}
-                                    />
-                                    <div className="flex flex-col">
-                                      <div className="flex items-center gap-2">
-                                        <span
-                                          className={`text-sm font-bold transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-amber-300" : "text-[#37474F] group-hover:text-[#CD853F]"}`}
-                                        >
-                                          {shop.name}
-                                        </span>
-                                        <span
-                                          className={`text-[11px] px-1.5 py-0.5 rounded-xl border shadow-sm ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700" : "bg-white text-stone-500 border-stone-200"}`}
-                                        >
-                                          {shop.tag}
-                                        </span>
-                                      </div>
-                                      <span
-                                        className={`text-xs mt-0.5 ${theme.textSec}`}
-                                      >
-                                        {shop.note}
-                                      </span>
-                                    </div>
-                                  </a>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* 特別推薦 (如：童裝、文具) */}
-                          {areaData.specialShops && (
+                            {/* 重點商家 (行程相關) */}
                             <div className="mb-5">
                               <h4
                                 className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
                               >
-                                <Scissors
-                                  className={`w-3.5 h-3.5 ${colors.pink}`}
+                                <Star
+                                  className={`w-3.5 h-3.5 ${colors.orange}`}
                                 />{" "}
-                                童裝與文具推薦
+                                行程重點商家
                               </h4>
                               <div className="grid grid-cols-1 gap-2.5">
-                                {areaData.specialShops.map((shop, i) => (
+                                {areaData.mainShops.map((shop, i) => (
                                   <div
                                     key={i}
-                                    className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${isDarkMode ? "bg-rose-900/10 border-rose-800/30 hover:bg-rose-900/20" : "bg-[#FFF0F5]/60 border-rose-100 hover:bg-[#FFF0F5]"}`}
+                                    className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${isDarkMode ? "bg-amber-900/10 border-amber-800/30 hover:bg-amber-900/20" : "bg-[#FFF8E1]/50 border-amber-100 hover:bg-[#FFF8E1]"}`}
                                   >
                                     <a
                                       href={getMapLink(
@@ -5065,12 +5257,12 @@ const ItineraryApp = () => {
                                       className="flex items-center gap-3 group flex-1"
                                     >
                                       <MapPin
-                                        className={`w-4 h-4 ${isDarkMode ? "text-rose-400" : "text-[#BC8F8F]"} group-hover:scale-125 transition-transform`}
+                                        className={`w-4 h-4 ${isDarkMode ? "text-amber-500" : "text-[#CD853F]"} group-hover:scale-125 transition-transform`}
                                       />
                                       <div className="flex flex-col">
                                         <div className="flex items-center gap-2">
                                           <span
-                                            className={`text-sm font-bold transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-rose-300" : "text-[#37474F] group-hover:text-[#BC8F8F]"}`}
+                                            className={`text-sm font-bold transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-amber-300" : "text-[#37474F] group-hover:text-[#CD853F]"}`}
                                           >
                                             {shop.name}
                                           </span>
@@ -5091,47 +5283,108 @@ const ItineraryApp = () => {
                                 ))}
                               </div>
                             </div>
-                          )}
 
-                          {/* 周邊連鎖店 (便利商店、咖啡廳) */}
-                          <div>
-                            <h4
-                              className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
-                            >
-                              <Coffee className="w-3.5 h-3.5 text-stone-400" />{" "}
-                              附近常見連鎖 (1km內)
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                              {areaData.nearbyChains.map((chain, i) => (
-                                <a
-                                  key={i}
-                                  href={getMapLink(
-                                    `${chain.name} ${areaData.mapQuerySuffix}`,
-                                  )}
-                                  className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-sm transition-all ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-sky-300 hover:border-sky-800" : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50 hover:text-[#5D737E] hover:border-[#5D737E]/30"}`}
+                            {/* 特別推薦 (如：童裝、文具) */}
+                            {areaData.specialShops && (
+                              <div className="mb-5">
+                                <h4
+                                  className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
                                 >
-                                  <span className="font-bold">
-                                    {chain.name}
-                                  </span>
-                                  <span
-                                    className={`text-xs border-l pl-2 ${isDarkMode ? "border-neutral-600 text-neutral-500" : "text-stone-400 border-stone-200"}`}
+                                  <Scissors
+                                    className={`w-3.5 h-3.5 ${colors.pink}`}
+                                  />{" "}
+                                  童裝與文具推薦
+                                </h4>
+                                <div className="grid grid-cols-1 gap-2.5">
+                                  {areaData.specialShops.map((shop, i) => (
+                                    <div
+                                      key={i}
+                                      className={`flex justify-between items-center p-3 rounded-xl border transition-colors ${isDarkMode ? "bg-rose-900/10 border-rose-800/30 hover:bg-rose-900/20" : "bg-[#FFF0F5]/60 border-rose-100 hover:bg-[#FFF0F5]"}`}
+                                    >
+                                      <a
+                                        href={getMapLink(
+                                          `${shop.name} ${areaData.mapQuerySuffix}`,
+                                        )}
+                                        className="flex items-center gap-3 group flex-1"
+                                      >
+                                        <MapPin
+                                          className={`w-4 h-4 ${isDarkMode ? "text-rose-400" : "text-[#BC8F8F]"} group-hover:scale-125 transition-transform`}
+                                        />
+                                        <div className="flex flex-col">
+                                          <div className="flex items-center gap-2">
+                                            <span
+                                              className={`text-sm font-bold transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-rose-300" : "text-[#37474F] group-hover:text-[#BC8F8F]"}`}
+                                            >
+                                              {shop.name}
+                                            </span>
+                                            <span
+                                              className={`text-[11px] px-1.5 py-0.5 rounded-xl border shadow-sm ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700" : "bg-white text-stone-500 border-stone-200"}`}
+                                            >
+                                              {shop.tag}
+                                            </span>
+                                          </div>
+                                          <span
+                                            className={`text-xs mt-0.5 ${theme.textSec}`}
+                                          >
+                                            {shop.note}
+                                          </span>
+                                        </div>
+                                      </a>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 周邊連鎖店 (便利商店、咖啡廳) */}
+                            <div>
+                              <h4
+                                className={`text-xs font-bold mb-2.5 flex items-center gap-1.5 ${theme.textSec}`}
+                              >
+                                <Coffee className="w-3.5 h-3.5 text-stone-400" />{" "}
+                                附近常見連鎖 (1km內)
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {areaData.nearbyChains.map((chain, i) => (
+                                  <a
+                                    key={i}
+                                    href={getMapLink(
+                                      `${chain.name} ${areaData.mapQuerySuffix}`,
+                                    )}
+                                    className={`text-xs px-3 py-1.5 rounded-xl border flex items-center gap-1.5 shadow-sm transition-all ${isDarkMode ? "bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-sky-300 hover:border-sky-800" : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50 hover:text-[#5D737E] hover:border-[#5D737E]/30"}`}
                                   >
-                                    {chain.location}
-                                  </span>
-                                </a>
-                              ))}
+                                    <span className="font-bold">
+                                      {chain.name}
+                                    </span>
+                                    <span
+                                      className={`text-xs border-l pl-2 ${isDarkMode ? "border-neutral-600 text-neutral-500" : "text-stone-400 border-stone-200"}`}
+                                    >
+                                      {chain.location}
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
+                        )}
+                      </div>
+                    );
+                  })
                 ) : (
-                  <div className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}>
-                    <Store className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`} />
-                    <p className={`text-sm font-medium ${theme.textSec}`}>暫無商家資訊</p>
-                    <p className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}>敬請期待更多內容</p>
+                  <div
+                    className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}
+                  >
+                    <Store
+                      className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                    />
+                    <p className={`text-sm font-medium ${theme.textSec}`}>
+                      暫無商家資訊
+                    </p>
+                    <p
+                      className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}
+                    >
+                      敬請期待更多內容
+                    </p>
                   </div>
                 )}
               </div>
@@ -5345,49 +5598,59 @@ const ItineraryApp = () => {
               <div className="space-y-4">
                 {usefulLinks && usefulLinks.length > 0 ? (
                   usefulLinks.map((section, idx) => (
-                  <div key={idx}>
-                    <h3
-                      className={`text-xs font-bold mb-2.5 px-3 py-1.5 rounded-xl w-fit border ${isDarkMode ? "text-blue-300 bg-blue-900/20 border-blue-800/30" : "text-[#3B5998] bg-[#E8F0FE] border-blue-100"}`}
-                    >
-                      {section.category}
-                    </h3>
-                    <div className="space-y-3">
-                      {section.items.map((item, i) => (
-                        <a
-                          key={i}
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`flex items-center gap-3 p-4 backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-98 group ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
-                        >
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner group-hover:scale-105 transition-transform ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
+                    <div key={idx}>
+                      <h3
+                        className={`text-xs font-bold mb-2.5 px-3 py-1.5 rounded-xl w-fit border ${isDarkMode ? "text-blue-300 bg-blue-900/20 border-blue-800/30" : "text-[#3B5998] bg-[#E8F0FE] border-blue-100"}`}
+                      >
+                        {section.category}
+                      </h3>
+                      <div className="space-y-3">
+                        {section.items.map((item, i) => (
+                          <a
+                            key={i}
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-3 p-4 backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-98 group ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
                           >
-                            {item.icon}
-                          </div>
-                          <div className="flex-1">
                             <div
-                              className={`text-sm font-bold flex items-center gap-1.5 group-hover:text-opacity-80 transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-sky-300" : "text-[#37474F] group-hover:text-[#5D737E]"}`}
+                              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner group-hover:scale-105 transition-transform ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
                             >
-                              {item.title}
-                              <ExternalLink
-                                className={`w-3 h-3 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
-                              />
+                              {item.icon}
                             </div>
-                            <p className={`text-xs mt-0.5 ${theme.textSec}`}>
-                              {item.desc}
-                            </p>
-                          </div>
-                        </a>
-                      ))}
+                            <div className="flex-1">
+                              <div
+                                className={`text-sm font-bold flex items-center gap-1.5 group-hover:text-opacity-80 transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-sky-300" : "text-[#37474F] group-hover:text-[#5D737E]"}`}
+                              >
+                                {item.title}
+                                <ExternalLink
+                                  className={`w-3 h-3 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                                />
+                              </div>
+                              <p className={`text-xs mt-0.5 ${theme.textSec}`}>
+                                {item.desc}
+                              </p>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))
                 ) : (
-                  <div className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}>
-                    <LinkIcon className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`} />
-                    <p className={`text-sm font-medium ${theme.textSec}`}>暫無實用連結</p>
-                    <p className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}>敬請期待更多內容</p>
+                  <div
+                    className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}
+                  >
+                    <LinkIcon
+                      className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                    />
+                    <p className={`text-sm font-medium ${theme.textSec}`}>
+                      暫無實用連結
+                    </p>
+                    <p
+                      className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}
+                    >
+                      敬請期待更多內容
+                    </p>
                   </div>
                 )}
               </div>
@@ -5467,22 +5730,20 @@ const ItineraryApp = () => {
                     ? "scale-110 ring-4 ring-opacity-20 -translate-y-1"
                     : "hover:scale-105"
                 }
-                ${
-                  (() => {
-                    const styles = {
-                      amber: isDarkMode
-                        ? "bg-gradient-to-tr from-amber-600/90 to-amber-500/90 ring-amber-500/40 border-amber-400/20 shadow-amber-900/40"
-                        : "bg-gradient-to-tr from-amber-400 to-amber-500 ring-amber-400/40 border-amber-300/40 shadow-amber-500/40",
-                      sky: isDarkMode
-                        ? "bg-gradient-to-tr from-sky-600/90 to-sky-500/90 ring-sky-500/40 border-sky-400/20 shadow-sky-900/40"
-                        : "bg-gradient-to-tr from-sky-400 to-sky-500 ring-sky-400/40 border-sky-300/40 shadow-sky-500/40",
-                      default: isDarkMode
-                        ? "bg-gradient-to-tr from-stone-600 to-stone-500 ring-stone-500/40 border-stone-400/20"
-                        : "bg-gradient-to-tr from-stone-400 to-stone-500 ring-stone-400/40 border-stone-300/40",
-                    };
-                    return styles[cAccent] || styles.default;
-                  })()
-                }
+                ${(() => {
+                  const styles = {
+                    amber: isDarkMode
+                      ? "bg-gradient-to-tr from-amber-600/90 to-amber-500/90 ring-amber-500/40 border-amber-400/20 shadow-amber-900/40"
+                      : "bg-gradient-to-tr from-amber-400 to-amber-500 ring-amber-400/40 border-amber-300/40 shadow-amber-500/40",
+                    sky: isDarkMode
+                      ? "bg-gradient-to-tr from-sky-600/90 to-sky-500/90 ring-sky-500/40 border-sky-400/20 shadow-sky-900/40"
+                      : "bg-gradient-to-tr from-sky-400 to-sky-500 ring-sky-400/40 border-sky-300/40 shadow-sky-500/40",
+                    default: isDarkMode
+                      ? "bg-gradient-to-tr from-stone-600 to-stone-500 ring-stone-500/40 border-stone-400/20"
+                      : "bg-gradient-to-tr from-stone-400 to-stone-500 ring-stone-400/40 border-stone-300/40",
+                  };
+                  return styles[cAccent] || styles.default;
+                })()}
               `}
             >
               <MessageSquare className="w-6 h-6 text-white drop-shadow-md" />
@@ -5602,24 +5863,33 @@ const ItineraryApp = () => {
           onClose={() => setIsTestMode(false)}
           testDateTime={testDateTime}
           onDateTimeChange={(newDateTime) => {
-            console.log(`🧪 更新時間: ${testDateTime.toLocaleString('zh-TW')} -> ${newDateTime.toLocaleString('zh-TW')}`);
+            console.log(
+              `🧪 更新時間: ${testDateTime.toLocaleString("zh-TW")} -> ${newDateTime.toLocaleString("zh-TW")}`,
+            );
             setTestDateTime(newDateTime);
           }}
           testLatitude={testLatitude}
           testLongitude={testLongitude}
           onLocationChange={(coords) => {
-            console.log(`🧪 更新位置: (${testLatitude}, ${testLongitude}) -> (${coords.lat}, ${coords.lon})`);
+            console.log(
+              `🧪 更新位置: (${testLatitude}, ${testLongitude}) -> (${coords.lat}, ${coords.lon})`,
+            );
             setTestLatitude(coords.lat);
             setTestLongitude(coords.lon);
             // 測試模式下主動抓取新座標的天氣
             getUserLocationWeather({
               isSilent: false,
-              coords: { latitude: coords.lat, longitude: coords.lon }
+              coords: { latitude: coords.lat, longitude: coords.lon },
             });
           }}
           testWeatherOverride={testWeatherOverride}
           onWeatherChange={(newOverride) => {
-            console.log(`🧪 更新天氣覆蓋: `, testWeatherOverride, ` -> `, newOverride);
+            console.log(
+              `🧪 更新天氣覆蓋: `,
+              testWeatherOverride,
+              ` -> `,
+              newOverride,
+            );
             setTestWeatherOverride(newOverride);
           }}
           theme={theme}
@@ -5734,55 +6004,68 @@ const ItineraryApp = () => {
           )}
         </AnimatePresence>
 
-      {/* 天氣詳情彈窗 (Weather Detail Modal) */}
-      {showWeatherDetail && detailWeatherData && (
-        <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="absolute inset-0" onClick={() => setShowWeatherDetail(false)} />
-          
-          <div className="relative z-10 w-full max-w-[400px]">
-            <WeatherDetail
-              weather={detailWeatherData}
-              activeDay={activeDay}
-              simulatedDate={frozenTestDateTime || (isTestMode ? testDateTime : new Date())}
-              loading={weatherDetailLoading}
-              isDarkMode={isDarkMode}
-              theme={currentTheme}
-              onClose={() => setShowWeatherDetail(false)}
-              onRefresh={() => {
-                if (activeDay === -1) {
-                  getUserLocationWeather({ isSilent: false });
-                } else {
-                  showToast("已更新預報資訊");
-                }
-              }}
-              advice={(() => {
-                if (!userWeather?.temp || !detailWeatherData.temp) return null;
-                const targetTemp = detailWeatherData.daily?.temperature_2m_max?.[0] || detailWeatherData.temp;
-                const diff = targetTemp - userWeather.temp;
-                const absDiff = Math.abs(diff).toFixed(0);
-                const isColder = diff < 0;
-                const code = detailWeatherData.weatherCode;
-                
-                const isRainy = [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code);
-                const isSnowy = [71, 73, 75, 77, 85, 86].includes(code);
-                
-                let extraAdvice = "建議穿著輕便";
-                if (isColder && absDiff > 3) extraAdvice = "請加強保暖";
-                if (isRainy) extraAdvice += "並攜帶雨具";
-                if (isSnowy) extraAdvice += "並穿著防滑鞋";
-
-                return (
-                  <>
-                    天氣為 <b>{detailWeatherData.desc}</b>，
-                    氣溫比目前{isColder ? "低" : "高"} <b style={{ color: isColder ? '#007aff' : '#ff9500' }}>{absDiff}°C</b>，
-                    {extraAdvice}。
-                  </>
-                );
-              })()}
+        {/* 天氣詳情彈窗 (Weather Detail Modal) */}
+        {showWeatherDetail && detailWeatherData && (
+          <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+            <div
+              className="absolute inset-0"
+              onClick={() => setShowWeatherDetail(false)}
             />
+
+            <div className="relative z-10 w-full max-w-[400px]">
+              <WeatherDetail
+                weather={detailWeatherData}
+                activeDay={activeDay}
+                simulatedDate={
+                  frozenTestDateTime || (isTestMode ? testDateTime : new Date())
+                }
+                loading={weatherDetailLoading}
+                isDarkMode={isDarkMode}
+                theme={currentTheme}
+                onClose={() => setShowWeatherDetail(false)}
+                onRefresh={() => {
+                  if (activeDay === -1) {
+                    getUserLocationWeather({ isSilent: false });
+                  } else {
+                    showToast("已更新預報資訊");
+                  }
+                }}
+                advice={(() => {
+                  if (!userWeather?.temp || !detailWeatherData.temp)
+                    return null;
+                  const targetTemp =
+                    detailWeatherData.daily?.temperature_2m_max?.[0] ||
+                    detailWeatherData.temp;
+                  const diff = targetTemp - userWeather.temp;
+                  const absDiff = Math.abs(diff).toFixed(0);
+                  const isColder = diff < 0;
+                  const code = detailWeatherData.weatherCode;
+
+                  const isRainy = [
+                    51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99,
+                  ].includes(code);
+                  const isSnowy = [71, 73, 75, 77, 85, 86].includes(code);
+
+                  let extraAdvice = "建議穿著輕便";
+                  if (isColder && absDiff > 3) extraAdvice = "請加強保暖";
+                  if (isRainy) extraAdvice += "並攜帶雨具";
+                  if (isSnowy) extraAdvice += "並穿著防滑鞋";
+
+                  return (
+                    <>
+                      天氣為 <b>{detailWeatherData.desc}</b>， 氣溫比目前
+                      {isColder ? "低" : "高"}{" "}
+                      <b style={{ color: isColder ? "#007aff" : "#ff9500" }}>
+                        {absDiff}°C
+                      </b>
+                      ，{extraAdvice}。
+                    </>
+                  );
+                })()}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );
