@@ -21,10 +21,9 @@
 [class*="backdrop-blur-xl"],
 [class*="backdrop-blur-2xl"] {
   /* 減少重繪：使用 transition 而不是複雜的 animation */
-  transition:
-    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   /* 確保 GPU 層穩定 */
   contain: layout style paint;
 }
@@ -69,9 +68,7 @@
 
 /* 防止 iOS Safari 在輸入時自動縮放 (字體小於 16px 會觸發) */
 @media screen and (max-width: 768px) {
-  input,
-  textarea,
-  select {
+  input, textarea, select {
     font-size: 16px;
   }
 }

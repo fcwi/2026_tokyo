@@ -625,9 +625,10 @@ const AiTab = ({
           <div className="flex items-center gap-2">
             {/* 圖片上傳按鈕 */}
             <label
-              className={`p-2.5 rounded-xl cursor-pointer transition-all active:scale-95 flex-shrink-0 border ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-neutral-300 hover:bg-neutral-600 hover:text-white" : "bg-stone-100 border-stone-200 text-stone-500 hover:bg-stone-200 hover:text-stone-700"}`}
+              className={`w-10 h-10 rounded-full cursor-pointer transition-all active:scale-95 flex-shrink-0 border flex items-center justify-center shadow-sm ${isDarkMode ? "bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200" : "bg-white border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700"}`}
+              title="上傳圖片"
             >
-              <ImageIcon className="w-5 h-5" />
+              <ImageIcon className="w-4.5 h-4.5" />
               <input
                 type="file"
                 accept="image/*"
@@ -639,7 +640,7 @@ const AiTab = ({
 
             {/* 輸入框 */}
             <div
-              className={`flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all focus-within:ring-2 focus-within:ring-offset-1 focus-within:ring-sky-200 ${isDarkMode ? "bg-neutral-900 border-neutral-700 focus-within:ring-offset-neutral-900" : "bg-white border-stone-200"}`}
+              className={`flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all focus-within:ring-2 focus-within:ring-offset-1 ${isDarkMode ? "bg-neutral-900 border-neutral-700 focus-within:ring-sky-500/30 focus-within:ring-offset-neutral-900" : "bg-white border-stone-200 focus-within:ring-sky-200"}`}
             >
               <input
                 type="text"
@@ -662,27 +663,33 @@ const AiTab = ({
               />
 
               {/* 語音輸入按鈕群 */}
-              <div className="flex items-center gap-1 border-l pl-2 border-stone-200 dark:border-neutral-700">
-                <button
-                  onClick={() => toggleListening("zh-TW")}
-                  className={`p-1.5 rounded-lg transition-all active:scale-90 relative ${listeningLang === "zh-TW" ? "text-rose-500 bg-rose-50 dark:bg-rose-900/20 ring-2 ring-rose-200 dark:ring-rose-800" : "text-stone-400 hover:text-stone-600 dark:text-neutral-500 dark:hover:text-neutral-300"}`}
-                  title="中文語音輸入"
-                >
-                  <Mic className="w-4 h-4" />
-                  <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[9px] font-bold">
+              <div className="flex items-center gap-2 border-l pl-2.5 border-stone-200 dark:border-neutral-700">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => toggleListening("zh-TW")}
+                    className={`w-8 h-8 rounded-lg transition-all active:scale-90 flex items-center justify-center ${listeningLang === "zh-TW" ? "text-white bg-rose-500 shadow-md" : isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800" : "text-stone-400 hover:text-stone-600 hover:bg-stone-100"}`}
+                    title="中文語音輸入"
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+                  <span
+                    className={`text-[10px] font-bold ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                  >
                     中
                   </span>
-                </button>
-                <button
-                  onClick={() => toggleListening(tripConfig.language.code)}
-                  className={`p-1.5 rounded-lg transition-all active:scale-90 relative ${listeningLang === tripConfig.language.code ? "text-sky-500 bg-sky-50 dark:bg-sky-900/20 ring-2 ring-sky-200 dark:ring-sky-800" : "text-stone-400 hover:text-stone-600 dark:text-neutral-500 dark:hover:text-neutral-300"}`}
-                  title={`${tripConfig.language.label}語音輸入`}
-                >
-                  <Mic className="w-4 h-4" />
-                  <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[9px] font-bold">
-                    {tripConfig.language.label.charAt(0)}
-                  </span>
-                </button>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => toggleListening(tripConfig.language.code)}
+                    className={`w-8 h-8 rounded-lg transition-all active:scale-90 flex items-center justify-center ${listeningLang === tripConfig.language.code ? "text-white bg-sky-500 shadow-md" : isDarkMode ? "text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800" : "text-stone-400 hover:text-stone-600 hover:bg-stone-100"}`}
+                    title={`${tripConfig.language.label}語音輸入`}
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+                  <Globe
+                    className={`w-3 h-3 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                  />
+                </div>
               </div>
             </div>
 
