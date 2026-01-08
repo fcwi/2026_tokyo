@@ -41,3 +41,42 @@ export const getWeatherData = (code) => {
   if ([95, 96, 99].includes(code)) return { text: "雷雨", advice: "請盡量待在室內。" };
   return { text: "晴時多雲", advice: "注意日夜溫差。" };
 };
+
+/**
+ * [新增] 根據經緯度與 POI 資訊構建分享文字
+ */
+export const buildShareTextLogic = (latitude, longitude, landmark) => {
+  const baseMessage = `我在這裡${landmark ? ` (靠近 ${landmark})` : ""}！`;
+  const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+  return {
+    baseMessage,
+    fullText: `${baseMessage}\n點擊查看位置：${mapUrl}`
+  };
+};
+
+/**
+ * [新增] 取得特定天數的預設地點 Key
+ */
+export const getDailyLocationKey = (dayIndex, itineraryData, tripConfig) => {
+  if (dayIndex === -1 || !itineraryData[dayIndex]) {
+    return tripConfig.locations[0].key;
+  }
+  return itineraryData[dayIndex].locationKey || tripConfig.locations[0].key;
+};
+
+/**
+ * [新增] AI 歡迎訊息範本
+ */
+export const getAiWelcomeTemplate = (mode, tripConfig) => {
+  const { name, label } = tripConfig.language;
+  if (mode === "translate") {
+    return {
+      role: "model",
+      text: `您好！我是您的隨身 AI 口譯員 🌍\n\n💡 口譯模式功能：\n🎤 點「中」說話：我會將中文翻成${name} (附拼音)。\n🎤 點「${label}」說話：錄下對方說的${name}，我會直接翻成中文！`,
+    };
+  }
+  return {
+    role: "model",
+    text: `您好！我是您的專屬 AI 導遊 ✨\n我已經熟讀了您的行程。\n\n💡 導遊模式功能：\n🎤 點「中」說話：您可以詢問行程細節、交通方式或周邊推薦。`,
+  };
+};

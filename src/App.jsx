@@ -78,8 +78,12 @@ import {
   flattenGuides, 
   flattenShops, 
   escapeRegex, 
-  getWeatherData 
+  getWeatherData,
+  getDailyLocationKey,    // 新增
+  getAiWelcomeTemplate,  // 新增
+  buildShareTextLogic    // 新增
 } from "./utils/itineraryHelpers.js";
+
 
 // 抑制 ESLint 對於 JSX 中 motion 未使用的誤判
 // eslint-disable-next-line no-unused-vars
@@ -960,23 +964,6 @@ const ItineraryApp = () => {
   const CACHE_MAX_SIZE = 50;
   const CACHE_EXPIRY_MS = 3600000;
 
-  const getWelcomeMessage = (mode) => {
-    const langName = tripConfig.language.name;
-    const langLabel = tripConfig.language.label;
-
-    if (mode === "translate") {
-      return {
-        role: "model",
-        text: `您好！我是您的隨身 AI 口譯員 🌍\n\n💡 口譯模式功能：\n🎤 點「中」說話：我會將中文翻成${langName} (附拼音)。\n🎤 點「${langLabel}」說話：錄下對方說的${langName}，我會直接翻成中文！`,
-      };
-    } else {
-      return {
-        role: "model",
-        text: `您好！我是您的專屬 AI 導遊 ✨\n我已經熟讀了您的行程。\n\n💡 導遊模式功能：\n🎤 點「中」說話：您可以詢問行程細節、交通方式或周邊推薦。\n(此模式專注於行程導覽，請切換模式以使用翻譯功能)`,
-      };
-    }
-  };
-
   const [aiMode, setAiMode] = useState("translate");
   const getStorageKey = (mode) => `trip_chat_history_${mode}`;
   const [messages, setMessages] = useState(() => {
@@ -986,7 +973,7 @@ const ItineraryApp = () => {
     } catch (e) {
       console.error("讀取聊天紀錄失敗", e);
     }
-    return [getWelcomeMessage("translate")];
+    return [getAiWelcomeTemplate("translate", tripConfig)];
   });
 
   useEffect(() => {
@@ -1121,12 +1108,6 @@ const ItineraryApp = () => {
     },
     [isDarkMode, cBase, currentTheme],
   );
-
-  const getDailyLocation = React.useCallback((dayIndex) => {
-    if (dayIndex === -1 || !itineraryData[dayIndex])
-      return tripConfig.locations[0].key;
-    return itineraryData[dayIndex].locationKey || tripConfig.locations[0].key;
-  }, []);
 
   const { tripStatus, daysUntilTrip, currentTripDayIndex } =
     React.useMemo(() => {
@@ -2292,13 +2273,17 @@ const ItineraryApp = () => {
     debugLog(`🏁 [最終輸出] Landmark: "${finalLandmark}"`);
     debugGroupEnd();
 
-    const baseMessage = `我在這裡${finalLandmark ? ` (靠近 ${finalLandmark})` : ""}！`;
-    const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    const { baseMessage, fullText } = buildShareTextLogic(
+      latitude, 
+      longitude, 
+      finalLandmark, 
+      locationName
+    );
     return {
       baseMessage,
-      fullText: `${baseMessage}\n點擊查看位置：${mapUrl}`,
+      fullText,
       finalLandmark,
-      tag,
+      tag, // tag 保留在主組件處理，因為它與 POI 來源狀態有關
     };
   };
 
@@ -2311,7 +2296,7 @@ const ItineraryApp = () => {
     if (saved) {
       setMessages(JSON.parse(saved));
     } else {
-      setMessages([getWelcomeMessage(newMode)]);
+      setMessages([getAiWelcomeTemplate(newMode, tripConfig)]);
     }
   };
 
@@ -2356,7 +2341,7 @@ const ItineraryApp = () => {
         `確定要清除「${aiMode === "translate" ? "口譯" : "導遊"}」的所有紀錄嗎？`,
       )
     ) {
-      const resetMsg = getWelcomeMessage(aiMode);
+      const resetMsg = getAiWelcomeTemplate(aiMode, tripConfig);
       setMessages([resetMsg]);
       localStorage.removeItem(getStorageKey(aiMode));
     }
@@ -2545,11 +2530,11 @@ const ItineraryApp = () => {
     () => (current?.events ? current.events : []),
     [current?.events],
   );
-  const currentLocation = getDailyLocation(activeDay);
+  const currentLocation = getDailyLocationKey(activeDay, itineraryData, tripConfig);
 
   // 使用 useMemo 鎖定天氣資料，優化滑動效能並處理測試模式覆蓋
   const displayWeather = React.useMemo(() => {
-    const currentLocation = getDailyLocation(activeDay);
+    const currentLocation = getDailyLocationKey(activeDay, itineraryData, tripConfig);
     const weatherData = weatherForecast[currentLocation];
     const effectiveWeatherOverride =
       frozenTestWeatherOverride || testWeatherOverride;
@@ -2601,7 +2586,6 @@ const ItineraryApp = () => {
     isTestMode,
     testWeatherOverride,
     frozenTestWeatherOverride,
-    getDailyLocation,
   ]);
 
   // 統一主題風格，根據天氣狀況動態調整環境色
@@ -2718,7 +2702,7 @@ const ItineraryApp = () => {
         : null;
     }
 
-    const locKey = getDailyLocation(activeDay);
+    const locKey = getDailyLocationKey(activeDay, itineraryData, tripConfig);
     const forecast = weatherForecast[locKey];
     if (!forecast) return null;
 
@@ -2743,7 +2727,6 @@ const ItineraryApp = () => {
     activeDay,
     userWeather,
     weatherForecast,
-    getDailyLocation,
   ]);
 
   const weatherDetailLoading =
@@ -3389,7 +3372,7 @@ const ItineraryApp = () => {
                               targetName = "明天";
                             } else if (tripStatus === "before") {
                               targetDayIndex = 0;
-                              const firstLocKey = getDailyLocation(0);
+                              const firstLocKey = getDailyLocationKey(0, itineraryData, tripConfig);
                               const locObj = tripConfig.locations.find(
                                 (l) => l.key === firstLocKey,
                               );
@@ -3404,7 +3387,7 @@ const ItineraryApp = () => {
                               );
                             }
 
-                            const targetLoc = getDailyLocation(targetDayIndex);
+                            const targetLoc = getDailyLocationKey(targetDayIndex, itineraryData, tripConfig);
                             const forecast = weatherForecast[targetLoc];
 
                             if (!forecast || !forecast.temperature_2m_max) {
@@ -3716,7 +3699,7 @@ const ItineraryApp = () => {
                             <div
                               className={`flex items-center gap-1.5 text-xs font-bold mb-1.5 uppercase tracking-wide ${theme.textSec}`}
                             >
-                              <Calendar className="w-3.5 h-3.5" /> 預報 (
+                              <Calendar className="w-3.5 h-3.5" /> 
                               <span className="flex items-center gap-1">
                                 {tripConfig.locations.find(
                                   (l) => l.key === currentLocation,
@@ -3729,7 +3712,6 @@ const ItineraryApp = () => {
                                   <ExternalLink className="w-3.5 h-3.5" />
                                 </button>
                               </span>
-                              )
                             </div>
                             <div className="flex items-center gap-4">
                               <div
