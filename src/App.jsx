@@ -112,6 +112,9 @@ import FlightInfoCard from "./components/FlightInfoCard.jsx";
 // ChecklistCard 組件
 import ChecklistCard from "./components/ChecklistCard.jsx";
 
+// 自定義 Hook：匯率管理
+import { useCurrency } from "./hooks/useCurrency.js";
+
 // 開發環境偵錯開關
 const isDev = true;
 
@@ -175,15 +178,7 @@ const ItineraryApp = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false); // 新增：追蹤地圖彈窗狀態
-  const [rateData, setRateData] = useState({
-    current: null,
-    trend: "neutral",
-    diff: 0,
-    loading: true,
-    error: false,
-  });
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
-  const { code, target } = tripConfig.currency;
 
   useEffect(() => {
     const checkMobile = () => {
@@ -210,55 +205,9 @@ const ItineraryApp = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isOnline) {
-      setRateData((prev) => ({ ...prev, loading: false }));
-      return;
-    }
-
-    setRateData((prev) => ({ ...prev, loading: true, error: false }));
-
-    const fetchRates = async () => {
-      try {
-        const nowRes = await fetch(
-          `https://latest.currency-api.pages.dev/v1/currencies/${code}.json`,
-        );
-        const nowData = await nowRes.json();
-        const currentRate = nowData[code][target.toLowerCase()];
-
-        const pastDate = new Date();
-        pastDate.setDate(pastDate.getDate() - 7);
-        const dateStr = pastDate.toISOString().split("T")[0];
-
-        const pastRes = await fetch(
-          `https://try.readme.io/https://${dateStr}.currency-api.pages.dev/v1/currencies/${code}.json`,
-        );
-        let pastRate = currentRate;
-        if (pastRes.ok) {
-          const pastData = await pastRes.json();
-          pastRate = pastData[code][target.toLowerCase()];
-        }
-
-        const diff = currentRate - pastRate;
-        let trend = "neutral";
-        if (diff > 0.0001) trend = "up";
-        if (diff < -0.0001) trend = "down";
-
-        setRateData({
-          current: currentRate,
-          trend,
-          diff,
-          loading: false,
-          error: false,
-        });
-      } catch (err) {
-        console.error("匯率抓取失敗:", err);
-        setRateData((prev) => ({ ...prev, loading: false, error: true }));
-      }
-    };
-
-    fetchRates();
-  }, [code, target, isOnline]);
+    // 使用自定義 Hook 簡化狀態管理
+  const { code, target } = tripConfig.currency;
+  const rateData = useCurrency(code, target, isOnline);
 
   const [toolKey, setToolKey] = useState("");
   const [toolPwd, setToolPwd] = useState("");
