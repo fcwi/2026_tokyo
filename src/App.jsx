@@ -73,6 +73,13 @@ import {
   tripConfig,
   checklistData,
 } from "./tripdata_2026_karuizawa.jsx";
+import { 
+  flattenItinerary, 
+  flattenGuides, 
+  flattenShops, 
+  escapeRegex, 
+  getWeatherData 
+} from "./utils/itineraryHelpers.js";
 
 // 抑制 ESLint 對於 JSX 中 motion 未使用的誤判
 // eslint-disable-next-line no-unused-vars
@@ -258,7 +265,6 @@ const ItineraryApp = () => {
   const [toolResult, setToolResult] = useState("");
   const [keyType, setKeyType] = useState("gemini");
 
-  const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const { keywordsSet, combinedRegex } = React.useMemo(() => {
     const allKeywordsRaw = [
       ...itineraryData.flatMap((day) => day.events.map((e) => e.title)),
@@ -1103,27 +1109,6 @@ const ItineraryApp = () => {
     setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
   }, []);
 
-  const flattenItinerary = (data) =>
-    data
-      .map((day) => {
-        const events = day.events
-          .map((e) => `  - ${e.time} ${e.title}: ${e.desc}`)
-          .join("\n");
-        return `📅 ${day.day} (${day.locationKey}):\n${events}`;
-      })
-      .join("\n\n");
-  const flattenGuides = (data) =>
-    data.map((g) => `📘 ${g.title}: ${g.summary}`).join("\n");
-  const flattenShops = (data) =>
-    data
-      .map((area) => {
-        const shops = area.mainShops
-          .map((s) => `  * ${s.name}: ${s.note}`)
-          .join("\n");
-        return `🛍️ ${area.area}:\n${shops}`;
-      })
-      .join("\n\n");
-
   const itineraryFlat = React.useMemo(
     () => flattenItinerary(itineraryData),
     [],
@@ -1138,47 +1123,6 @@ const ItineraryApp = () => {
   };
 
   // 2. Get Weather Info from WMO Code
-  // 純粹的數據版本，不依賴 isDarkMode（用於邏輯層）
-  const getWeatherData = React.useCallback(
-    (code) => {
-      if (code === 0)
-        return {
-          text: "晴朗",
-          advice: "天氣很好，注意防曬。",
-        };
-      if ([1, 2, 3].includes(code))
-        return {
-          text: "多雲",
-          advice: "舒適，適合戶外。",
-        };
-      if ([45, 48].includes(code))
-        return {
-          text: "有霧",
-          advice: "能見度低請小心。",
-        };
-      if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code))
-        return {
-          text: "有雨",
-          advice: "請務必攜帶雨具。",
-        };
-      if ([71, 73, 75, 77, 85, 86].includes(code))
-        return {
-          text: "降雪",
-          advice: "請穿防滑雪靴。",
-        };
-      if ([95, 96, 99].includes(code))
-        return {
-          text: "雷雨",
-          advice: "請盡量待在室內。",
-        };
-      return {
-        text: "晴時多雲",
-        advice: "注意日夜溫差。",
-      };
-    },
-    [], // 不依賴任何外部狀態
-  );
-
   // UI 版本，包含圖示和顏色（依賴 isDarkMode，用於顯示層）
   const getWeatherInfo = React.useCallback(
     (code) => {
@@ -1226,7 +1170,7 @@ const ItineraryApp = () => {
         advice: data.advice,
       };
     },
-    [isDarkMode, cBase, currentTheme, getWeatherData],
+    [isDarkMode, cBase, currentTheme],
   );
 
   const getDailyLocation = React.useCallback((dayIndex) => {
@@ -1577,7 +1521,6 @@ const ItineraryApp = () => {
       }
     },
     [
-      getWeatherData,
       showToast,
       isAppReady,
       isTestMode,
@@ -2852,7 +2795,6 @@ const ItineraryApp = () => {
     userWeather,
     weatherForecast,
     getDailyLocation,
-    getWeatherData,
   ]);
 
   const weatherDetailLoading =
