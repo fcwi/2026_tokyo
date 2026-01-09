@@ -150,6 +150,7 @@ const FinanceScreen = ({
 
     if (apiKey) {
       setIsScanning(true);
+      setIsScanning(true);
       setShowReceiptModal(true);
       setReceiptItems([]);
       setReceiptImages([]);
@@ -439,14 +440,18 @@ const FinanceScreen = ({
     );
   }
 
+  // ★ UI 修改重點：
+  // 1. 改為 min-h-[calc(100vh-130px)]：允許卡片隨內容增長，不再強制固定高度。
+  // 2. 移除 overflow-hidden：讓捲動行為回到外層的 window。
+  // 3. 列表區移除 overflow-y-auto：這樣列表變長時，會撐開卡片，輸入框自然會被推到頁面最下方，需要捲動頁面才能看到。
   return (
-    <div className={`px-4 pb-32 animate-fadeIn min-h-[calc(100vh-140px)]`}>
+    <div className={`px-4 pb-28 animate-fadeIn flex flex-col min-h-[calc(100vh-130px)]`}>
       
-      {/* 主卡片容器：自然高度，無 overflow 限制 */}
-      <div className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}>
+      {/* 主卡片容器：flex-1 確保內容少時撐開高度，但移除 overflow 讓內容多時可延伸 */}
+      <div className={`flex-1 flex flex-col backdrop-blur-2xl border rounded-[2rem] shadow-xl transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}>
         
-        {/* Header - 可選：加上 sticky top-0 讓它吸附頂部，或移除讓它隨頁面捲動 */}
-        <div className={`sticky top-0 z-10 p-4 border-b backdrop-blur-xl transition-colors duration-300 ${isDarkMode ? 'border-neutral-700 bg-neutral-900/95' : 'border-stone-200/50 bg-white/95'}`}>
+        {/* Header */}
+        <div className={`shrink-0 p-4 border-b backdrop-blur-xl transition-colors duration-300 ${isDarkMode ? 'border-neutral-700 bg-neutral-900/95' : 'border-stone-200/50 bg-white/95'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-2xl shadow-sm border border-white/50">{user.avatar}</div>
@@ -476,8 +481,8 @@ const FinanceScreen = ({
           </div>
         </div>
 
-        {/* 記帳列表 - 移除 overflow 和高度限制，讓內容自然撐高 */}
-        <div className="p-4 space-y-3 min-h-[40vh]">
+        {/* 列表區域：移除 overflow-y-auto，讓內容自然撐開卡片 */}
+        <div className="flex-1 p-4 space-y-3">
           {records.filter(r => r.type === mode).length === 0 && (
              <div className={`flex flex-col items-center justify-center py-20 opacity-40 ${theme.textSec}`}>
                  <Wallet className="w-12 h-12 mb-2 stroke-1"/>
@@ -581,8 +586,8 @@ const FinanceScreen = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Footer 輸入區 - 參考 ChatInput.jsx 樣式，緊接在列表後方 */}
-        <div className={`border-t backdrop-blur-md transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/90 border-neutral-700' : 'bg-white/90 border-stone-200/80'}`}>
+        {/* Footer 輸入區 - 固定在卡片內容的最下方 */}
+        <div className={`shrink-0 border-t backdrop-blur-md transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/90 border-neutral-700' : 'bg-white/90 border-stone-200/80'}`}>
           <div className="p-2">
             {/* 圖片預覽區 */}
             {noteImages.length > 0 && (
@@ -605,7 +610,7 @@ const FinanceScreen = ({
             {/* 隱藏的檔案選擇器 */}
             <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" multiple />
 
-            {/* 輸入控制區 - 參考 ChatInput 的佈局 */}
+            {/* 輸入控制區 */}
             <div className="flex items-end gap-2">
                 {/* 相機按鈕 */}
                 <button 
@@ -616,7 +621,7 @@ const FinanceScreen = ({
                     <Camera className="w-5 h-5" />
                 </button>
 
-                {/* 輸入框容器 - 參考 ChatInput 的 textarea 風格 */}
+                {/* 輸入框容器 */}
                 <div className="flex-1 min-w-0">
                     {mode === 'finance' && (
                         <div className="mb-1">
@@ -651,7 +656,7 @@ const FinanceScreen = ({
                     />
                 </div>
 
-                {/* 發送按鈕 - 參考 ChatInput 的樣式 */}
+                {/* 發送按鈕 */}
                 <button 
                     onClick={() => {
                         handleManualSubmit();
