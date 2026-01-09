@@ -64,6 +64,7 @@ import {
   Lock,
   Unlock,
   Key,
+  DollarSign,
 } from "lucide-react";
 import {
   itineraryData,
@@ -94,6 +95,9 @@ import CalculatorModal from "./components/CalculatorModal.jsx";
 import TestModePanel from "./components/TestModePanel.jsx";
 import WeatherDetail from "./components/WeatherDetail.jsx";
 
+// 財務管理主畫面
+import FinanceNote from "./components/FinanceNote.jsx";
+
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
 
@@ -109,6 +113,12 @@ const ENCRYPTED_API_KEY_PAYLOAD = (
 ).trim();
 const ENCRYPTED_MAPS_KEY_PAYLOAD = (
   import.meta.env.VITE_ENCODED_MAPS_KEY || ""
+).trim();
+const ENCRYPTED_GAS_URL_PAYLOAD = (
+  import.meta.env.VITE_ENCODED_GAS_URL || ""
+).trim();
+const ENCRYPTED_GAS_TOKEN_PAYLOAD = (
+  import.meta.env.VITE_ENCODED_GAS_TOKEN || ""
 ).trim();
 
 //  FlightInfoCard 組件
@@ -147,6 +157,10 @@ const ItineraryApp = () => {
   const [password, setPassword] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [mapsApiKey, setMapsApiKey] = useState("");
+  const [gasUrl, setGasUrl] = useState(""); 
+  const [gasToken, setGasToken] = useState("");
+  // const [gasUrl] = useState("https://script.google.com/macros/s/AKfycbzT2nqj-bq5OUoRT6M2j7V4rxa6bTE5DWCxCpey65C54AG_Mnzz1XMFIwxXlsro8whR/exec"); // 部署後的 URL (正式版建議加密)
+  // const [gasToken] = useState("GAS_TOKEN_FCWI");     // 設定的密碼 (正式版建議加密)
   const [authError, setAuthError] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showEncryptTool, setShowEncryptTool] = useState(false);
@@ -632,6 +646,23 @@ const ItineraryApp = () => {
         } catch (e) {
           console.warn("Maps Key 解密失敗", e);
         }
+      }
+      if (ENCRYPTED_GAS_URL_PAYLOAD) {
+        try {
+          const decryptedUrl = await CryptoUtils.decrypt(ENCRYPTED_GAS_URL_PAYLOAD, inputPwd);
+          if (decryptedUrl && decryptedUrl.startsWith("http")) {
+            setGasUrl(decryptedUrl);
+          }
+        } catch (e) { console.warn("GAS URL 解密失敗", e); }
+      }
+
+      if (ENCRYPTED_GAS_TOKEN_PAYLOAD) {
+        try {
+          const decryptedToken = await CryptoUtils.decrypt(ENCRYPTED_GAS_TOKEN_PAYLOAD, inputPwd);
+          if (decryptedToken) {
+            setGasToken(decryptedToken);
+          }
+        } catch (e) { console.warn("GAS Token 解密失敗", e); }
       }
 
       setIsVerified(true);
@@ -4326,6 +4357,82 @@ const ItineraryApp = () => {
                 )}
               </div>
             </div>
+            <div
+              className={`backdrop-blur-2xl border rounded-[2rem] p-5 shadow-xl min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+            >
+              <h2
+                className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
+              >
+                <div
+                  className={`p-1.5 rounded-xl ${isDarkMode ? "bg-blue-900/20" : "bg-[#E8F0FE]"}`}
+                >
+                  <LinkIcon
+                    className={`w-4 h-4 ${isDarkMode ? "text-blue-300" : "text-[#3B5998]"}`}
+                  />
+                </div>
+                實用連結百寶箱
+              </h2>
+
+              <div className="space-y-4">
+                {usefulLinks && usefulLinks.length > 0 ? (
+                  usefulLinks.map((section, idx) => (
+                    <div key={idx}>
+                      <h3
+                        className={`text-xs font-bold mb-2.5 px-3 py-1.5 rounded-xl w-fit border ${isDarkMode ? "text-blue-300 bg-blue-900/20 border-blue-800/30" : "text-[#3B5998] bg-[#E8F0FE] border-blue-100"}`}
+                      >
+                        {section.category}
+                      </h3>
+                      <div className="space-y-3">
+                        {section.items.map((item, i) => (
+                          <a
+                            key={i}
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-3 p-4 backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-98 group ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
+                          >
+                            <div
+                              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner group-hover:scale-105 transition-transform ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
+                            >
+                              {item.icon}
+                            </div>
+                            <div className="flex-1">
+                              <div
+                                className={`text-sm font-bold flex items-center gap-1.5 group-hover:text-opacity-80 transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-sky-300" : "text-[#37474F] group-hover:text-[#5D737E]"}`}
+                              >
+                                {item.title}
+                                <ExternalLink
+                                  className={`w-3 h-3 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                                />
+                              </div>
+                              <p className={`text-xs mt-0.5 ${theme.textSec}`}>
+                                {item.desc}
+                              </p>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div
+                    className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}
+                  >
+                    <LinkIcon
+                      className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                    />
+                    <p className={`text-sm font-medium ${theme.textSec}`}>
+                      暫無實用連結
+                    </p>
+                    <p
+                      className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}
+                    >
+                      敬請期待更多內容
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -4756,85 +4863,19 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* --- 頁籤：實用連結 (Resources Tab) --- */}
-        {activeTab === "resources" && (
-          <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
-            <div
-              className={`backdrop-blur-2xl border rounded-[2rem] p-5 shadow-xl min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
-            >
-              <h2
-                className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
-              >
-                <div
-                  className={`p-1.5 rounded-xl ${isDarkMode ? "bg-blue-900/20" : "bg-[#E8F0FE]"}`}
-                >
-                  <LinkIcon
-                    className={`w-4 h-4 ${isDarkMode ? "text-blue-300" : "text-[#3B5998]"}`}
-                  />
-                </div>
-                實用連結百寶箱
-              </h2>
-
-              <div className="space-y-4">
-                {usefulLinks && usefulLinks.length > 0 ? (
-                  usefulLinks.map((section, idx) => (
-                    <div key={idx}>
-                      <h3
-                        className={`text-xs font-bold mb-2.5 px-3 py-1.5 rounded-xl w-fit border ${isDarkMode ? "text-blue-300 bg-blue-900/20 border-blue-800/30" : "text-[#3B5998] bg-[#E8F0FE] border-blue-100"}`}
-                      >
-                        {section.category}
-                      </h3>
-                      <div className="space-y-3">
-                        {section.items.map((item, i) => (
-                          <a
-                            key={i}
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center gap-3 p-4 backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-98 group ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
-                          >
-                            <div
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner group-hover:scale-105 transition-transform ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
-                            >
-                              {item.icon}
-                            </div>
-                            <div className="flex-1">
-                              <div
-                                className={`text-sm font-bold flex items-center gap-1.5 group-hover:text-opacity-80 transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-sky-300" : "text-[#37474F] group-hover:text-[#5D737E]"}`}
-                              >
-                                {item.title}
-                                <ExternalLink
-                                  className={`w-3 h-3 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
-                                />
-                              </div>
-                              <p className={`text-xs mt-0.5 ${theme.textSec}`}>
-                                {item.desc}
-                              </p>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div
-                    className={`py-12 text-center rounded-2xl border-2 border-dashed flex flex-col items-center justify-center ${isDarkMode ? "bg-neutral-800/20 border-neutral-700" : "bg-stone-50/50 border-stone-200"}`}
-                  >
-                    <LinkIcon
-                      className={`w-12 h-12 mx-auto mb-3 opacity-40 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
-                    />
-                    <p className={`text-sm font-medium ${theme.textSec}`}>
-                      暫無實用連結
-                    </p>
-                    <p
-                      className={`text-xs mt-1 ${isDarkMode ? "text-neutral-600" : "text-stone-400"}`}
-                    >
-                      敬請期待更多內容
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* --- 頁籤：記帳/記事 (Finance Tab) --- */}
+        {activeTab === "finance" && (
+          <div className="flex-1 animate-fadeIn">
+            <FinanceNote 
+              isDarkMode={isDarkMode}
+              theme={theme}
+              rateData={rateData}        // 傳遞匯率資料
+              gasUrl={gasUrl}            // 傳遞 GAS URL
+              gasToken={gasToken}        // 傳遞 Token
+              apiKey={apiKey}            // 傳遞 Gemini API Key
+              setFullPreviewImage={setFullPreviewImage} // 複用 App.jsx 的圖片預覽遮罩
+              showToast={showToast}      // 複用 Toast 提示
+            />
           </div>
         )}
 
@@ -4955,7 +4996,7 @@ const ItineraryApp = () => {
             </button>
 
             {/* 5. 連結 (Resources) */}
-            <button
+            {/* <button
               onClick={() => {
                 handleInterruptClick();
                 setActiveTab("resources");
@@ -4975,6 +5016,30 @@ const ItineraryApp = () => {
                 className={`w-5 h-5 ${activeTab === "resources" ? "stroke-[2.5px]" : "stroke-2"}`}
               />
               {activeTab === "resources" && (
+                <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
+              )}
+            </button> */}
+            {/* 5. 記帳 (Finance) */}
+            <button
+              onClick={() => {
+                handleInterruptClick();
+                setActiveTab("finance");
+              }}
+              className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
+                ${
+                  activeTab === "finance"
+                    ? isDarkMode
+                      ? `bg-${cBase}-800/50 text-sky-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
+                      : `bg-white/60 text-sky-600 border-white/20 shadow-md -translate-y-0.5`
+                    : isDarkMode
+                      ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
+                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                }`}
+            >
+              <DollarSign // 記得在 lucide-react import 加入 DollarSign
+                className={`w-5 h-5 ${activeTab === "finance" ? "stroke-[2.5px]" : "stroke-2"}`}
+              />
+              {activeTab === "finance" && (
                 <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button>
