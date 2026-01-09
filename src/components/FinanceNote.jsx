@@ -379,7 +379,7 @@ const FinanceScreen = ({
             await uploadToGAS({
                 action: 'edit', 
                 id: editingRecord.id,
-                type: editingRecord.type, // ★ 修正重點：必須補上這行，GAS 才知道要去哪個工作表找 ID
+                type: editingRecord.type,
                 content: editContent,
                 amount: newAmount,
                 twdAmount: newTwdAmount,
@@ -400,7 +400,7 @@ const FinanceScreen = ({
 
   if (!user) {
     return (
-      <div className={`flex flex-col items-center justify-center h-[60vh] p-6 space-y-6 animate-fadeIn`}>
+      <div className={`flex flex-col items-center justify-center min-h-[60vh] p-6 space-y-6 animate-fadeIn`}>
          <div className={`w-full max-w-sm backdrop-blur-2xl border rounded-[2rem] p-8 shadow-xl text-center space-y-6 ${theme.cardBg} ${theme.cardBorder}`}>
            <div className="space-y-2">
             <h2 className={`text-2xl font-bold ${theme.text}`}>歡迎使用旅程記帳</h2>
@@ -440,45 +440,46 @@ const FinanceScreen = ({
   }
 
   return (
-    <div className="flex-1 px-4 pb-28 space-y-5 flex flex-col h-[calc(100vh-120px)] animate-fadeIn relative">
+    <div className={`px-4 pb-32 animate-fadeIn min-h-[calc(100vh-140px)]`}>
       
-      {/* 主容器 */}
-      <div className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}>
+      {/* 主卡片容器：自然高度，無 overflow 限制 */}
+      <div className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}>
         
-        {/* Header */}
-        <div className={`p-4 border-b flex items-center justify-between backdrop-blur-sm z-10 ${isDarkMode ? 'border-neutral-700 bg-neutral-800/40' : 'border-stone-200/50 bg-white/40'}`}>
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-2xl shadow-sm border border-white/50">{user.avatar}</div>
-             <div>
-                <div className={`text-sm font-bold flex items-center gap-1.5 ${theme.text}`}>
-                    {user.name}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${isDarkMode ? 'bg-neutral-700 border-neutral-600 text-neutral-400' : 'bg-stone-100 border-stone-200 text-stone-500'}`}>
-                        {mode === 'finance' ? '記帳中' : '記事中'}
-                    </span>
-                </div>
-             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => handleSyncData(false)} 
-              disabled={isSyncing}
-              className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-sky-400' : 'bg-white border-stone-200 text-stone-400 hover:text-sky-500'}`}
-            >
-              <RefreshCcw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-sky-500' : ''}`} />
-            </button>
-            <div className={`flex p-1 rounded-xl border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-100 border-stone-200'}`}>
-                <button onClick={() => setMode('finance')} className={`p-2 rounded-lg transition-all ${mode === 'finance' ? (isDarkMode ? 'bg-sky-700 text-white shadow-sm' : 'bg-white text-sky-600 shadow-sm') : 'text-stone-400'}`}><DollarSign className="w-4 h-4"/></button>
-                <button onClick={() => setMode('note')} className={`p-2 rounded-lg transition-all ${mode === 'note' ? (isDarkMode ? 'bg-orange-600 text-white shadow-sm' : 'bg-white text-orange-500 shadow-sm') : 'text-stone-400'}`}><MessageSquare className="w-4 h-4"/></button>
+        {/* Header - 可選：加上 sticky top-0 讓它吸附頂部，或移除讓它隨頁面捲動 */}
+        <div className={`sticky top-0 z-10 p-4 border-b backdrop-blur-xl transition-colors duration-300 ${isDarkMode ? 'border-neutral-700 bg-neutral-900/95' : 'border-stone-200/50 bg-white/95'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+               <div className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-2xl shadow-sm border border-white/50">{user.avatar}</div>
+               <div>
+                  <div className={`text-sm font-bold flex items-center gap-1.5 ${theme.text}`}>
+                      {user.name}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${isDarkMode ? 'bg-neutral-700 border-neutral-600 text-neutral-400' : 'bg-stone-100 border-stone-200 text-stone-500'}`}>
+                          {mode === 'finance' ? '記帳中' : '記事中'}
+                      </span>
+                  </div>
+               </div>
             </div>
-            <button onClick={handleLogout} className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-red-400' : 'bg-white border-stone-200 text-stone-400 hover:text-red-500'}`}><LogOut className="w-4 h-4" /></button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => handleSyncData(false)} 
+                disabled={isSyncing}
+                className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-sky-400' : 'bg-white border-stone-200 text-stone-400 hover:text-sky-500'}`}
+              >
+                <RefreshCcw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-sky-500' : ''}`} />
+              </button>
+              <div className={`flex p-1 rounded-xl border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-100 border-stone-200'}`}>
+                  <button onClick={() => setMode('finance')} className={`p-2 rounded-lg transition-all ${mode === 'finance' ? (isDarkMode ? 'bg-sky-700 text-white shadow-sm' : 'bg-white text-sky-600 shadow-sm') : 'text-stone-400'}`}><DollarSign className="w-4 h-4"/></button>
+                  <button onClick={() => setMode('note')} className={`p-2 rounded-lg transition-all ${mode === 'note' ? (isDarkMode ? 'bg-orange-600 text-white shadow-sm' : 'bg-white text-orange-500 shadow-sm') : 'text-stone-400'}`}><MessageSquare className="w-4 h-4"/></button>
+              </div>
+              <button onClick={handleLogout} className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-red-400' : 'bg-white border-stone-200 text-stone-400 hover:text-red-500'}`}><LogOut className="w-4 h-4" /></button>
+            </div>
           </div>
         </div>
 
-        {/* 內容列表 */}
-        {/* 修改 1: 將 space-y-2 改為 space-y-3，讓記帳列表稍微寬鬆一點，與記事氣泡一致 */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+        {/* 記帳列表 - 移除 overflow 和高度限制，讓內容自然撐高 */}
+        <div className="p-4 space-y-3 min-h-[40vh]">
           {records.filter(r => r.type === mode).length === 0 && (
-             <div className={`flex flex-col items-center justify-center h-full opacity-40 ${theme.textSec}`}>
+             <div className={`flex flex-col items-center justify-center py-20 opacity-40 ${theme.textSec}`}>
                  <Wallet className="w-12 h-12 mb-2 stroke-1"/>
                  <p className="text-sm">尚無任何{mode === 'finance' ? '消費' : '記事'}紀錄</p>
              </div>
@@ -555,7 +556,7 @@ const FinanceScreen = ({
                    </div>
                </div>
 
-               {/* 3. 操作按鈕區域 - 修改 2: 加入條件判斷，只能編輯/刪除自己的項目 */}
+               {/* 3. 操作按鈕區域 */}
                {record.user.name === user.name && (
                    <div className="flex flex-col justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button 
@@ -580,55 +581,103 @@ const FinanceScreen = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Footer 輸入區 */}
-        <div className={`p-3 border-t backdrop-blur-xl ${isDarkMode ? 'bg-black/20 border-white/5' : 'bg-white/50 border-stone-200/50'}`}>
+        {/* Footer 輸入區 - 參考 ChatInput.jsx 樣式，緊接在列表後方 */}
+        <div className={`border-t backdrop-blur-md transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/90 border-neutral-700' : 'bg-white/90 border-stone-200/80'}`}>
+          <div className="p-2">
+            {/* 圖片預覽區 */}
             {noteImages.length > 0 && (
-                <div className="mb-2 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex gap-2 overflow-x-auto pb-2 mb-2 px-1 scrollbar-hide">
                     {noteImages.map((img, idx) => (
-                        <div key={idx} className="relative flex-shrink-0 w-20 h-20 bg-black/50 backdrop-blur-md rounded-xl border border-white/10 overflow-hidden group">
-                            <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                        <div key={idx} className="relative flex-shrink-0 group animate-slideUp">
+                            <img src={img} alt={`Preview ${idx}`} className="h-16 w-auto rounded-xl border shadow-md object-cover" />
                             <button 
                                 onClick={() => removeNoteImage(idx)} 
-                                className="absolute top-1 left-1 p-1 bg-black/60 rounded-full text-white hover:bg-red-500 transition-colors z-20"
+                                className="absolute -top-2 -right-2 p-1.5 rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all active:scale-90"
+                                title="移除圖片"
                             >
                                 <X className="w-3 h-3"/>
                             </button>
-                            <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/50 rounded-full text-[9px] text-white">
-                                {idx + 1}
-                            </div>
                         </div>
                     ))}
-                    <div className="flex items-center text-xs opacity-50 px-2 min-w-max">
-                        <span className={theme.textSec}>已選 {noteImages.length} 張</span>
-                    </div>
                 </div>
             )}
 
+            {/* 隱藏的檔案選擇器 */}
+            <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" multiple />
+
+            {/* 輸入控制區 - 參考 ChatInput 的佈局 */}
             <div className="flex items-end gap-2">
-                <button onClick={() => fileInputRef.current.click()} className={`p-3 rounded-xl border transition-all active:scale-95 flex-shrink-0 ${theme.cardBg} ${theme.textSec} hover:text-sky-500`}>
+                {/* 相機按鈕 */}
+                <button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    className={`p-2.5 rounded-xl border transition-all shadow-sm flex-shrink-0 active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}
+                    title="上傳圖片"
+                >
                     <Camera className="w-5 h-5" />
                 </button>
-                <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" multiple />
 
-                <div className={`flex-1 rounded-xl border px-3 py-2 flex flex-col justify-center min-h-[48px] transition-colors ${isDarkMode ? 'bg-black/30 border-white/10' : 'bg-white/70 border-stone-200'}`}>
+                {/* 輸入框容器 - 參考 ChatInput 的 textarea 風格 */}
+                <div className="flex-1 min-w-0">
                     {mode === 'finance' && (
-                        <div className="flex items-center gap-2 mb-1 border-b border-dashed border-gray-400/30 pb-1">
-                            <span className="text-sky-500 font-bold">$</span>
-                            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="金額" className={`bg-transparent outline-none w-full font-mono font-bold text-lg ${theme.text} placeholder:opacity-40`} />
+                        <div className="mb-1">
+                            <input 
+                                type="number" 
+                                value={amount} 
+                                onChange={e => setAmount(e.target.value)} 
+                                placeholder="金額 (JPY)"
+                                className={`w-full border rounded-2xl px-3 py-2 text-base focus:outline-none focus:ring-2 transition-all shadow-inner resize-none leading-relaxed tracking-wide
+                                    ${isDarkMode ? 'bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400'}`}
+                            />
                         </div>
                     )}
-                    <input type="text" value={inputText} onChange={e => setInputText(e.target.value)} placeholder={mode === 'finance' ? "項目 (如: 午餐)" : "留言..."} className={`bg-transparent outline-none w-full text-sm ${theme.text} placeholder:opacity-50`} onKeyDown={e => e.key === 'Enter' && handleManualSubmit()} />
+                    <textarea
+                        value={inputText}
+                        onChange={(e) => {
+                            setInputText(e.target.value);
+                            e.target.style.height = "auto";
+                            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleManualSubmit();
+                                e.target.style.height = "auto";
+                            }
+                        }}
+                        rows={1}
+                        placeholder={mode === 'finance' ? "項目說明..." : "輸入記事內容..."}
+                        className={`w-full border rounded-2xl px-3 py-3 text-base focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-50 resize-none max-h-[120px] leading-relaxed tracking-wide
+                            ${isDarkMode ? 'bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400'}`}
+                    />
                 </div>
 
-                <button onClick={handleManualSubmit} disabled={isUploading || isScanning} className={`p-3 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95 flex-shrink-0 ${mode === 'finance' ? 'bg-sky-500 shadow-sky-500/30' : 'bg-orange-500 shadow-orange-500/30'} ${(isUploading || isScanning) ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {/* 發送按鈕 - 參考 ChatInput 的樣式 */}
+                <button 
+                    onClick={() => {
+                        handleManualSubmit();
+                        const textarea = document.querySelector("textarea");
+                        if (textarea) textarea.style.height = "auto";
+                    }}
+                    disabled={isUploading || isScanning || (mode === 'finance' && !amount)}
+                    className={`p-3 rounded-xl transition-all shadow-md flex-shrink-0 mb-0.5 font-bold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+                        ${isUploading || isScanning || (mode === 'finance' && !amount)
+                            ? isDarkMode
+                                ? 'bg-neutral-700 text-neutral-500 shadow-none'
+                                : 'bg-stone-200 text-stone-400 shadow-none'
+                            : isDarkMode
+                                ? 'bg-gradient-to-r from-sky-600 to-blue-700 text-white hover:shadow-lg'
+                                : 'bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white hover:shadow-lg'
+                        }`}
+                >
                     {isUploading ? <Loader className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5" />}
                 </button>
             </div>
+          </div>
         </div>
 
       </div>
 
-      {/* --- 發票批次確認 Modal --- */}
+      {/* --- 發票批次確認 Modal (保持不變) --- */}
       {showReceiptModal && (
         <div 
             className="fixed inset-0 z-[9999] flex items-center justify-center px-4 pt-4 pb-28 bg-black/80 backdrop-blur-sm animate-fadeIn transform-gpu"
