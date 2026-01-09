@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Camera, Send, DollarSign, MessageSquare, 
   Loader, Trash2, X, LogOut, Wallet, Plus, Check, ScanLine, Image as ImageIcon,
-  RefreshCcw 
+  RefreshCcw, Edit3, Save // 新增 Edit3, Save Icon
 } from 'lucide-react';
 import { uploadToGAS, parseReceiptWithGemini, fetchFromGAS } from '../utils/financeHelper';
 
@@ -40,8 +40,6 @@ const FinanceScreen = ({
   // --- 2. 輸入與 AI 狀態 ---
   const [inputText, setInputText] = useState('');
   const [amount, setAmount] = useState('');
-  
-  // 支援多圖
   const [noteImages, setNoteImages] = useState([]); 
 
   const [isScanning, setIsScanning] = useState(false);
@@ -56,7 +54,12 @@ const FinanceScreen = ({
   const [receiptItems, setReceiptItems] = useState([]); 
   const [receiptImages, setReceiptImages] = useState([]); 
 
-  // --- 4. Effect 與 邏輯 ---
+  // --- 4. 編輯功能狀態 (新功能) ---
+  const [editingRecord, setEditingRecord] = useState(null); // 當前正在編輯的紀錄物件
+  const [editContent, setEditContent] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+
+  // --- 5. Effect 與 邏輯 ---
 
   const handleSyncData = useCallback(async (isBackground = false) => {
     if (!gasUrl || !gasToken) return;
@@ -71,10 +74,8 @@ const FinanceScreen = ({
           twdAmount: Number(r.twdAmount) || 0,
           synced: true
         }));
-
-        // 排序：舊 -> 新 (讓最新的在最下面)
+        // 舊 -> 新
         formatted.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
         setRecords(formatted);
         if (!isBackground) showToast("資料同步完成");
       }
@@ -90,12 +91,12 @@ const FinanceScreen = ({
     localStorage.setItem('finance_records', JSON.stringify(records));
   }, [records]);
 
-  // 當紀錄更新或模式切換時，自動捲動到底部
   useEffect(() => {
-    if (messagesEndRef.current) {
+    // 只有在非編輯狀態且有新訊息時才自動捲動
+    if (!editingRecord && messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [records, mode, noteImages]);
+  }, [records, mode, noteImages, editingRecord]);
 
   useEffect(() => {
     if (gasUrl && gasToken && user) {
@@ -108,7 +109,7 @@ const FinanceScreen = ({
     }
   }, [gasUrl, gasToken, user, handleSyncData]);
 
-  // --- 5. 其他核心邏輯 ---
+  // --- 6. 核心操作邏輯 ---
 
   const handleUserSetup = () => {
     if (!setupName.trim()) return;
@@ -136,7 +137,6 @@ const FinanceScreen = ({
           reader.onload = (event) => resolve(event.target.result);
           reader.readAsDataURL(file);
       }));
-      
       try {
         const newImages = await Promise.all(base64Promises);
         setNoteImages(prev => [...prev, ...newImages]);
@@ -152,7 +152,6 @@ const FinanceScreen = ({
       setShowReceiptModal(true);
       setReceiptItems([]);
       setReceiptImages([]);
-
       await processImagesForScanning(files, true);
     } else {
        const file = files[0];
@@ -172,7 +171,6 @@ const FinanceScreen = ({
   const handleAppendImage = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
     setIsScanning(true);
     await processImagesForScanning(files, false);
     e.target.value = '';
@@ -185,7 +183,6 @@ const FinanceScreen = ({
            reader.onload = (evt) => resolve(evt.target.result);
            reader.readAsDataURL(file);
         }));
-        
         const newImages = await Promise.all(base64Promises);
         setReceiptImages(prev => isReset ? newImages : [...prev, ...newImages]);
 
@@ -334,13 +331,81 @@ const FinanceScreen = ({
     }
   };
 
-  // --- 6. 渲染 UI ---
+  // --- 7. 編輯功能相關函式 (新) ---
+
+  const startEditing = (record) => {
+    setEditingRecord(record);
+    setEditContent(record.content || '');
+    setEditAmount(record.amount || '');
+  };
+
+  const cancelEditing = () => {
+    setEditingRecord(null);
+    setEditContent('');
+    setEditAmount('');
+  };
+
+  const saveEdit = async () => {
+    if (!editingRecord) return;
+    
+    // 基本驗證
+    if (editingRecord.type === 'finance' && !editAmount) {
+        showToast("金額不能為空", "error");
+        return;
+    }
+
+    const currentRate = rateData?.Exrate || 0.22;
+    const newAmount = editingRecord.type === 'finance' ? parseFloat(editAmount) : 0;
+    const newTwdAmount = editingRecord.type === 'finance' ? Math.round(newAmount * currentRate) : 0;
+
+    // 1. 更新本地 State (Optimistic Update)
+    const updatedRecords = records.map(r => {
+        if (r.id === editingRecord.id) {
+            return {
+                ...r,
+                content: editContent,
+                amount: newAmount,
+                twdAmount: newTwdAmount,
+                synced: false // 標記為未同步，等待後端回應
+            };
+        }
+        return r;
+    });
+    setRecords(updatedRecords);
+    showToast("已更新，正在同步...", "success");
+    cancelEditing(); // 關閉視窗
+
+    // 2. 呼叫 GAS 更新
+    if (gasUrl && gasToken) {
+        try {
+            await uploadToGAS({
+                action: 'edit', // 需要 GAS 支援此 action
+                id: editingRecord.id,
+                content: editContent,
+                amount: newAmount,
+                twdAmount: newTwdAmount,
+                // 為了 GAS 方便，可以多傳一些輔助欄位，例如 store (如果需要重新解析店名)
+                item: editContent, 
+                store: editContent.split('-')[0]?.trim()
+            }, gasUrl, gasToken);
+            
+            // 同步成功，標記 synced = true
+            setRecords(prev => prev.map(r => r.id === editingRecord.id ? { ...r, synced: true } : r));
+            showToast("同步更新成功");
+        } catch (error) {
+            console.error("Edit upload failed:", error);
+            showToast("雲端更新失敗，請檢查網路", "error");
+        }
+    }
+  };
+
+  // --- 8. 渲染 UI ---
 
   if (!user) {
+    // 登入介面 (省略重複代碼，保持原樣)
     return (
       <div className={`flex flex-col items-center justify-center h-[60vh] p-6 space-y-6 animate-fadeIn`}>
          <div className={`w-full max-w-sm backdrop-blur-2xl border rounded-[2rem] p-8 shadow-xl text-center space-y-6 ${theme.cardBg} ${theme.cardBorder}`}>
-           {/* ... (登入畫面保持不變) ... */}
            <div className="space-y-2">
             <h2 className={`text-2xl font-bold ${theme.text}`}>歡迎使用旅程記帳</h2>
             <p className={`text-sm ${theme.textSec}`}>請設定您的暱稱與頭像以識別紀錄</p>
@@ -384,7 +449,7 @@ const FinanceScreen = ({
       {/* 主容器 */}
       <div className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}>
         
-        {/* Header (保持不變) */}
+        {/* Header */}
         <div className={`p-4 border-b flex items-center justify-between backdrop-blur-sm z-10 ${isDarkMode ? 'border-neutral-700 bg-neutral-800/40' : 'border-stone-200/50 bg-white/40'}`}>
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-2xl shadow-sm border border-white/50">{user.avatar}</div>
@@ -413,7 +478,7 @@ const FinanceScreen = ({
           </div>
         </div>
 
-        {/* 內容列表 - 改版後 */}
+        {/* 內容列表 */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
           {records.filter(r => r.type === mode).length === 0 && (
              <div className={`flex flex-col items-center justify-center h-full opacity-40 ${theme.textSec}`}>
@@ -427,35 +492,46 @@ const FinanceScreen = ({
                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-stone-100 text-lg shadow-sm">{record.user.avatar}</div>
                </div>
                
-               {/* 記帳卡片容器 */}
                <div className={`flex flex-col max-w-[85%] ${record.user.name === user.name ? 'items-end' : 'items-start'}`}>
                    
-                   {/* 頂部資訊列 (姓名) */}
                    <span className={`text-[10px] mb-1 opacity-60 flex items-center gap-1 ${theme.textSec}`}>
                      {record.user.name}
                    </span>
 
-                   {/* 卡片本體 */}
                    <div className={`relative overflow-hidden shadow-sm transition-all border
                         ${record.type === 'finance' 
                             ? (isDarkMode ? 'bg-neutral-800 border-neutral-700 rounded-xl w-64' : 'bg-white border-stone-200 rounded-xl w-64') 
                             : (isDarkMode ? 'bg-neutral-800 border-neutral-700 rounded-2xl p-3' : 'bg-white border-stone-200 rounded-2xl p-3')
                         }
                    `}>
-                       {/* 刪除按鈕 (Hover 顯示) */}
-                       <button onClick={() => handleDelete(record.id, record.type)} className={`absolute top-1 right-1 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 ${isDarkMode ? 'hover:bg-black/20 text-white/50' : 'hover:bg-black/5 text-black/30'}`}><X className="w-3 h-3" /></button>
+                       {/* 編輯與刪除按鈕群組 (Hover 顯示) */}
+                       <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                           {/* 編輯按鈕 */}
+                           <button 
+                             onClick={() => startEditing(record)} 
+                             className={`p-1.5 rounded-full transition-colors ${isDarkMode ? 'hover:bg-black/40 text-white/70' : 'hover:bg-black/10 text-black/50'}`}
+                             title="編輯"
+                           >
+                             <Edit3 className="w-3 h-3" />
+                           </button>
+                           {/* 刪除按鈕 */}
+                           <button 
+                             onClick={() => handleDelete(record.id, record.type)} 
+                             className={`p-1.5 rounded-full transition-colors ${isDarkMode ? 'hover:bg-red-900/50 text-red-300' : 'hover:bg-red-100 text-red-500'}`}
+                             title="刪除"
+                           >
+                             <X className="w-3 h-3" />
+                           </button>
+                       </div>
 
                        {/* === 記帳模式：表格化佈局 === */}
                        {record.type === 'finance' ? (
                            <div className="flex flex-col">
-                               {/* 上半部：內容與金額 */}
                                <div className="flex justify-between items-start p-3 gap-3">
-                                   {/* 左側：品項與時間 */}
                                    <div className="flex-1 min-w-0">
                                        <div className={`text-sm font-bold truncate leading-tight ${theme.text}`}>{record.content || "未製品項"}</div>
                                        <div className="flex items-center gap-1.5 mt-1.5">
                                            <span className={`text-[10px] ${theme.textSec}`}>{formatTime(record.timestamp)}</span>
-                                           {/* 同步勾勾 */}
                                            {record.synced ? (
                                                <Check className="w-3 h-3 text-green-500" />
                                            ) : (
@@ -464,7 +540,6 @@ const FinanceScreen = ({
                                        </div>
                                    </div>
 
-                                   {/* 右側：金額 */}
                                    <div className="text-right flex-shrink-0">
                                        <div className={`text-base font-mono font-bold leading-tight ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
                                             ¥{record.amount.toLocaleString()}
@@ -475,7 +550,6 @@ const FinanceScreen = ({
                                    </div>
                                </div>
 
-                               {/* 圖片附件 (若有) */}
                                {record.image && (
                                    <div className="px-3 pb-3">
                                        <img 
@@ -488,7 +562,7 @@ const FinanceScreen = ({
                                )}
                            </div>
                        ) : (
-                           /* === 記事模式：保持對話氣泡佈局 === */
+                           /* === 記事模式：對話氣泡 === */
                            <>
                                {record.content && <div className={`text-sm break-words whitespace-pre-wrap ${theme.text}`}>{record.content}</div>}
                                {record.image && <img src={record.image} alt="attachment" onClick={() => setFullPreviewImage(record.image)} className="mt-2 rounded-lg max-h-40 object-cover border border-black/5 cursor-zoom-in" />}
@@ -505,10 +579,8 @@ const FinanceScreen = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Footer 輸入區 (保持不變) */}
+        {/* Footer 輸入區 */}
         <div className={`p-3 border-t backdrop-blur-xl ${isDarkMode ? 'bg-black/20 border-white/5' : 'bg-white/50 border-stone-200/50'}`}>
-            
-            {/* 多圖預覽列 */}
             {noteImages.length > 0 && (
                 <div className="mb-2 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                     {noteImages.map((img, idx) => (
@@ -535,7 +607,6 @@ const FinanceScreen = ({
                 <button onClick={() => fileInputRef.current.click()} className={`p-3 rounded-xl border transition-all active:scale-95 flex-shrink-0 ${theme.cardBg} ${theme.textSec} hover:text-sky-500`}>
                     <Camera className="w-5 h-5" />
                 </button>
-                
                 <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" multiple />
 
                 <div className={`flex-1 rounded-xl border px-3 py-2 flex flex-col justify-center min-h-[48px] transition-colors ${isDarkMode ? 'bg-black/30 border-white/10' : 'bg-white/70 border-stone-200'}`}>
@@ -557,14 +628,12 @@ const FinanceScreen = ({
       </div>
 
       {/* --- 發票批次確認 Modal --- */}
-      {/* 🔹 修改重點：Z-Index 提升至 9999，確保不被底部按鈕遮擋 */}
       {showReceiptModal && (
         <div 
             className="fixed inset-0 z-[9999] flex items-center justify-center px-4 pt-4 pb-28 bg-black/80 backdrop-blur-sm animate-fadeIn transform-gpu"
             style={{ willChange: 'opacity, transform' }}
         >
             <div className={`w-full max-w-md max-h-[85vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-white/40'}`}>
-                
                 {/* Modal Header */}
                 <div className="p-4 border-b flex items-center justify-between shrink-0 bg-opacity-50 backdrop-blur-md">
                     <h3 className={`text-lg font-bold flex items-center gap-2 ${theme.text}`}>
@@ -580,8 +649,6 @@ const FinanceScreen = ({
 
                 {/* Modal Body */}
                 <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
-                    
-                    {/* 多張圖片預覽列 + 加拍按鈕 */}
                     <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide min-h-[96px]"> 
                         {receiptImages.map((img, idx) => (
                             <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-white/10 group">
@@ -610,7 +677,6 @@ const FinanceScreen = ({
                         )}
                     </div>
 
-                    {/* 明細列表 */}
                     <div className="space-y-3">
                         {receiptItems.map((item, idx) => (
                             <div key={item.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isDarkMode ? 'bg-black/20 border-neutral-700' : 'bg-stone-50 border-stone-200'} ${!item.selected && 'opacity-50'}`}>
@@ -672,7 +738,7 @@ const FinanceScreen = ({
                     )}
                 </div>
 
-                {/* Modal Footer (pb-safe 確保不貼底) */}
+                {/* Modal Footer */}
                 <div className="p-4 pb-8 border-t bg-opacity-50 backdrop-blur-md shrink-0">
                     <button 
                         onClick={handleBatchConfirm}
@@ -681,6 +747,56 @@ const FinanceScreen = ({
                         ${isScanning ? 'bg-gray-500 opacity-50 cursor-not-allowed' : 'bg-gradient-to-r from-sky-500 to-blue-600'}`}
                     >
                         {isScanning ? '分析中...' : `確認匯入 ${receiptItems.filter(i=>i.selected).length} 筆項目`}
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* --- 編輯紀錄 Modal (新功能) --- */}
+      {editingRecord && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-white/40'}`}>
+                <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}>
+                    <Edit3 className="w-5 h-5 text-sky-500"/>
+                    編輯紀錄
+                </h3>
+                
+                <div className="space-y-4">
+                    <div>
+                        <label className={`text-xs font-bold mb-1 block ${theme.textSec}`}>內容 / 品項</label>
+                        <input 
+                            type="text" 
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className={`w-full p-3 rounded-xl border bg-transparent outline-none focus:ring-2 focus:ring-sky-500 ${isDarkMode ? 'border-neutral-700 text-white' : 'border-stone-200 text-stone-800'}`}
+                        />
+                    </div>
+                    {editingRecord.type === 'finance' && (
+                        <div>
+                            <label className={`text-xs font-bold mb-1 block ${theme.textSec}`}>金額 (JPY)</label>
+                            <input 
+                                type="number" 
+                                value={editAmount}
+                                onChange={(e) => setEditAmount(e.target.value)}
+                                className={`w-full p-3 rounded-xl border bg-transparent outline-none font-mono focus:ring-2 focus:ring-sky-500 ${isDarkMode ? 'border-neutral-700 text-white' : 'border-stone-200 text-stone-800'}`}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                    <button 
+                        onClick={cancelEditing}
+                        className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+                    >
+                        取消
+                    </button>
+                    <button 
+                        onClick={saveEdit}
+                        className="flex-1 py-3 rounded-xl font-bold text-sm text-white bg-sky-500 shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Save className="w-4 h-4"/> 儲存
                     </button>
                 </div>
             </div>
