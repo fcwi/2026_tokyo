@@ -1,8 +1,10 @@
+// components/FinanceNote.jsx
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Camera, Send, DollarSign, MessageSquare, 
   Loader, Trash2, X, LogOut, Wallet, Plus, Check, ScanLine, Image as ImageIcon,
-  RefreshCcw, Edit3, Save // 新增 Edit3, Save Icon
+  RefreshCcw, Edit3, Save 
 } from 'lucide-react';
 import { uploadToGAS, parseReceiptWithGemini, fetchFromGAS } from '../utils/financeHelper';
 
@@ -54,8 +56,8 @@ const FinanceScreen = ({
   const [receiptItems, setReceiptItems] = useState([]); 
   const [receiptImages, setReceiptImages] = useState([]); 
 
-  // --- 4. 編輯功能狀態 (新功能) ---
-  const [editingRecord, setEditingRecord] = useState(null); // 當前正在編輯的紀錄物件
+  // --- 4. 編輯功能狀態 ---
+  const [editingRecord, setEditingRecord] = useState(null); 
   const [editContent, setEditContent] = useState('');
   const [editAmount, setEditAmount] = useState('');
 
@@ -92,7 +94,6 @@ const FinanceScreen = ({
   }, [records]);
 
   useEffect(() => {
-    // 只有在非編輯狀態且有新訊息時才自動捲動
     if (!editingRecord && messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -331,8 +332,6 @@ const FinanceScreen = ({
     }
   };
 
-  // --- 7. 編輯功能相關函式 (新) ---
-
   const startEditing = (record) => {
     setEditingRecord(record);
     setEditContent(record.content || '');
@@ -348,7 +347,6 @@ const FinanceScreen = ({
   const saveEdit = async () => {
     if (!editingRecord) return;
     
-    // 基本驗證
     if (editingRecord.type === 'finance' && !editAmount) {
         showToast("金額不能為空", "error");
         return;
@@ -358,7 +356,7 @@ const FinanceScreen = ({
     const newAmount = editingRecord.type === 'finance' ? parseFloat(editAmount) : 0;
     const newTwdAmount = editingRecord.type === 'finance' ? Math.round(newAmount * currentRate) : 0;
 
-    // 1. 更新本地 State (Optimistic Update)
+    // 1. 前端樂觀更新 (UI Update)
     const updatedRecords = records.map(r => {
         if (r.id === editingRecord.id) {
             return {
@@ -366,30 +364,29 @@ const FinanceScreen = ({
                 content: editContent,
                 amount: newAmount,
                 twdAmount: newTwdAmount,
-                synced: false // 標記為未同步，等待後端回應
+                synced: false 
             };
         }
         return r;
     });
     setRecords(updatedRecords);
     showToast("已更新，正在同步...", "success");
-    cancelEditing(); // 關閉視窗
+    cancelEditing();
 
-    // 2. 呼叫 GAS 更新
+    // 2. 後端同步 (Cloud Sync)
     if (gasUrl && gasToken) {
         try {
             await uploadToGAS({
-                action: 'edit', // 需要 GAS 支援此 action
+                action: 'edit', 
                 id: editingRecord.id,
+                type: editingRecord.type, // ★ 修正重點：必須補上這行，GAS 才知道要去哪個工作表找 ID
                 content: editContent,
                 amount: newAmount,
                 twdAmount: newTwdAmount,
-                // 為了 GAS 方便，可以多傳一些輔助欄位，例如 store (如果需要重新解析店名)
                 item: editContent, 
                 store: editContent.split('-')[0]?.trim()
             }, gasUrl, gasToken);
             
-            // 同步成功，標記 synced = true
             setRecords(prev => prev.map(r => r.id === editingRecord.id ? { ...r, synced: true } : r));
             showToast("同步更新成功");
         } catch (error) {
@@ -402,7 +399,6 @@ const FinanceScreen = ({
   // --- 8. 渲染 UI ---
 
   if (!user) {
-    // 登入介面 (省略重複代碼，保持原樣)
     return (
       <div className={`flex flex-col items-center justify-center h-[60vh] p-6 space-y-6 animate-fadeIn`}>
          <div className={`w-full max-w-sm backdrop-blur-2xl border rounded-[2rem] p-8 shadow-xl text-center space-y-6 ${theme.cardBg} ${theme.cardBorder}`}>
@@ -479,7 +475,8 @@ const FinanceScreen = ({
         </div>
 
         {/* 內容列表 */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+        {/* 修改 1: 將 space-y-2 改為 space-y-3，讓記帳列表稍微寬鬆一點，與記事氣泡一致 */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
           {records.filter(r => r.type === mode).length === 0 && (
              <div className={`flex flex-col items-center justify-center h-full opacity-40 ${theme.textSec}`}>
                  <Wallet className="w-12 h-12 mb-2 stroke-1"/>
@@ -487,44 +484,27 @@ const FinanceScreen = ({
              </div>
           )}
           {records.filter(r => r.type === mode).map((record) => (
-            <div key={record.id} className={`group flex gap-3 ${record.user.name === user.name ? 'flex-row-reverse' : 'flex-row'}`}>
+            // Flex 容器
+            <div key={record.id} className={`group flex gap-2 ${record.user.name === user.name ? 'flex-row-reverse' : 'flex-row'}`}>
+               
+               {/* 1. 頭像區域 */}
                <div className="flex-shrink-0 flex flex-col items-center gap-1">
                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-stone-100 text-lg shadow-sm">{record.user.avatar}</div>
-               </div>
-               
-               <div className={`flex flex-col max-w-[85%] ${record.user.name === user.name ? 'items-end' : 'items-start'}`}>
-                   
-                   <span className={`text-[10px] mb-1 opacity-60 flex items-center gap-1 ${theme.textSec}`}>
+                   <span className={`text-[10px] opacity-60 leading-tight max-w-[4rem] truncate text-center ${theme.textSec}`}>
                      {record.user.name}
                    </span>
-
+               </div>
+               
+               {/* 2. 內容卡片區域 */}
+               <div className={`flex flex-col max-w-[80%] ${record.user.name === user.name ? 'items-end' : 'items-start'}`}>
+                   
                    <div className={`relative overflow-hidden shadow-sm transition-all border
                         ${record.type === 'finance' 
-                            ? (isDarkMode ? 'bg-neutral-800 border-neutral-700 rounded-xl w-64' : 'bg-white border-stone-200 rounded-xl w-64') 
+                            ? (isDarkMode ? 'bg-neutral-800 border-neutral-700 rounded-xl w-60' : 'bg-white border-stone-200 rounded-xl w-60') 
                             : (isDarkMode ? 'bg-neutral-800 border-neutral-700 rounded-2xl p-3' : 'bg-white border-stone-200 rounded-2xl p-3')
                         }
                    `}>
-                       {/* 編輯與刪除按鈕群組 (Hover 顯示) */}
-                       <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                           {/* 編輯按鈕 */}
-                           <button 
-                             onClick={() => startEditing(record)} 
-                             className={`p-1.5 rounded-full transition-colors ${isDarkMode ? 'hover:bg-black/40 text-white/70' : 'hover:bg-black/10 text-black/50'}`}
-                             title="編輯"
-                           >
-                             <Edit3 className="w-3 h-3" />
-                           </button>
-                           {/* 刪除按鈕 */}
-                           <button 
-                             onClick={() => handleDelete(record.id, record.type)} 
-                             className={`p-1.5 rounded-full transition-colors ${isDarkMode ? 'hover:bg-red-900/50 text-red-300' : 'hover:bg-red-100 text-red-500'}`}
-                             title="刪除"
-                           >
-                             <X className="w-3 h-3" />
-                           </button>
-                       </div>
-
-                       {/* === 記帳模式：表格化佈局 === */}
+                       {/* === 記帳模式 === */}
                        {record.type === 'finance' ? (
                            <div className="flex flex-col">
                                <div className="flex justify-between items-start p-3 gap-3">
@@ -562,7 +542,7 @@ const FinanceScreen = ({
                                )}
                            </div>
                        ) : (
-                           /* === 記事模式：對話氣泡 === */
+                           /* === 記事模式 === */
                            <>
                                {record.content && <div className={`text-sm break-words whitespace-pre-wrap ${theme.text}`}>{record.content}</div>}
                                {record.image && <img src={record.image} alt="attachment" onClick={() => setFullPreviewImage(record.image)} className="mt-2 rounded-lg max-h-40 object-cover border border-black/5 cursor-zoom-in" />}
@@ -574,6 +554,27 @@ const FinanceScreen = ({
                        )}
                    </div>
                </div>
+
+               {/* 3. 操作按鈕區域 - 修改 2: 加入條件判斷，只能編輯/刪除自己的項目 */}
+               {record.user.name === user.name && (
+                   <div className="flex flex-col justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button 
+                             onClick={() => startEditing(record)} 
+                             className={`p-2 rounded-full border transition-colors shadow-sm ${theme.cardBg} ${isDarkMode ? 'border-neutral-700 hover:text-sky-400 hover:border-sky-500' : 'border-stone-200 hover:text-sky-600 hover:border-sky-400'}`}
+                             title="編輯"
+                        >
+                             <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button 
+                             onClick={() => handleDelete(record.id, record.type)} 
+                             className={`p-2 rounded-full border transition-colors shadow-sm ${theme.cardBg} ${isDarkMode ? 'border-neutral-700 hover:text-red-400 hover:border-red-500' : 'border-stone-200 hover:text-red-600 hover:border-red-400'}`}
+                             title="刪除"
+                        >
+                             <Trash2 className="w-4 h-4" />
+                        </button>
+                   </div>
+               )}
+
             </div>
           ))}
           <div ref={messagesEndRef} />
@@ -753,7 +754,7 @@ const FinanceScreen = ({
         </div>
       )}
 
-      {/* --- 編輯紀錄 Modal (新功能) --- */}
+      {/* --- 編輯紀錄 Modal (保持不變) --- */}
       {editingRecord && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
             <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-white/40'}`}>
