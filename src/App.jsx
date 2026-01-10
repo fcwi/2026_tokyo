@@ -5083,15 +5083,15 @@ const ItineraryApp = () => {
               )}
             </button>
 
-            {/* 2. 指南 (Guides) */}
+            {/* 2. 記帳記事 (Finance) */}
             <button
               onClick={() => {
                 handleInterruptClick();
-                handleTabChange("guides");
+                handleTabChange("finance");
               }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
-                  activeTab === "guides"
+                  activeTab === "finance"
                     ? isDarkMode
                       ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
                       : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
@@ -5100,10 +5100,10 @@ const ItineraryApp = () => {
                       : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
                 }`}
             >
-              <BookOpen
-                className={`w-5 h-5 ${activeTab === "guides" ? "stroke-[2.5px]" : "stroke-2"}`}
+              <DollarSign
+                className={`w-5 h-5 ${activeTab === "finance" ? "stroke-[2.5px]" : "stroke-2"}`}
               />
-              {activeTab === "guides" && (
+              {activeTab === "finance" && (
                 <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button>
@@ -5188,27 +5188,27 @@ const ItineraryApp = () => {
                 <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button> */}
-            {/* 5. 記帳 (Finance) */}
+            {/* 5. 指南與連結 (Guides) */}
             <button
               onClick={() => {
                 handleInterruptClick();
-                handleTabChange("finance");
+                handleTabChange("guides");
               }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
-                  activeTab === "finance"
+                  activeTab === "guides"
                     ? isDarkMode
-                      ? `bg-${cBase}-800/50 text-sky-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
-                      : `bg-white/60 text-sky-600 border-white/20 shadow-md -translate-y-0.5`
+                      ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
+                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
                       : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
                 }`}
             >
-              <DollarSign // 記得在 lucide-react import 加入 DollarSign
-                className={`w-5 h-5 ${activeTab === "finance" ? "stroke-[2.5px]" : "stroke-2"}`}
+              <BookOpen
+                className={`w-5 h-5 ${activeTab === "guides" ? "stroke-[2.5px]" : "stroke-2"}`}
               />
-              {activeTab === "finance" && (
+              {activeTab === "guides" && (
                 <span className="absolute -bottom-[2px] w-1 h-1 rounded-full bg-current shadow-[0_0_8px_currentColor]"></span>
               )}
             </button>
