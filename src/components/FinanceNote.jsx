@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Camera, Send, DollarSign, MessageSquare, 
-  Loader, Trash2, X, LogOut, Wallet, Plus, Check, ScanLine, Image as ImageIcon,
+  Loader, Trash2, X, LogOut, Wallet, Plus, Check, ScanLine,
   RefreshCcw, Edit3, Save 
 } from 'lucide-react';
 import { uploadToGAS, parseReceiptWithGemini, fetchFromGAS } from '../utils/financeHelper';
@@ -412,7 +412,7 @@ const FinanceScreen = ({
               <button 
                 key={av}
                 onClick={() => setSetupAvatar(av)}
-                className={`text-2xl p-2 rounded-xl border transition-all ${setupAvatar === av ? 'bg-sky-100 border-sky-400 scale-110 shadow-md' : 'border-transparent hover:bg-black/5'}`}
+                className={`text-2xl p-2 rounded-lg border transition-all ${setupAvatar === av ? (isDarkMode ? 'bg-sky-600/30 border-sky-500 scale-110 shadow-md' : 'bg-sky-100 border-sky-400 scale-110 shadow-md') : (isDarkMode ? 'border-neutral-700 hover:bg-neutral-800/50' : 'border-transparent hover:bg-black/5')}`}
               >
                 {av}
               </button>
@@ -424,13 +424,13 @@ const FinanceScreen = ({
               placeholder="輸入您的暱稱"
               value={setupName}
               onChange={e => setSetupName(e.target.value)}
-              className={`w-full p-3 rounded-xl border text-center font-bold outline-none focus:ring-2 focus:ring-sky-300 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}
+              className={`w-full p-3 rounded-lg border text-center font-bold outline-none focus:ring-2 transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20' : 'bg-stone-50 border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20'}`}
             />
             <button 
               onClick={handleUserSetup} 
               disabled={!setupName} 
-              className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 
-                ${setupName ? 'bg-gradient-to-r from-sky-500 to-blue-600' : 'bg-gray-300 cursor-not-allowed'}`}
+              className={`w-full py-3 rounded-lg font-bold text-white shadow-lg transition-all active:scale-95 
+                ${setupName ? (isDarkMode ? 'bg-sky-600 hover:bg-sky-700' : 'bg-[#5D737E] hover:bg-[#4A606A]') : 'bg-stone-300 cursor-not-allowed'}`}
             >
               開始記錄
             </button>
@@ -448,19 +448,16 @@ const FinanceScreen = ({
     <div className={`px-4 pb-28 animate-fadeIn flex flex-col min-h-[calc(100vh-130px)]`}>
       
       {/* 主卡片容器：flex-1 確保內容少時撐開高度，但移除 overflow 讓內容多時可延伸 */}
-      <div className={`flex-1 flex flex-col backdrop-blur-2xl border rounded-[2rem] shadow-xl transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}>
+      <div className={`flex-1 flex flex-col backdrop-blur-md border rounded-2xl shadow-lg transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/80 border-neutral-700' : 'bg-white/90 border-stone-200/80'}`}>
         
         {/* Header */}
-        <div className={`shrink-0 p-4 border-b backdrop-blur-xl transition-colors duration-300 ${isDarkMode ? 'border-neutral-700 bg-neutral-900/95' : 'border-stone-200/50 bg-white/95'}`}>
+        <div className={`shrink-0 p-4 border-b backdrop-blur-sm transition-colors duration-300 ${isDarkMode ? 'border-neutral-700 bg-neutral-900/50' : 'border-stone-200/50 bg-white/50'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-2xl shadow-sm border border-white/50">{user.avatar}</div>
                <div>
-                  <div className={`text-sm font-bold flex items-center gap-1.5 ${theme.text}`}>
+                  <div className={`text-sm font-bold ${theme.text}`}>
                       {user.name}
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${isDarkMode ? 'bg-neutral-700 border-neutral-600 text-neutral-400' : 'bg-stone-100 border-stone-200 text-stone-500'}`}>
-                          {mode === 'finance' ? '記帳中' : '記事中'}
-                      </span>
                   </div>
                </div>
             </div>
@@ -468,15 +465,15 @@ const FinanceScreen = ({
               <button 
                 onClick={() => handleSyncData(false)} 
                 disabled={isSyncing}
-                className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-sky-400' : 'bg-white border-stone-200 text-stone-400 hover:text-sky-500'}`}
+                className={`p-2 rounded-lg border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:text-sky-400 hover:border-sky-500' : 'bg-stone-50 border-stone-300 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]'}`}
               >
                 <RefreshCcw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-sky-500' : ''}`} />
               </button>
-              <div className={`flex p-1 rounded-xl border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-100 border-stone-200'}`}>
-                  <button onClick={() => setMode('finance')} className={`p-2 rounded-lg transition-all ${mode === 'finance' ? (isDarkMode ? 'bg-sky-700 text-white shadow-sm' : 'bg-white text-sky-600 shadow-sm') : 'text-stone-400'}`}><DollarSign className="w-4 h-4"/></button>
-                  <button onClick={() => setMode('note')} className={`p-2 rounded-lg transition-all ${mode === 'note' ? (isDarkMode ? 'bg-orange-600 text-white shadow-sm' : 'bg-white text-orange-500 shadow-sm') : 'text-stone-400'}`}><MessageSquare className="w-4 h-4"/></button>
+              <div className={`flex p-1 rounded-lg border gap-1 ${isDarkMode ? 'bg-neutral-900/60 border-neutral-600' : 'bg-stone-50 border-stone-300'}`}>
+                  <button onClick={() => setMode('finance')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${mode === 'finance' ? (isDarkMode ? 'bg-sky-600 text-white shadow-lg hover:shadow-sky-600/50 hover:bg-sky-700' : 'bg-[#5D737E] text-white shadow-md hover:shadow-lg hover:bg-[#4A606A]') : (isDarkMode ? 'text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30' : 'text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50')}`}><DollarSign className="w-3.5 h-3.5 inline mr-0.5"/>記帳</button>
+                  <button onClick={() => setMode('note')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${mode === 'note' ? (isDarkMode ? 'bg-orange-600 text-white shadow-lg hover:shadow-orange-600/50 hover:bg-orange-700' : 'bg-orange-500 text-white shadow-md hover:shadow-lg hover:bg-orange-600') : (isDarkMode ? 'text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30' : 'text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50')}`}><MessageSquare className="w-3.5 h-3.5 inline mr-0.5"/>記事</button>
               </div>
-              <button onClick={handleLogout} className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-red-400' : 'bg-white border-stone-200 text-stone-400 hover:text-red-500'}`}><LogOut className="w-4 h-4" /></button>
+              <button onClick={handleLogout} className={`p-2 rounded-lg border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-600' : 'bg-stone-50 border-stone-300 text-stone-500 hover:text-red-600 hover:border-red-400'}`}><LogOut className="w-4 h-4" /></button>
             </div>
           </div>
         </div>
@@ -495,8 +492,8 @@ const FinanceScreen = ({
                
                {/* 1. 頭像區域 */}
                <div className="flex-shrink-0 flex flex-col items-center gap-1">
-                   <div className="w-8 h-8 rounded-full flex items-center justify-center bg-stone-100 text-lg shadow-sm">{record.user.avatar}</div>
-                   <span className={`text-[10px] opacity-60 leading-tight max-w-[4rem] truncate text-center ${theme.textSec}`}>
+                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-md border transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-gradient-to-br from-stone-100 to-stone-50 border-stone-200'}`}>{record.user.avatar}</div>
+                   <span className={`text-[10px] opacity-70 leading-tight max-w-[4.5rem] truncate text-center font-medium ${theme.textSec}`}>
                      {record.user.name}
                    </span>
                </div>
@@ -506,8 +503,8 @@ const FinanceScreen = ({
                    
                    <div className={`relative overflow-hidden shadow-sm transition-all border
                         ${record.type === 'finance' 
-                            ? (isDarkMode ? 'bg-neutral-800 border-neutral-700 rounded-xl w-60' : 'bg-white border-stone-200 rounded-xl w-60') 
-                            : (isDarkMode ? 'bg-neutral-800 border-neutral-700 rounded-2xl p-3' : 'bg-white border-stone-200 rounded-2xl p-3')
+                            ? (isDarkMode ? 'bg-neutral-800/80 border-neutral-700 rounded-xl w-60' : 'bg-white border-stone-200/80 rounded-xl w-60') 
+                            : (isDarkMode ? 'bg-neutral-800/80 border-neutral-700 rounded-xl p-3' : 'bg-white border-stone-200/80 rounded-xl p-3')
                         }
                    `}>
                        {/* === 記帳模式 === */}
@@ -527,7 +524,7 @@ const FinanceScreen = ({
                                    </div>
 
                                    <div className="text-right flex-shrink-0">
-                                       <div className={`text-base font-mono font-bold leading-tight ${isDarkMode ? 'text-sky-300' : 'text-sky-600'}`}>
+                                       <div className={`text-base font-mono font-bold leading-tight ${isDarkMode ? 'text-sky-400' : 'text-[#5D737E]'}`}>
                                             ¥{record.amount.toLocaleString()}
                                        </div>
                                        <div className={`text-[10px] mt-0.5 ${theme.textSec}`}>
@@ -588,19 +585,19 @@ const FinanceScreen = ({
 
         {/* Footer 輸入區 - 固定在卡片內容的最下方 */}
         <div className={`shrink-0 border-t backdrop-blur-md transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/90 border-neutral-700' : 'bg-white/90 border-stone-200/80'}`}>
-          <div className="p-2">
+          <div className="px-3 py-2 space-y-1.5">
             {/* 圖片預覽區 */}
             {noteImages.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-2 mb-2 px-1 scrollbar-hide">
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                     {noteImages.map((img, idx) => (
                         <div key={idx} className="relative flex-shrink-0 group animate-slideUp">
-                            <img src={img} alt={`Preview ${idx}`} className="h-16 w-auto rounded-xl border shadow-md object-cover" />
+                            <img src={img} alt={`Preview ${idx}`} className="h-12 w-auto rounded-lg border shadow-sm object-cover" />
                             <button 
                                 onClick={() => removeNoteImage(idx)} 
-                                className="absolute -top-2 -right-2 p-1.5 rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all active:scale-90"
+                                className={`absolute -top-2 -right-2 p-1 rounded-full text-white shadow-md active:scale-90 transition-all ${isDarkMode ? 'bg-red-500 hover:bg-red-600' : 'bg-red-500 hover:bg-red-600'}`}
                                 title="移除圖片"
                             >
-                                <X className="w-3 h-3"/>
+                                <X className="w-2.5 h-2.5"/>
                             </button>
                         </div>
                     ))}
@@ -611,36 +608,34 @@ const FinanceScreen = ({
             <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" className="hidden" multiple />
 
             {/* 輸入控制區 */}
-            <div className="flex items-end gap-2">
+            <div className="flex items-center gap-1.5">
                 {/* 相機按鈕 */}
                 <button 
                     onClick={() => fileInputRef.current?.click()} 
-                    className={`p-2.5 rounded-xl border transition-all shadow-sm flex-shrink-0 active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700' : 'bg-white border-stone-200 text-stone-500 hover:bg-stone-50'}`}
+                    className={`p-2 rounded-lg border transition-all shadow-sm flex-shrink-0 active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700' : 'bg-stone-50 border-stone-300 text-stone-600 hover:text-stone-700 hover:bg-white'}`}
                     title="上傳圖片"
                 >
-                    <Camera className="w-5 h-5" />
+                    <Camera className="w-4 h-4" />
                 </button>
 
-                {/* 輸入框容器 */}
-                <div className="flex-1 min-w-0">
+                {/* 輸入框容器 - 金額與項目同一行 */}
+                <div className="flex-1 min-w-0 flex gap-1.5 items-center">
                     {mode === 'finance' && (
-                        <div className="mb-1">
-                            <input 
-                                type="number" 
-                                value={amount} 
-                                onChange={e => setAmount(e.target.value)} 
-                                placeholder="金額 (JPY)"
-                                className={`w-full border rounded-2xl px-3 py-2 text-base focus:outline-none focus:ring-2 transition-all shadow-inner resize-none leading-relaxed tracking-wide
-                                    ${isDarkMode ? 'bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400'}`}
-                            />
-                        </div>
+                        <input 
+                            type="number" 
+                            value={amount} 
+                            onChange={e => setAmount(e.target.value)} 
+                            placeholder="金額"
+                            className={`flex-shrink-0 w-24 border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-70 leading-tight font-mono
+                                ${isDarkMode ? 'bg-neutral-800/80 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-stone-50 border-stone-300 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-500'}`}
+                        />
                     )}
                     <textarea
                         value={inputText}
                         onChange={(e) => {
                             setInputText(e.target.value);
                             e.target.style.height = "auto";
-                            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                            e.target.style.height = `${Math.min(e.target.scrollHeight, 40)}px`;
                         }}
                         onKeyDown={(e) => {
                             if (e.key === "Enter" && !e.shiftKey) {
@@ -650,9 +645,9 @@ const FinanceScreen = ({
                             }
                         }}
                         rows={1}
-                        placeholder={mode === 'finance' ? "項目說明..." : "輸入記事內容..."}
-                        className={`w-full border rounded-2xl px-3 py-3 text-base focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-50 resize-none max-h-[120px] leading-relaxed tracking-wide
-                            ${isDarkMode ? 'bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400'}`}
+                        placeholder={mode === 'finance' ? "項目說明..." : "記事內容..."}
+                        className={`flex-1 min-w-0 border rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-70 resize-none max-h-[40px] leading-snug
+                            ${isDarkMode ? 'bg-neutral-800/80 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-stone-50 border-stone-300 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-500'}`}
                     />
                 </div>
 
@@ -664,17 +659,17 @@ const FinanceScreen = ({
                         if (textarea) textarea.style.height = "auto";
                     }}
                     disabled={isUploading || isScanning || (mode === 'finance' && !amount)}
-                    className={`p-3 rounded-xl transition-all shadow-md flex-shrink-0 mb-0.5 font-bold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+                    className={`p-2 rounded-lg transition-all shadow-sm flex-shrink-0 font-bold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
                         ${isUploading || isScanning || (mode === 'finance' && !amount)
                             ? isDarkMode
                                 ? 'bg-neutral-700 text-neutral-500 shadow-none'
                                 : 'bg-stone-200 text-stone-400 shadow-none'
                             : isDarkMode
-                                ? 'bg-gradient-to-r from-sky-600 to-blue-700 text-white hover:shadow-lg'
-                                : 'bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white hover:shadow-lg'
+                                ? 'bg-sky-600 text-white hover:bg-sky-700 shadow-md hover:shadow-lg'
+                                : 'bg-[#5D737E] text-white hover:bg-[#4A606A] shadow-md hover:shadow-lg'
                         }`}
                 >
-                    {isUploading ? <Loader className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5" />}
+                    {isUploading ? <Loader className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4" />}
                 </button>
             </div>
           </div>
@@ -688,7 +683,7 @@ const FinanceScreen = ({
             className="fixed inset-0 z-[9999] flex items-center justify-center px-4 pt-4 pb-28 bg-black/80 backdrop-blur-sm animate-fadeIn transform-gpu"
             style={{ willChange: 'opacity, transform' }}
         >
-            <div className={`w-full max-w-md max-h-[85vh] flex flex-col rounded-3xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-white/40'}`}>
+            <div className={`w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-200/50'}`}>
                 {/* Modal Header */}
                 <div className="p-4 border-b flex items-center justify-between shrink-0 bg-opacity-50 backdrop-blur-md">
                     <h3 className={`text-lg font-bold flex items-center gap-2 ${theme.text}`}>
@@ -706,7 +701,7 @@ const FinanceScreen = ({
                 <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
                     <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide min-h-[96px]"> 
                         {receiptImages.map((img, idx) => (
-                            <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-white/10 group">
+                            <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border shadow-sm group">
                                 <img src={img} alt={`Receipt ${idx}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" decoding="async" />
                                 <div className="absolute top-1 right-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded-full backdrop-blur-md">
                                     {idx + 1}
@@ -717,7 +712,7 @@ const FinanceScreen = ({
                         {!isScanning && (
                             <button 
                               onClick={() => appendInputRef.current?.click()}
-                              className={`flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${isDarkMode ? 'border-neutral-700 bg-neutral-800/50 text-neutral-400 hover:text-sky-400 hover:border-sky-500' : 'border-stone-300 bg-stone-50 text-stone-400 hover:text-sky-500 hover:border-sky-400'}`}
+                              className={`flex-shrink-0 w-24 h-24 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all active:scale-95 ${isDarkMode ? 'border-neutral-600 bg-neutral-800/30 text-neutral-400 hover:text-sky-400 hover:border-sky-500' : 'border-stone-400 bg-stone-50 text-stone-500 hover:text-sky-500 hover:border-sky-400'}`}
                             >
                                 <Camera className="w-6 h-6"/>
                                 <span className="text-[10px] font-bold">加拍一張</span>
@@ -734,7 +729,7 @@ const FinanceScreen = ({
 
                     <div className="space-y-3">
                         {receiptItems.map((item, idx) => (
-                            <div key={item.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${isDarkMode ? 'bg-black/20 border-neutral-700' : 'bg-stone-50 border-stone-200'} ${!item.selected && 'opacity-50'}`}>
+                            <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${isDarkMode ? 'bg-neutral-800/50 border-neutral-700' : 'bg-stone-50/80 border-stone-300'} ${!item.selected && 'opacity-50'}`}>
                                 <button 
                                     onClick={() => {
                                         const newItems = [...receiptItems];
@@ -786,7 +781,7 @@ const FinanceScreen = ({
                     {!isScanning && (
                         <button 
                             onClick={() => setReceiptItems([...receiptItems, { id: Date.now(), name: '', amount: '', selected: true }])}
-                            className={`w-full mt-4 py-3 border border-dashed rounded-xl flex items-center justify-center gap-2 text-sm font-bold opacity-60 hover:opacity-100 transition-opacity ${theme.textSec} ${isDarkMode ? 'border-neutral-600' : 'border-stone-300'}`}
+                            className={`w-full mt-4 py-3 border border-dashed rounded-lg flex items-center justify-center gap-2 text-sm font-bold opacity-70 hover:opacity-100 transition-all ${isDarkMode ? 'border-neutral-600 text-neutral-500 hover:border-sky-500 hover:text-sky-400' : 'border-stone-400 text-stone-600 hover:border-[#5D737E] hover:text-[#5D737E]'}`}
                         >
                             <Plus className="w-4 h-4"/> 新增項目
                         </button>
@@ -798,8 +793,8 @@ const FinanceScreen = ({
                     <button 
                         onClick={handleBatchConfirm}
                         disabled={isScanning || receiptItems.filter(i=>i.selected).length === 0}
-                        className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2
-                        ${isScanning ? 'bg-gray-500 opacity-50 cursor-not-allowed' : 'bg-gradient-to-r from-sky-500 to-blue-600'}`}
+                        className={`w-full py-3.5 rounded-lg font-bold text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
+                        ${isScanning || receiptItems.filter(i=>i.selected).length === 0 ? 'bg-stone-400 opacity-50 cursor-not-allowed' : (isDarkMode ? 'bg-sky-600 hover:bg-sky-700' : 'bg-[#5D737E] hover:bg-[#4A606A]')}`}
                     >
                         {isScanning ? '分析中...' : `確認匯入 ${receiptItems.filter(i=>i.selected).length} 筆項目`}
                     </button>
@@ -808,10 +803,10 @@ const FinanceScreen = ({
         </div>
       )}
 
-      {/* --- 編輯紀錄 Modal (保持不變) --- */}
+      {/* --- 編輯紀錄 Modal --- */}
       {editingRecord && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-            <div className={`w-full max-w-sm rounded-3xl shadow-2xl p-6 border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-white/40'}`}>
+            <div className={`w-full max-w-sm rounded-2xl shadow-2xl p-6 border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-200/50'}`}>
                 <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}>
                     <Edit3 className="w-5 h-5 text-sky-500"/>
                     編輯紀錄
@@ -824,7 +819,7 @@ const FinanceScreen = ({
                             type="text" 
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
-                            className={`w-full p-3 rounded-xl border bg-transparent outline-none focus:ring-2 focus:ring-sky-500 ${isDarkMode ? 'border-neutral-700 text-white' : 'border-stone-200 text-stone-800'}`}
+                            className={`w-full p-3 rounded-lg border bg-transparent outline-none focus:ring-2 transition-all ${isDarkMode ? 'border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20' : 'border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20'}`}
                         />
                     </div>
                     {editingRecord.type === 'finance' && (
@@ -834,7 +829,7 @@ const FinanceScreen = ({
                                 type="number" 
                                 value={editAmount}
                                 onChange={(e) => setEditAmount(e.target.value)}
-                                className={`w-full p-3 rounded-xl border bg-transparent outline-none font-mono focus:ring-2 focus:ring-sky-500 ${isDarkMode ? 'border-neutral-700 text-white' : 'border-stone-200 text-stone-800'}`}
+                                className={`w-full p-3 rounded-lg border bg-transparent outline-none font-mono focus:ring-2 transition-all ${isDarkMode ? 'border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20' : 'border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20'}`}
                             />
                         </div>
                     )}
@@ -843,13 +838,13 @@ const FinanceScreen = ({
                 <div className="flex gap-3 mt-6">
                     <button 
                         onClick={cancelEditing}
-                        className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors ${isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'}`}
+                        className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
                     >
                         取消
                     </button>
                     <button 
                         onClick={saveEdit}
-                        className="flex-1 py-3 rounded-xl font-bold text-sm text-white bg-sky-500 shadow-lg shadow-sky-500/30 hover:bg-sky-600 transition-colors flex items-center justify-center gap-2"
+                        className={`flex-1 py-3 rounded-lg font-bold text-sm text-white shadow-lg transition-colors flex items-center justify-center gap-2 ${isDarkMode ? 'bg-sky-600 hover:bg-sky-700' : 'bg-[#5D737E] hover:bg-[#4A606A]'}`}
                     >
                         <Save className="w-4 h-4"/> 儲存
                     </button>
