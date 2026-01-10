@@ -3193,7 +3193,7 @@ const ItineraryApp = () => {
               <button
                 ref={(el) => (navItemsRef.current[-1] = el)}
                 onClick={() => changeDay(-1)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-sm flex items-center gap-1.5 shadow-sm active:scale-95 hover:scale-105
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-2xl flex items-center gap-1.5 shadow-sm active:scale-95 hover:scale-105
                   ${
                     activeDay === -1
                       ? `${theme.accentBg} ${theme.accent} ${isDarkMode ? "border-white/10" : "border-white/20"} scale-105 shadow-md`
@@ -3209,7 +3209,7 @@ const ItineraryApp = () => {
                   ref={(el) => (navItemsRef.current[index] = el)}
                   onClick={() => changeDay(index)}
                   aria-label={`查看${data.day}`}
-                  className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-sm shadow-sm active:scale-95 hover:scale-105
+                  className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-2xl shadow-sm active:scale-95 hover:scale-105
                     ${
                       activeDay === index
                         ? `${theme.accentBg} ${theme.text} ${isDarkMode ? "border-white/10" : "border-white/20"} scale-105 shadow-md`
@@ -4213,7 +4213,7 @@ const ItineraryApp = () => {
                     return (
                       <div
                         key={idx}
-                        className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/40 border-white/5" : "bg-white/70 border-white/20"}`}
+                        className={`backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg hover:scale-[1.02] transition-all duration-300 transform ${theme.cardBg} ${theme.cardBorder}`}
                       >
                         {/* 指南標題列 (點擊展開) */}
                         <div
@@ -4358,10 +4358,14 @@ const ItineraryApp = () => {
               </div>
             </div>
             <div
-              className={`backdrop-blur-2xl border rounded-[2rem] p-5 shadow-xl min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              style={theme.ambientStyle}
             >
               <h2
                 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
+                style={{
+                  textShadow: isDarkMode ? "0 2px 4px rgba(0,0,0,0.3)" : "none",
+                }}
               >
                 <div
                   className={`p-1.5 rounded-xl ${isDarkMode ? "bg-blue-900/20" : "bg-[#E8F0FE]"}`}
@@ -4389,7 +4393,7 @@ const ItineraryApp = () => {
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-3 p-4 backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-98 group ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
+                            className={`flex items-center gap-3 p-4 backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-98 group ${theme.cardBg} ${theme.cardBorder}`}
                           >
                             <div
                               className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner group-hover:scale-105 transition-transform ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
@@ -4398,11 +4402,11 @@ const ItineraryApp = () => {
                             </div>
                             <div className="flex-1">
                               <div
-                                className={`text-sm font-bold flex items-center gap-1.5 group-hover:text-opacity-80 transition-colors ${isDarkMode ? "text-neutral-200 group-hover:text-sky-300" : "text-[#37474F] group-hover:text-[#5D737E]"}`}
+                                className={`text-sm font-bold flex items-center gap-1.5 transition-colors ${theme.text} ${isDarkMode ? "group-hover:text-sky-300" : "group-hover:text-[#5D737E]"}`}
                               >
                                 {item.title}
                                 <ExternalLink
-                                  className={`w-3 h-3 ${isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                                  className={`w-3 h-3 ${theme.textSec}`}
                                 />
                               </div>
                               <p className={`text-xs mt-0.5 ${theme.textSec}`}>
@@ -4471,7 +4475,7 @@ const ItineraryApp = () => {
                     return (
                       <div
                         key={idx}
-                        className={`backdrop-blur-sm border rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 transform ${isDarkMode ? "bg-neutral-800/30 border-neutral-700" : "bg-white/60 border-stone-200"}`}
+                        className={`backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg hover:scale-[1.02] transition-all duration-300 transform ${theme.cardBg} ${theme.cardBorder}`}
                       >
                         {/* 區域標題列 (點擊展開) */}
                         <div
@@ -4687,7 +4691,7 @@ const ItineraryApp = () => {
             >
               {/* 對話視窗標題與模式切換 */}
               <div
-                className={`p-4 border-b backdrop-blur-sm flex flex-col gap-3 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/60 border-stone-200/50"}
+                className={`p-4 border-b backdrop-blur-2xl flex flex-col gap-3 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/60 border-stone-200/50"}
                 ${
                   aiMode === "translate"
                     ? isDarkMode
@@ -4816,7 +4820,7 @@ const ItineraryApp = () => {
 
               {/* 快速建議問題：根據當前模式動態切換 */}
               <div
-                className={`px-4 py-3 border-t flex gap-2.5 overflow-x-auto scrollbar-hide backdrop-blur-sm ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/60 border-stone-200/50"}`}
+                className={`px-4 py-3 border-t flex gap-2.5 overflow-x-auto scrollbar-hide backdrop-blur-2xl ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/60 border-stone-200/50"}`}
               >
                 {(aiMode === "translate"
                   ? tripConfig.translationQuestions || [
