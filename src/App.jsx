@@ -65,6 +65,7 @@ import {
   Unlock,
   Key,
   DollarSign,
+  Download,
 } from "lucide-react";
 import {
   itineraryData,
@@ -175,6 +176,52 @@ const ItineraryApp = () => {
   });
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
 
+  // 圖片下載：處理 data URL 及一般 URL，避免另開分頁
+  const handleDownloadPreview = async (e) => {
+    if (e) e.stopPropagation();
+    try {
+      if (isIOSSafari) {
+        setToast({ show: true, message: "iOS：長按圖片即可儲存", type: "success" });
+        return;
+      }
+      if (!fullPreviewImage) return;
+
+      let blob;
+      if (fullPreviewImage.startsWith("data:")) {
+        const [header, data] = fullPreviewImage.split(",");
+        const mimeMatch = header.match(/data:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+        const bstr = atob(data);
+        const len = bstr.length;
+        const u8arr = new Uint8Array(len);
+        for (let i = 0; i < len; i++) u8arr[i] = bstr.charCodeAt(i);
+        blob = new Blob([u8arr], { type: mime });
+      } else {
+        const resp = await fetch(fullPreviewImage);
+        blob = await resp.blob();
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = blob.type.includes("png")
+        ? "png"
+        : blob.type.includes("webp")
+          ? "webp"
+          : "jpg";
+      a.download = `image.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 800);
+
+      setToast({ show: true, message: "已開始下載", type: "success" });
+    } catch (err) {
+      console.error("download error", err);
+      setToast({ show: true, message: "下載失敗，請稍後重試", type: "error" });
+    }
+  };
+
   useEffect(() => {
     if (fullPreviewImage) {
       document.body.style.overflow = "hidden";
@@ -197,19 +244,28 @@ const ItineraryApp = () => {
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false); // 新增：追蹤地圖彈窗狀態
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isIOSSafari, setIsIOSSafari] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-      if (/android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent)) {
-        setIsMobile(true);
-      } else {
-        setIsMobile(window.innerWidth < 768);
-      }
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const isAndroid = /android/i.test(ua);
+      const isIOSLike = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isWindowsTouch = /Windows/i.test(ua) && navigator.maxTouchPoints > 0;
+      const byViewport = window.innerWidth < 768;
+      setIsMobile(isAndroid || isIOSLike || isWindowsTouch || byViewport);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // 偵測 iOS Safari（iPadOS 也涵蓋）以提供友善提示
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isSafariEngine = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
+    setIsIOSSafari(isIOSDevice && isSafariEngine);
   }, []);
 
   useEffect(() => {
@@ -5305,15 +5361,32 @@ const ItineraryApp = () => {
                   alt="Full Preview"
                   className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
                 />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFullPreviewImage(null);
-                  }}
-                  className="absolute -top-12 right-0 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
-                >
-                  <X className="w-8 h-8" />
-                </button>
+                {isIOSSafari && (
+                  <div className="absolute bottom-4 left-4 text-[11px] md:text-xs text-white/85 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 shadow-xl">
+                    iOS 提示：長按圖片即可儲存
+                  </div>
+                )}
+                <div className="absolute bottom-4 right-4 flex gap-2 px-2 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 shadow-xl">
+                  <button
+                    onClick={handleDownloadPreview}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    aria-label="下載圖片"
+                    title="下載"
+                  >
+                    <Download className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFullPreviewImage(null);
+                    }}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                    aria-label="關閉預覽"
+                    title="關閉"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
               </motion.div>
             </motion.div>
           )}
