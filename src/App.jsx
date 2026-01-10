@@ -702,6 +702,115 @@ const ItineraryApp = () => {
   const [expandedShops, setExpandedShops] = useState({});
   const [availableVoices, setAvailableVoices] = useState([]);
 
+  // 瀏覽器歷史記錄管理 - 處理返回鍵行為
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const state = event.state;
+      
+      if (!state) {
+        // 如果沒有狀態，表示要退出應用
+        return;
+      }
+
+      // 處理模態框關閉
+      if (state.modal) {
+        switch (state.modal) {
+          case 'calculator':
+            setIsCalculatorOpen(false);
+            break;
+          case 'map':
+            setIsMapModalOpen(false);
+            break;
+          case 'weather':
+            setShowWeatherDetail(false);
+            break;
+          case 'testMode':
+            setIsTestMode(false);
+            break;
+          default:
+            break;
+        }
+        return;
+      }
+
+      // 處理 tab 切換
+      if (state.tab && state.tab !== activeTab) {
+        setActiveTab(state.tab);
+        return;
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // 初始化：將當前狀態推入歷史記錄
+    if (!window.history.state) {
+      window.history.replaceState({ tab: activeTab }, '');
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [activeTab]);
+
+  // 包裝 setActiveTab，添加歷史記錄
+  const handleTabChange = React.useCallback((newTab) => {
+    if (newTab === activeTab) return;
+    
+    setActiveTab(newTab);
+    window.history.pushState({ tab: newTab }, '');
+  }, [activeTab]);
+
+  // 包裝模態框的開關，添加歷史記錄
+  const handleCalculatorOpen = React.useCallback(() => {
+    setIsCalculatorOpen(true);
+    window.history.pushState({ modal: 'calculator' }, '');
+  }, []);
+
+  const handleCalculatorClose = React.useCallback(() => {
+    setIsCalculatorOpen(false);
+    // 只在最後一個歷史記錄是計算機時才返回
+    if (window.history.state?.modal === 'calculator') {
+      window.history.back();
+    }
+  }, []);
+
+  // 處理 MapModal 的切換（接受布爾值參數，用於 DayMap 組件）
+  const handleMapModalToggle = React.useCallback((isOpen) => {
+    if (isOpen) {
+      setIsMapModalOpen(true);
+      window.history.pushState({ modal: 'map' }, '');
+    } else {
+      setIsMapModalOpen(false);
+      if (window.history.state?.modal === 'map') {
+        window.history.back();
+      }
+    }
+  }, []);
+
+  const handleWeatherDetailOpen = React.useCallback(() => {
+    setShowWeatherDetail(true);
+    window.history.pushState({ modal: 'weather' }, '');
+  }, []);
+
+  const handleWeatherDetailClose = React.useCallback(() => {
+    setShowWeatherDetail(false);
+    if (window.history.state?.modal === 'weather') {
+      window.history.back();
+    }
+  }, []);
+
+  const handleTestModeOpen = React.useCallback(() => {
+    setIsTestMode(true);
+    window.history.pushState({ modal: 'testMode' }, '');
+  }, []);
+
+  const handleTestModeClose = React.useCallback(() => {
+    setIsTestMode(false);
+    if (window.history.state?.modal === 'testMode') {
+      window.history.back();
+    }
+  }, []);
+
   // 導覽列自動捲動用的 Ref
   const navContainerRef = useRef(null);
   const navItemsRef = useRef({}); // 用物件來存每一顆按鈕的 ref
@@ -2357,7 +2466,7 @@ const ItineraryApp = () => {
       setTestLatitude(userWeather?.lat || 35.6762);
       setTestLongitude(userWeather?.lon || 139.6503);
       setTestWeatherOverride({ overview: null, days: {} });
-      setIsTestMode(true);
+      handleTestModeOpen();
       setTestModeClickCount(0);
       showToast("🩷 進入測試模式！", "success");
     } else {
@@ -3279,7 +3388,7 @@ const ItineraryApp = () => {
                               <span className="flex items-center gap-1">
                                 {userWeather.locationName}
                                 <button
-                                  onClick={() => setShowWeatherDetail(true)}
+                                  onClick={handleWeatherDetailOpen}
                                   className={`p-2 rounded-xl transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
                                   title="查看詳細氣象資訊"
                                 >
@@ -3736,7 +3845,7 @@ const ItineraryApp = () => {
                                   (l) => l.key === currentLocation,
                                 )?.name || "當地"}
                                 <button
-                                  onClick={() => setShowWeatherDetail(true)}
+                                  onClick={handleWeatherDetailOpen}
                                   className={`p-2 rounded-xl transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
                                   title="查看詳細氣象資訊"
                                 >
@@ -4123,7 +4232,7 @@ const ItineraryApp = () => {
                                   userLocation={userWeather}
                                   isDarkMode={isDarkMode}
                                   theme={theme}
-                                  onModalToggle={setIsMapModalOpen}
+                                  onModalToggle={handleMapModalToggle}
                                 />
                               </Suspense>
 
@@ -4897,7 +5006,7 @@ const ItineraryApp = () => {
             <button
               onClick={() => {
                 handleInterruptClick();
-                setActiveTab("itinerary");
+                handleTabChange("itinerary");
               }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 group backdrop-blur-md border
                 ${
@@ -4922,7 +5031,7 @@ const ItineraryApp = () => {
             <button
               onClick={() => {
                 handleInterruptClick();
-                setActiveTab("guides");
+                handleTabChange("guides");
               }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
@@ -4947,7 +5056,7 @@ const ItineraryApp = () => {
             <button
               onClick={() => {
                 handleInterruptClick();
-                setActiveTab("ai");
+                handleTabChange("ai");
               }}
               className={`mx-1 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg backdrop-blur-md active:scale-95 border
                 ${
@@ -4978,7 +5087,7 @@ const ItineraryApp = () => {
             <button
               onClick={() => {
                 handleInterruptClick();
-                setActiveTab("shops");
+                handleTabChange("shops");
               }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
@@ -5027,7 +5136,7 @@ const ItineraryApp = () => {
             <button
               onClick={() => {
                 handleInterruptClick();
-                setActiveTab("finance");
+                handleTabChange("finance");
               }}
               className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-md border
                 ${
@@ -5083,7 +5192,7 @@ const ItineraryApp = () => {
         {/* 計算機按鈕 (僅行動裝置顯示) */}
         {isMobile && (
           <button
-            onClick={() => setIsCalculatorOpen(true)}
+            onClick={handleCalculatorOpen}
             className={`fixed bottom-[19rem] right-5 w-12 h-12 backdrop-blur-md border rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all opacity-60 hover:opacity-100
               ${
                 isDarkMode
@@ -5099,7 +5208,7 @@ const ItineraryApp = () => {
         {/* 匯率計算機彈窗 */}
         <CalculatorModal
           isOpen={isCalculatorOpen}
-          onClose={() => setIsCalculatorOpen(false)}
+          onClose={handleCalculatorClose}
           isDarkMode={isDarkMode}
           rateData={rateData}
           currencyCode={tripConfig.currency.code}
@@ -5109,7 +5218,7 @@ const ItineraryApp = () => {
         {/* 測試模式面板 (開發與測試用) */}
         <TestModePanel
           isOpen={isTestMode}
-          onClose={() => setIsTestMode(false)}
+          onClose={handleTestModeClose}
           testDateTime={testDateTime}
           onDateTimeChange={(newDateTime) => {
             console.log(
@@ -5258,7 +5367,7 @@ const ItineraryApp = () => {
           <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
             <div
               className="absolute inset-0"
-              onClick={() => setShowWeatherDetail(false)}
+              onClick={handleWeatherDetailClose}
             />
 
             <div className="relative z-10 w-full max-w-[400px]">
@@ -5271,7 +5380,7 @@ const ItineraryApp = () => {
                 loading={weatherDetailLoading}
                 isDarkMode={isDarkMode}
                 theme={currentTheme}
-                onClose={() => setShowWeatherDetail(false)}
+                onClose={handleWeatherDetailClose}
                 onRefresh={() => {
                   if (activeDay === -1) {
                     getUserLocationWeather({ isSilent: false });
