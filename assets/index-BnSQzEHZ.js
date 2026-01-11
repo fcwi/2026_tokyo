@@ -179,7 +179,6 @@ ${x}`}).join(`
            格式：[${At}翻譯] ([羅馬拼音])
         2. 若使用者輸入${At} (或英文/其他語言) -> 僅翻譯成繁體中文。
         3. **嚴禁廢話**：不要解釋語法，不要打招呼，只輸出翻譯結果。
-        4. 如果使用者輸入的內容明顯是想聊天或問行程，請禮貌回覆：「目前為口譯模式，請切換至導遊模式以詢問行程。」
         `}]},contents:[...Wn.slice(-1).filter(ut=>ut.role!=="system").map(ut=>({role:ut.role,parts:[{text:ut.text||""}]})),V(Z)],generationConfig:{temperature:.3,maxOutputTokens:2e3}}}else{let At="";he&&ht.locationName&&!ht.loading&&ht.locationName!=="定位中..."?At=`【使用者目前 GPS 位置】：${ht.locationName}。
 回答時請優先依據此位置 (例如：附近的超商)。`:At="目前無 GPS，請假設使用者位於行程表中的地點。";const ut=new Date(de.startDate),ee=Ht?nn:new Date,cn=new Date(ee.toLocaleString("en-US",{timeZone:m}))-ut,Oe=Math.floor(cn/(1e3*60*60*24))+1;let gn="";Oe>=1&&Oe<=Dn.length?gn=`今天是行程的第 ${Oe} 天 (Day ${Oe})。`:Oe<1?gn=`旅程尚未開始 (預計 ${de.startDate} 出發)。`:gn="旅程已經結束。";const Te=`你是這趟「${de.title}」的專屬 AI 導遊。
         【目前目的地當地時間】：${_} (時區: ${m})。
