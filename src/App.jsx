@@ -3002,6 +3002,11 @@ const ItineraryApp = () => {
         ? currentTheme.glassColors.nav.dark
         : currentTheme.glassColors.nav.light,
 
+      // 導覽按鈕樣式（區別於卡片）
+      navBtnStyle: isDarkMode
+        ? "bg-[#2A2A2A]/60 border-white/15"
+        : "bg-stone-100/85 border-stone-300/60 shadow-sm",
+
       // 裝飾光暈
       blob1: isDarkMode
         ? currentTheme.blobs.dark[0]
@@ -3499,11 +3504,11 @@ const ItineraryApp = () => {
               <button
                 ref={(el) => (navItemsRef.current[-1] = el)}
                 onClick={() => changeDay(-1)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-2xl flex items-center gap-1.5 shadow-sm active:scale-95 hover:scale-105
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-xl flex items-center gap-1.5 active:scale-95 hover:scale-105
                   ${
                     activeDay === -1
-                      ? `${theme.accentBg} ${theme.accent} ${isDarkMode ? "border-white/10" : "border-white/20"} scale-105 shadow-md`
-                      : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5 hover:shadow-md`
+                      ? `${theme.accentBg} ${theme.accent} ${isDarkMode ? "border-white/10" : "border-amber-300/50"} scale-105 shadow-md`
+                      : `${theme.navBtnStyle} ${theme.textSec} hover:bg-stone-200/90 hover:shadow-md`
                   }`}
               >
                 <LayoutDashboard className="w-4 h-4" /> 總覽
@@ -3515,11 +3520,11 @@ const ItineraryApp = () => {
                   ref={(el) => (navItemsRef.current[index] = el)}
                   onClick={() => changeDay(index)}
                   aria-label={`查看${data.day}`}
-                  className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-2xl shadow-sm active:scale-95 hover:scale-105
+                  className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 border backdrop-blur-xl active:scale-95 hover:scale-105
                     ${
                       activeDay === index
-                        ? `${theme.accentBg} ${theme.text} ${isDarkMode ? "border-white/10" : "border-white/20"} scale-105 shadow-md`
-                        : `${theme.cardBg} ${theme.textSec} border-transparent hover:bg-black/5 hover:shadow-md`
+                        ? `${theme.accentBg} ${theme.text} ${isDarkMode ? "border-white/10" : "border-amber-300/50"} scale-105 shadow-md`
+                        : `${theme.navBtnStyle} ${theme.textSec} hover:bg-stone-200/90 hover:shadow-md`
                     }`}
                 >
                   {data.day}
@@ -5287,11 +5292,11 @@ const ItineraryApp = () => {
         {/* --- 底部導覽列 (Bottom Navigation) --- */}
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto">
           <div
-            className={`flex items-center gap-1 px-2 py-2 rounded-full backdrop-blur-2xl border shadow-2xl transition-all duration-300
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-2xl border shadow-2xl transition-all duration-300
             ${
               isDarkMode
                 ? `bg-${cBase}-900/60 border-white/10 shadow-black/50`
-                : `bg-${cBase}-50/60 border-white/20 shadow-${cBase}-500/10`
+                : "bg-white/80 border-white/50 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.15)]"
             }`}
           >
             {/* 1. 行程 (Itinerary) */}
@@ -5305,10 +5310,10 @@ const ItineraryApp = () => {
                   activeTab === "itinerary"
                     ? isDarkMode
                       ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
-                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
+                      : `bg-white text-${cBase}-800 border-white shadow-[0_4px_12px_rgba(0,0,0,0.12)] -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
-                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                      : `border-transparent text-${cBase}-400 hover:text-${cBase}-700 hover:bg-black/5`
                 }`}
             >
               <Home
@@ -5330,10 +5335,10 @@ const ItineraryApp = () => {
                   activeTab === "finance"
                     ? isDarkMode
                       ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
-                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
+                      : `bg-white text-${cBase}-800 border-white shadow-[0_4px_12px_rgba(0,0,0,0.12)] -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
-                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                      : `border-transparent text-${cBase}-400 hover:text-${cBase}-700 hover:bg-black/5`
                 }`}
             >
               <DollarSign
@@ -5386,10 +5391,10 @@ const ItineraryApp = () => {
                   activeTab === "shops"
                     ? isDarkMode
                       ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
-                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
+                      : `bg-white text-${cBase}-800 border-white shadow-[0_4px_12px_rgba(0,0,0,0.12)] -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
-                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                      : `border-transparent text-${cBase}-400 hover:text-${cBase}-700 hover:bg-black/5`
                 }`}
             >
               <Store
@@ -5435,10 +5440,10 @@ const ItineraryApp = () => {
                   activeTab === "guides"
                     ? isDarkMode
                       ? `bg-${cBase}-800/50 text-${cAccent}-400 border-${cBase}-600/20 shadow-[0_0_15px_rgba(0,0,0,0.2)] -translate-y-0.5`
-                      : `bg-white/60 text-${cBase}-700 border-white/20 shadow-md -translate-y-0.5`
+                      : `bg-white text-${cBase}-800 border-white shadow-[0_4px_12px_rgba(0,0,0,0.12)] -translate-y-0.5`
                     : isDarkMode
                       ? `border-transparent text-${cBase}-400 hover:text-${cBase}-200 hover:bg-${cBase}-700/20`
-                      : `border-transparent text-${cBase}-500 hover:text-${cBase}-700 hover:bg-${cBase}-200/30`
+                      : `border-transparent text-${cBase}-400 hover:text-${cBase}-700 hover:bg-black/5`
                 }`}
             >
               <BookOpen
