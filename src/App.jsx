@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, lazy, Suspense, useMemo, useCallback } from "react";
+﻿import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
 import {
   Sun,
   CloudSnow,
@@ -2178,247 +2178,120 @@ const ItineraryApp = () => {
     };
   }, []);
 
-  // 偵測是否為 iOS 設備 (用於語音識別相容性處理)
-  // 使用 useMemo 確保值穩定
-  const isIOS = useMemo(() => 
-    /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
-  []);
-
-  // 檢查瀏覽器是否支援語音識別
-  const speechRecognitionSupported = useMemo(() =>
-    "webkitSpeechRecognition" in window || "SpeechRecognition" in window,
-  []);
-
-  // 創建語音識別實例的輔助函數
-  // iOS 需要每次都創建新實例，因為 iOS Safari 不允許重複使用同一實例
-  const createRecognitionInstance = useCallback((lang) => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.continuous = false;
-    // iOS Safari: interimResults 設為 false 可提高穩定性
-    // 非 iOS 可開啟以獲得即時回饋
-    recognition.interimResults = !isIOS;
-    recognition.lang = lang;
-    // 設定最大候選數量 (有助於提高辨識準確度)
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-      let transcript = "";
-      let isFinalResult = false;
-      
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        transcript += event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          isFinalResult = true;
-        }
-      }
-      
-      // 更新輸入框內容
-      setInputMessage(transcript);
-      
-      // iOS: 當獲得最終結果時，不需要手動停止，讓系統自動處理
-      // 非 iOS: 也讓系統自動處理結束
-      if (isFinalResult && !isIOS) {
+  // === iOS PWA 語音識別：只在卸載時清理 ===
+  useEffect(() => {
+    return () => {
+      // 組件卸載時，如果有正在執行的語音識別，將其終止
+      if (recognitionRef.current) {
         try {
-          recognition.stop();
+          recognitionRef.current.abort();
         } catch {
-          // 忽略停止時的錯誤
+          // 忽略錯誤
         }
       }
     };
+  }, []);
 
-    recognition.onend = () => {
-      console.log("語音識別: 結束");
+  // === iOS PWA 關鍵：每次點擊都建立全新實例 ===
+  // Fresh Instance + User Activation + Clean State
+  const toggleListening = async (lang) => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    // 0. 瀏覽器支援檢查
+    if (!SpeechRecognition) {
+      showToast("抱歉，您的瀏覽器不支援語音輸入功能。", "error");
+      return;
+    }
+
+    // 1. 如果正在聆聽，則停止
+    if (listeningLang) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.error("停止失敗", e);
+        }
+      }
       setListeningLang(null);
-      // iOS: 清理實例以便下次創建新的
-      if (isIOS) {
-        recognitionRef.current = null;
+      return;
+    }
+
+    // --- 新增修正：針對 iPad PWA 的「暖機」動作 ---
+    // iPadOS PWA 有時會因為 Audio Session 未激活而導致 SpeechRecognition 瞬間結束或報錯
+    // 我們先請求一次 getUserMedia 來強制激活麥克風權限與硬體通道
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 成功取得後立刻關閉，我們只需要激活權限，不需要真的錄音
+      stream.getTracks().forEach(track => track.stop());
+    } catch (err) {
+      console.error("麥克風權限獲取失敗", err);
+      showToast("請允許麥克風權限", "error");
+      return;
+    }
+    // ----------------------------------------------
+
+    // 2. 【關鍵】每次點擊時，建立全新的實例
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false; // iOS PWA 建議設為 false，講完一句自動停
+    recognition.interimResults = true;
+    recognition.lang = lang;
+
+    // 3. 重新綁定事件 (因為是新實例，必須重新綁定)
+    recognition.onstart = () => {
+      setListeningLang(lang);
+      setInputMessage(""); // 清空輸入框開始新輸入
+    };
+
+    recognition.onresult = (event) => {
+      let finalStr = '';
+      let interimStr = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalStr += event.results[i][0].transcript;
+        } else {
+          interimStr += event.results[i][0].transcript;
+        }
+      }
+
+      // 更新 State
+      if (finalStr) {
+        setInputMessage(finalStr);
+      } else if (interimStr) {
+        setInputMessage(interimStr);
       }
     };
 
     recognition.onerror = (event) => {
-      console.error("語音識別錯誤:", event.error, event);
-      setListeningLang(null);
-      
-      // iOS 特定錯誤處理
-      if (event.error === "not-allowed") {
-        showToast("請在設定中允許此網站使用麥克風", "error");
-      } else if (event.error === "no-speech") {
-        // 沒有偵測到語音 - 不需要顯示錯誤訊息，這是正常情況
-      } else if (event.error === "audio-capture") {
-        showToast("無法存取麥克風，請檢查權限設定", "error");
-      } else if (event.error === "network") {
-        showToast("網路連線問題，請檢查網路", "error");
-      } else if (event.error !== "aborted") {
-        // 其他未知錯誤
-        showToast("語音輸入發生問題，請重試", "error");
-      }
-      
-      // iOS: 清理實例
-      if (isIOS) {
-        recognitionRef.current = null;
-      }
-    };
+      console.error("語音識別錯誤:", event.error);
 
-    // 用於除錯的事件
-    recognition.onstart = () => {
-      console.log("語音識別: 開始", { lang, isIOS });
-    };
-
-    recognition.onaudiostart = () => {
-      console.log("語音識別: 音訊擷取開始");
-    };
-
-    recognition.onaudioend = () => {
-      console.log("語音識別: 音訊擷取結束");
-    };
-
-    recognition.onspeechstart = () => {
-      console.log("語音識別: 偵測到語音");
-    };
-
-    recognition.onspeechend = () => {
-      console.log("語音識別: 語音結束");
-    };
-
-    return recognition;
-  }, [isIOS, showToast]);
-
-  // 用於追蹤是否正在啟動中，避免重複啟動
-  const isStartingRef = useRef(false);
-
-  // 初始化語音識別 (非 iOS 設備預先創建實例)
-  useEffect(() => {
-    if (speechRecognitionSupported && !isIOS) {
-      // 非 iOS 設備: 預先創建並重複使用實例
-      recognitionRef.current = createRecognitionInstance("zh-TW");
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // 忽略錯誤
+      // 忽略 abort 與 no-speech (通常是用戶停止或沒說話)
+      if (event.error !== "aborted" && event.error !== "no-speech") {
+        if (event.error === "not-allowed") {
+          showToast("請檢查設定中的麥克風權限", "error");
+        } else {
+          showToast("語音辨識發生錯誤，請重試", "error");
         }
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.onend = null;
-        recognitionRef.current.onerror = null;
-        recognitionRef.current.onstart = null;
-        recognitionRef.current = null;
       }
       setListeningLang(null);
     };
-  }, [speechRecognitionSupported, isIOS, createRecognitionInstance]);
 
-  const toggleListening = useCallback((lang) => {
-    // 檢查瀏覽器支援
-    if (!speechRecognitionSupported) {
-      showToast("抱歉，您的瀏覽器不支援語音輸入功能", "error");
-      return;
-    }
+    recognition.onend = () => {
+      // 自動結束時重置狀態
+      setListeningLang(null);
+    };
 
-    // 防止重複啟動
-    if (isStartingRef.current) {
-      console.log("語音識別: 正在啟動中，忽略重複請求");
-      return;
-    }
+    // 4. 更新 Ref 並啟動
+    recognitionRef.current = recognition;
 
     try {
-      // 如果正在聆聽同一語言，則停止
-      if (listeningLang === lang) {
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.stop();
-          } catch {
-            // iOS 可能已經停止
-          }
-        }
-        setListeningLang(null);
-        return;
-      }
-
-      // 如果正在聆聽其他語言，先停止
-      if (listeningLang && recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // 忽略錯誤
-        }
-      }
-
-      // 清空輸入框
-      setInputMessage("");
-
-      // iOS: 每次都創建新實例 (這是 iOS Safari 的要求)
-      // 必須在用戶互動的直接調用棧中創建和啟動
-      if (isIOS) {
-        // 先清理舊實例
-        if (recognitionRef.current) {
-          recognitionRef.current.onresult = null;
-          recognitionRef.current.onend = null;
-          recognitionRef.current.onerror = null;
-          recognitionRef.current.onstart = null;
-          recognitionRef.current = null;
-        }
-        recognitionRef.current = createRecognitionInstance(lang);
-      } else {
-        // 非 iOS: 更新現有實例的語言設定
-        if (!recognitionRef.current) {
-          recognitionRef.current = createRecognitionInstance(lang);
-        } else {
-          recognitionRef.current.lang = lang;
-        }
-      }
-
-      // 標記正在啟動
-      isStartingRef.current = true;
-
-      // 開始語音識別
-      try {
-        recognitionRef.current.start();
-        setListeningLang(lang);
-      } catch (startError) {
-        console.error("啟動語音識別失敗:", startError);
-        // 可能是因為之前的實例還沒完全停止，等待後重試
-        if (isIOS) {
-          setTimeout(() => {
-            try {
-              recognitionRef.current = createRecognitionInstance(lang);
-              recognitionRef.current.start();
-              setListeningLang(lang);
-            } catch (retryError) {
-              console.error("重試啟動失敗:", retryError);
-              showToast("語音輸入啟動失敗，請稍後重試", "error");
-              setListeningLang(null);
-            } finally {
-              isStartingRef.current = false;
-            }
-          }, 300);
-          return;
-        } else {
-          throw startError;
-        }
-      } finally {
-        isStartingRef.current = false;
-      }
-
+      recognition.start();
     } catch (error) {
-      console.error("語音識別操作出錯:", error);
+      console.error("啟動語音識別失敗:", error);
       setListeningLang(null);
-      isStartingRef.current = false;
-      
-      // iOS 特定: 清理實例
-      if (isIOS) {
-        recognitionRef.current = null;
-      }
-      
-      showToast("語音輸入發生問題，請重試", "error");
+      showToast("無法啟動麥克風", "error");
     }
-  }, [speechRecognitionSupported, listeningLang, isIOS, createRecognitionInstance, showToast]);
+  };
 
   const LANGUAGE_SPECS = {
     "ja-JP": {
