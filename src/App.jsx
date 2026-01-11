@@ -638,6 +638,7 @@ const ItineraryApp = () => {
         card: "p-4",
         cardLarge: "p-5",
       },
+      componentStyles: theme.componentStyles || {},
     };
   }, []);
 
@@ -661,6 +662,38 @@ const ItineraryApp = () => {
       pink: isDarkMode ? sc.pink.dark : sc.pink.light,
     };
   }, [isDarkMode, currentTheme.semanticColors]);
+
+  // 🎨 新增：useComponentStyles Hook - Pro Max 級組件樣式管理
+  const useComponentStyles = (isDarkMode, currentTheme) => {
+    return React.useMemo(() => {
+      const styles = currentTheme.componentStyles;
+      return {
+        itineraryCard: isDarkMode ? styles.itineraryCard.dark : styles.itineraryCard.light,
+        navButton: isDarkMode ? styles.navButton.dark : styles.navButton.light,
+        navContainer: isDarkMode ? styles.navContainer.dark : styles.navContainer.light,
+        chatUserBubble: isDarkMode ? styles.chatUserBubble.dark : styles.chatUserBubble.light,
+        chatModelBubble: isDarkMode ? styles.chatModelBubble.dark : styles.chatModelBubble.light,
+        chatContainer: isDarkMode ? styles.chatContainer.dark : styles.chatContainer.light,
+        infoCard: isDarkMode ? styles.infoCard.dark : styles.infoCard.light,
+        tagBase: isDarkMode ? styles.tagBase.dark : styles.tagBase.light,
+        inputField: isDarkMode ? styles.inputField.dark : styles.inputField.light,
+        buttonPrimary: isDarkMode ? styles.buttonPrimary.dark : styles.buttonPrimary.light,
+        buttonSecondary: isDarkMode ? styles.buttonSecondary.dark : styles.buttonSecondary.light,
+        modalBackdrop: isDarkMode ? styles.modalBackdrop.dark : styles.modalBackdrop.light,
+        modalContent: isDarkMode ? styles.modalContent.dark : styles.modalContent.light,
+        divider: isDarkMode ? styles.divider.dark : styles.divider.light,
+        cardHover: isDarkMode ? styles.cardHover.dark : styles.cardHover.light,
+        loadingOverlay: isDarkMode ? styles.loadingOverlay.dark : styles.loadingOverlay.light,
+        toastSuccess: isDarkMode ? styles.toastSuccess.dark : styles.toastSuccess.light,
+        toastWarning: isDarkMode ? styles.toastWarning.dark : styles.toastWarning.light,
+        toastError: isDarkMode ? styles.toastError.dark : styles.toastError.light,
+        mainBackground: isDarkMode ? styles.mainBackground.dark : styles.mainBackground.light,
+        pageContainer: isDarkMode ? styles.pageContainer.dark : styles.pageContainer.light,
+      };
+    }, [isDarkMode, currentTheme.componentStyles]);
+  };
+
+  const componentStyles = useComponentStyles(isDarkMode, currentTheme);
 
   useEffect(() => {
     const checkSavedPassword = async () => {
@@ -2946,7 +2979,7 @@ const ItineraryApp = () => {
         </div>
 
         <div
-          className={`max-w-md w-full backdrop-blur-xl border rounded-3xl p-8 shadow-2xl relative z-10 ${theme.cardBg} ${theme.cardBorder}`}
+          className={`max-w-md w-full backdrop-blur-xl border rounded-3xl p-8 shadow-2xl relative z-10 ${componentStyles.itineraryCard}`}
         >
           <div className="text-center mb-8">
             <div
@@ -3202,7 +3235,7 @@ const ItineraryApp = () => {
         }}
       >
         <div
-          className={`p-2 rounded-full shadow-lg backdrop-blur-md border ${theme.cardBg} ${theme.cardBorder}`}
+          className={`p-2 rounded-full shadow-lg backdrop-blur-md border ${componentStyles.itineraryCard}`}
         >
           <RotateCcw
             className={`w-5 h-5 ${theme.accent} ${isRefreshing ? "animate-spin" : ""}`}
@@ -3269,7 +3302,7 @@ const ItineraryApp = () => {
         <div className="flex justify-between items-end px-4 pt-5 pb-2 relative z-20 gap-4">
           {/* 左側：行程標題 (點擊觸發測試模式彩蛋) */}
           <div
-            className={`px-3 py-2.5 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 cursor-pointer select-none active:scale-95 ${theme.cardBg} ${theme.cardBorder}`}
+            className={`px-3 py-2.5 rounded-2xl backdrop-blur-md shadow-sm border transition-all duration-300 min-w-0 cursor-pointer select-none active:scale-95 ${componentStyles.itineraryCard}`}
             onClick={handleTitleClick}
           >
             <h1
@@ -3297,7 +3330,7 @@ const ItineraryApp = () => {
                   e.stopPropagation();
                   handleLockButtonClick();
                 }}
-                className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
+                className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${componentStyles.itineraryCard} ${theme.accent}`}
                 title={testModeClickCount === 10 ? "進入測試模式" : "鎖定行程"}
               >
                 {testModeClickCount === 10 ? (
@@ -3313,7 +3346,7 @@ const ItineraryApp = () => {
                   handleInterruptClick();
                   toggleTheme();
                 }}
-                className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${theme.cardBg} ${theme.cardBorder} ${theme.accent}`}
+                className={`p-2 rounded-full backdrop-blur-md shadow-sm border transition-all duration-300 active:scale-90 ${componentStyles.itineraryCard} ${theme.accent}`}
                 aria-label={`切換到${isDarkMode ? "亮色" : "深色"}模式`}
               >
                 {isDarkMode ? (
@@ -3412,7 +3445,7 @@ const ItineraryApp = () => {
                   >
                     {/* --- 總覽頁面：即時天氣與預報卡片 --- */}
                     <div
-                      className={`backdrop-blur-xl border rounded-[1.5rem] p-4 ${theme.cardShadow} transition-colors duration-300 relative overflow-hidden ${theme.cardBg} ${theme.cardBorder}`}
+                      className={`backdrop-blur-xl border rounded-[1.5rem] p-4 ${theme.cardShadow} transition-colors duration-300 relative overflow-hidden ${componentStyles.itineraryCard}`}
                       style={theme.ambientStyle}
                     >
                       {/* 上半部：目前天氣與地點資訊 */}
@@ -3681,7 +3714,7 @@ const ItineraryApp = () => {
                     {/* --- 旅程狀態與檢查清單 --- */}
                     {tripStatus === "before" && (
                       <div
-                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${componentStyles.itineraryCard}`}
                         style={theme.ambientStyle}
                       >
                         <div className="text-center mb-5">
@@ -3718,7 +3751,7 @@ const ItineraryApp = () => {
                     {/* --- 旅程狀態：旅途中 (顯示今日重點) --- */}
                     {tripStatus === "during" && currentTripDayIndex >= 0 && (
                       <div
-                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${componentStyles.itineraryCard}`}
                         style={theme.ambientStyle}
                       >
                         <div
@@ -3823,7 +3856,7 @@ const ItineraryApp = () => {
                     {/* --- 旅程狀態：旅程結束 (回顧) --- */}
                     {tripStatus === "after" && (
                       <div
-                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                        className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} animate-fadeIn transition-colors duration-300 ${componentStyles.itineraryCard}`}
                         style={theme.ambientStyle}
                       >
                         <div className="text-center mb-5">
@@ -3888,7 +3921,7 @@ const ItineraryApp = () => {
                       <>
                         {/* 該日天氣預報卡片 */}
                         <div
-                          className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                          className={`backdrop-blur-xl border rounded-3xl p-5 ${theme.cardShadow} flex items-center justify-between relative overflow-hidden transition-colors duration-300 ${componentStyles.itineraryCard}`}
                           style={theme.ambientStyle}
                         >
                           <div className="relative z-10">
@@ -3971,7 +4004,7 @@ const ItineraryApp = () => {
 
                         {/* 行程內容主卡片 */}
                         <div
-                          className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] relative transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+                          className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] relative transition-colors duration-300 ${componentStyles.itineraryCard}`}
                           style={theme.ambientStyle}
                         >
                           {/* 標題與日期 */}
@@ -4353,7 +4386,7 @@ const ItineraryApp = () => {
         {activeTab === "guides" && (
           <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
-              className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${componentStyles.itineraryCard}`}
               style={theme.ambientStyle}
             >
               <h2
@@ -4378,7 +4411,7 @@ const ItineraryApp = () => {
                     return (
                       <div
                         key={idx}
-                        className={`backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg hover:scale-[1.02] transition-all duration-300 transform ${theme.cardBg} ${theme.cardBorder}`}
+                        className={`backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg hover:scale-[1.02] transition-all duration-300 transform ${componentStyles.itineraryCard}`}
                       >
                         {/* 指南標題列 (點擊展開) */}
                         <div
@@ -4523,7 +4556,7 @@ const ItineraryApp = () => {
               </div>
             </div>
             <div
-              className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${componentStyles.itineraryCard}`}
               style={theme.ambientStyle}
             >
               <h2
@@ -4558,7 +4591,7 @@ const ItineraryApp = () => {
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-3 p-4 backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-98 group ${theme.cardBg} ${theme.cardBorder}`}
+                            className={`flex items-center gap-3 p-4 backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-98 group ${componentStyles.itineraryCard}`}
                           >
                             <div
                               className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border shadow-inner group-hover:scale-105 transition-transform ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-stone-100"}`}
@@ -4609,7 +4642,7 @@ const ItineraryApp = () => {
         {activeTab === "shops" && (
           <div className="flex-1 px-4 pb-32 space-y-5 animate-fadeIn">
             <div
-              className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              className={`backdrop-blur-2xl border rounded-[2rem] p-5 ${theme.cardShadow} min-h-[auto] transition-colors duration-300 ${componentStyles.itineraryCard}`}
               style={theme.ambientStyle}
             >
               <h2
@@ -4640,7 +4673,7 @@ const ItineraryApp = () => {
                     return (
                       <div
                         key={idx}
-                        className={`backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg hover:scale-[1.02] transition-all duration-300 transform ${theme.cardBg} ${theme.cardBorder}`}
+                        className={`backdrop-blur-2xl border rounded-2xl ${theme.cardShadow} hover:shadow-lg hover:scale-[1.02] transition-all duration-300 transform ${componentStyles.itineraryCard}`}
                       >
                         {/* 區域標題列 (點擊展開) */}
                         <div
@@ -4852,7 +4885,7 @@ const ItineraryApp = () => {
         {activeTab === "ai" && (
           <div className="flex-1 px-4 pb-32 space-y-5 flex flex-col h-[calc(100vh-130px)] animate-fadeIn">
             <div
-              className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden max-w-full transition-colors duration-300 ${theme.cardBg} ${theme.cardBorder}`}
+              className={`backdrop-blur-2xl border rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden max-w-full transition-colors duration-300 ${componentStyles.itineraryCard}`}
             >
               {/* 對話視窗標題與模式切換 */}
               <div

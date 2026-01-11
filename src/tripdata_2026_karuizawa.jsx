@@ -1293,16 +1293,25 @@ export const tripConfig = {
       lightning: "text-yellow-500",
     },
 
-    // 毛玻璃與背景色
+    // 毛玻璃與背景色 (Pro Max 級升級)
+    // 【設計原則】
+    // - card: 內容卡片，透明度高但清晰，提升感強
+    // - nav: 背景導航，超級透明，輔助性
+    // - chatBubble: 對話泡泡，適度透明，易讀性優先
     glassColors: {
       card: {
         light:
-          "bg-white/85 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]",
-        dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]",
+          "bg-white/85 backdrop-blur-lg backdrop-saturate-180 border border-white/30 shadow-lg shadow-black/5",
+        dark: "bg-[#1F1F1F]/92 backdrop-blur-lg backdrop-saturate-180 border border-white/15 shadow-xl shadow-black/40",
       },
       nav: {
-        light: "bg-white/30 backdrop-blur-2xl border-white/15 shadow-lg",
-        dark: "bg-[#2A2A2A]/80 backdrop-blur-2xl border-white/10 shadow-2xl shadow-black/30",
+        light: "bg-white/25 backdrop-blur-3xl backdrop-saturate-150 border border-white/20 shadow-md shadow-black/3",
+        dark: "bg-[#2A2A2A]/50 backdrop-blur-3xl backdrop-saturate-150 border border-white/10 shadow-lg shadow-black/50",
+      },
+      chatBubble: {
+        light:
+          "bg-white/88 backdrop-blur-lg backdrop-saturate-180 border border-white/25 shadow-md shadow-black/4",
+        dark: "bg-neutral-800/88 backdrop-blur-lg backdrop-saturate-180 border border-white/12 shadow-lg shadow-black/50",
       },
     },
 
@@ -1571,6 +1580,141 @@ export const tripConfig = {
           light: "bg-white text-[#BC8F8F] border-stone-200 hover:bg-stone-50",
           dark: "bg-neutral-800 text-rose-300 border-neutral-600 hover:bg-neutral-700",
         },
+      },
+    },
+
+    // ========== 🆕 組件樣式系統 (Component Styles - Pro Max Edition) ==========
+    // 【說明】
+    // 統一所有 UI 組件的樣式定義，支援日/夜模式動態切換
+    // 【使用方式】
+    // const styles = tripConfig.theme.componentStyles.itineraryCard;
+    // className={isDarkMode ? styles.dark : styles.light}
+    // 【好處】
+    // - 單一變更點：修改主題時，所有組件自動同步
+    // - 視覺一致性：卡片、導航、對話框遵循相同毛玻璃規則
+    // - 可讀性最優：日/夜模式自動調整對比度
+    //
+    componentStyles: {
+      // 行程卡片 (Day Overview, Event Cards)
+      itineraryCard: {
+        light: "bg-white/85 backdrop-blur-lg backdrop-saturate-180 border border-white/30 rounded-2xl shadow-lg shadow-black/5",
+        dark: "bg-[#1F1F1F]/92 backdrop-blur-lg backdrop-saturate-180 border border-white/15 rounded-2xl shadow-xl shadow-black/40",
+      },
+
+      // 導航按鈕 (Day Navigation Tabs)
+      navButton: {
+        light: "bg-white/25 backdrop-blur-3xl backdrop-saturate-150 border border-white/20 rounded-xl hover:bg-white/35 transition-all duration-300",
+        dark: "bg-[#2A2A2A]/50 backdrop-blur-3xl backdrop-saturate-150 border border-white/10 rounded-xl hover:bg-[#3A3A3A]/60 transition-all duration-300",
+      },
+
+      // 導航容器背景
+      navContainer: {
+        light: "bg-gradient-to-r from-white/10 via-white/5 to-white/10",
+        dark: "bg-gradient-to-r from-[#2A2A2A]/40 via-[#1F1F1F]/30 to-[#2A2A2A]/40",
+      },
+
+      // 對話泡泡 - 使用者端
+      chatUserBubble: {
+        light: "bg-[#5D737E] text-white shadow-md",
+        dark: "bg-sky-800 text-white shadow-lg",
+      },
+
+      // 對話泡泡 - 模型端
+      chatModelBubble: {
+        light: "bg-white/88 backdrop-blur-lg border border-white/25 text-stone-700 shadow-md shadow-black/4",
+        dark: "bg-neutral-800/88 backdrop-blur-lg border border-white/12 text-neutral-200 shadow-lg shadow-black/50",
+      },
+
+      // 對話容器背景
+      chatContainer: {
+        light: "bg-[#F9F9F6]/80",
+        dark: "bg-black/30 backdrop-blur-sm",
+      },
+
+      // 資訊卡片 (Flight, Hotel, Checklist)
+      infoCard: {
+        light: "bg-white/80 backdrop-blur-md border border-white/25 rounded-2xl shadow-md",
+        dark: "bg-[#262626]/85 backdrop-blur-md border border-white/12 rounded-2xl shadow-lg",
+      },
+
+      // 標籤與分類 (Tags)
+      tagBase: {
+        light: "rounded-full px-3 py-1 text-sm font-medium shadow-sm backdrop-blur-sm",
+        dark: "rounded-full px-3 py-1 text-sm font-medium shadow-md backdrop-blur-sm",
+      },
+
+      // 輸入框與焦點狀態
+      inputField: {
+        light: "bg-white/70 backdrop-blur-sm border border-stone-200/50 rounded-xl focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20",
+        dark: "bg-[#262626]/60 backdrop-blur-sm border border-white/10 rounded-xl focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20",
+      },
+
+      // 按鈕 - 主要 (Primary Action)
+      buttonPrimary: {
+        light: "bg-gradient-to-br from-[#5D737E] to-[#3F5561] text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all",
+        dark: "bg-gradient-to-br from-sky-700 to-blue-900 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all",
+      },
+
+      // 按鈕 - 次要 (Secondary Action)
+      buttonSecondary: {
+        light: "bg-white/40 backdrop-blur-md border border-white/25 hover:bg-white/50 active:scale-95 transition-all",
+        dark: "bg-[#2A2A2A]/50 backdrop-blur-md border border-white/10 hover:bg-[#3A3A3A]/60 active:scale-95 transition-all",
+      },
+
+      // 模態框背景 (Modal Backdrop)
+      modalBackdrop: {
+        light: "bg-black/20 backdrop-blur-sm",
+        dark: "bg-black/50 backdrop-blur-sm",
+      },
+
+      // 模態框容器
+      modalContent: {
+        light: "bg-white/95 backdrop-blur-lg border border-white/30 rounded-3xl shadow-2xl",
+        dark: "bg-[#1F1F1F]/98 backdrop-blur-lg border border-white/15 rounded-3xl shadow-2xl shadow-black/50",
+      },
+
+      // 分隔線
+      divider: {
+        light: "border-stone-200/30",
+        dark: "border-white/10",
+      },
+
+      // 懸停效果 - 卡片提升
+      cardHover: {
+        light: "hover:shadow-xl hover:shadow-black/8 transition-all duration-300",
+        dark: "hover:shadow-2xl hover:shadow-black/60 transition-all duration-300",
+      },
+
+      // 加載狀態
+      loadingOverlay: {
+        light: "bg-white/60 backdrop-blur-md",
+        dark: "bg-[#1F1F1F]/80 backdrop-blur-md",
+      },
+
+      // 成功/警告/錯誤提示
+      toastSuccess: {
+        light: "bg-emerald-50/90 border border-emerald-200/50 text-emerald-800",
+        dark: "bg-emerald-900/30 border border-emerald-500/30 text-emerald-200",
+      },
+      toastWarning: {
+        light: "bg-amber-50/90 border border-amber-200/50 text-amber-800",
+        dark: "bg-amber-900/30 border border-amber-500/30 text-amber-200",
+      },
+      toastError: {
+        light: "bg-red-50/90 border border-red-200/50 text-red-800",
+        dark: "bg-red-900/30 border border-red-500/30 text-red-200",
+      },
+
+      // 主背景漸層
+      mainBackground: {
+        light: "bg-gradient-to-br from-[#F5F7FA] via-[#FDFBF7] to-white",
+        dark: "bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#1F1F1F]",
+      },
+
+      // 頁面容器
+      pageContainer: {
+        light: "bg-[#F5F7FA] text-stone-800",
+        dark: "bg-[#0F0F0F] text-neutral-200",
       },
     },
   },
