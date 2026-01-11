@@ -1,10 +1,11 @@
 // components/FinanceNote.jsx
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Camera, Send, DollarSign, MessageSquare, 
-  Loader, Trash2, X, LogOut, Wallet, Plus, Check, ScanLine,
-  RefreshCcw, Edit3, Save 
+  Loader, Trash2, X, LogOut, Wallet, Plus, Check, Search,
+  RefreshCcw, Edit3, Save, ChevronDown, ChevronRight, ChevronsUpDown 
 } from 'lucide-react';
 import { uploadToGAS, parseReceiptWithGemini, fetchFromGAS } from '../utils/financeHelper';
 
@@ -46,6 +47,9 @@ const FinanceScreen = ({
   const [mode, setMode] = useState('finance');
   const [records, setRecords] = useState(() => JSON.parse(localStorage.getItem('finance_records')) || []);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false); // 🆕 頭像選單狀態
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 }); // 🆕 選單位置
+  const menuButtonRef = useRef(null); // 🆕 頭像按鈕 ref
   
   // --- 2. 輸入與 AI 狀態 ---
   const [inputText, setInputText] = useState('');
@@ -69,6 +73,13 @@ const FinanceScreen = ({
   const [editContent, setEditContent] = useState('');
   const [editAmount, setEditAmount] = useState('');
 
+  // --- 4.5. 日期收折狀態 (預設全部收折) ---
+  const [expandedDates, setExpandedDates] = useState({});
+
+  // --- 4.6. 搜尋功能狀態 ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
   // --- 5. Effect 與 邏輯 ---
 
   const handleSyncData = useCallback(async (isBackground = false) => {
@@ -78,8 +89,28 @@ const FinanceScreen = ({
     try {
       const cloudRecords = await fetchFromGAS(gasUrl, gasToken);
       if (cloudRecords && Array.isArray(cloudRecords)) {
+        // 將日期轉換為本地時間 YYYY/M/D 格式
+        const normalizeToLocalDate = (dateStr, timestamp) => {
+          // 優先使用 timestamp 來獲取正確的本地日期
+          if (timestamp) {
+            const d = new Date(timestamp);
+            if (!isNaN(d.getTime())) {
+              return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+            }
+          }
+          // 若無 timestamp，嘗試解析 date 欄位
+          if (dateStr) {
+            const d = new Date(dateStr.replace(/-/g, '/'));
+            if (!isNaN(d.getTime())) {
+              return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+            }
+          }
+          return dateStr || '未知日期';
+        };
+        
         const formatted = cloudRecords.map(r => ({
           ...r,
+          date: normalizeToLocalDate(r.date, r.timestamp),
           amount: Number(r.amount) || 0,
           twdAmount: Number(r.twdAmount) || 0,
           synced: true
@@ -107,6 +138,47 @@ const FinanceScreen = ({
     }
   }, [records, mode, noteImages, editingRecord]);
 
+  // 🆕 點擊外部關閉使用者選單
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // 檢查點擊是否在選單按鈕或選單內
+      const isMenuButton = menuButtonRef.current?.contains(event.target);
+      const isMenu = event.target.closest('.user-menu-portal');
+      if (showUserMenu && !isMenuButton && !isMenu) {
+        setShowUserMenu(false);
+      }
+    };
+    
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showUserMenu]);
+
+  // 🆕 計算並更新選單位置
+  const updateMenuPosition = useCallback(() => {
+    if (menuButtonRef.current) {
+      const rect = menuButtonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 8,
+        left: rect.left
+      });
+    }
+  }, []);
+
+  // 🆕 當選單開啟時更新位置，並監聽滾動/resize
+  useEffect(() => {
+    if (showUserMenu) {
+      updateMenuPosition();
+      window.addEventListener('scroll', updateMenuPosition, true);
+      window.addEventListener('resize', updateMenuPosition);
+      return () => {
+        window.removeEventListener('scroll', updateMenuPosition, true);
+        window.removeEventListener('resize', updateMenuPosition);
+      };
+    }
+  }, [showUserMenu, updateMenuPosition]);
+
   useEffect(() => {
     if (gasUrl && gasToken && user) {
       handleSyncData(true);
@@ -119,6 +191,28 @@ const FinanceScreen = ({
   }, [gasUrl, gasToken, user, handleSyncData]);
 
   // --- 6. 核心操作邏輯 ---
+
+  const scrollToRecord = (recordId) => {
+    const element = document.getElementById(`record-${recordId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('ring-2', 'ring-sky-400', 'ring-offset-2');
+      setTimeout(() => {
+        element?.classList.remove('ring-2', 'ring-sky-400', 'ring-offset-2');
+      }, 2000);
+    }
+  };
+
+  const getSearchResults = () => {
+    if (!searchQuery.trim()) return [];
+    const query = searchQuery.toLowerCase();
+    return records
+      .filter(r => r.type === mode)
+      .filter(r => 
+        r.content?.toLowerCase().includes(query) || 
+        r.amount?.toString().includes(query)
+      );
+  };
 
   const handleUserSetup = () => {
     if (!setupName.trim()) return;
@@ -248,10 +342,14 @@ const FinanceScreen = ({
     const targetMode = customType || mode;
     const currentRate = rateData?.Exrate || 0.22;
     
+    // 使用本地時間格式化日期 (YYYY/M/D)
+    const now = new Date();
+    const localDate = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+    
     const newItem = {
       id: Date.now() + Math.random(),
       type: targetMode,
-      date: new Date().toISOString().split('T')[0],
+      date: localDate,
       timestamp: new Date().toISOString(),
       user: user,
       content: content,
@@ -449,151 +547,398 @@ const FinanceScreen = ({
   }
 
   // ★ UI 修改重點：
-  // 1. 改為 min-h-[calc(100vh-130px)]：允許卡片隨內容增長，不再強制固定高度。
-  // 2. 移除 overflow-hidden：讓捲動行為回到外層的 window。
-  // 3. 列表區移除 overflow-y-auto：這樣列表變長時，會撐開卡片，輸入框自然會被推到頁面最下方，需要捲動頁面才能看到。
+  // 1. 使用 min-h-[calc(100vh-130px)]：最小高度確保底部靠近導覽列。
+  // 2. 使用 pb-28：底部留白微調以貼近 AI 導遊。
+  // 3. 內容多時會撐開卡片，捲動行為在外層 window。
   return (
     <div className={`px-4 pb-28 animate-fadeIn flex flex-col min-h-[calc(100vh-130px)]`}>
       
-      {/* 主卡片容器：flex-1 確保內容少時撐開高度，但移除 overflow 讓內容多時可延伸 */}
-      <div className={`flex-1 flex flex-col backdrop-blur-md border rounded-2xl shadow-lg transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/80 border-neutral-700' : 'bg-white/90 border-stone-200/80'}`}>
+      {/* 主卡片容器：內容多時自然撐開 */}
+      <div className={`flex-1 flex flex-col backdrop-blur-2xl border rounded-[2rem] shadow-xl transition-colors duration-300 ${isDarkMode ? 'bg-[#1F1F1F]/92 backdrop-saturate-180 border-white/15' : 'bg-white/85 backdrop-saturate-180 border-white/30'}`}>
         
         {/* Header */}
-        <div className={`shrink-0 p-4 border-b backdrop-blur-sm transition-colors duration-300 ${isDarkMode ? 'border-neutral-700 bg-neutral-900/50' : 'border-stone-200/50 bg-white/50'}`}>
+        <div className={`shrink-0 p-4 border-b backdrop-blur-2xl transition-colors duration-300 ${isDarkMode ? 'border-white/10 bg-neutral-800/60' : 'border-stone-200/50 bg-white/60'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-               <div className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-2xl shadow-sm border border-white/50">{user.avatar}</div>
-               <div>
-                  <div className={`text-sm font-bold ${theme.text}`}>
-                      {user.name}
-                  </div>
-               </div>
+               {/* 🆕 頭像按鈕 - 點擊顯示選單 */}
+               {user && (
+                 <>
+                   <button
+                     ref={menuButtonRef}
+                     onClick={() => setShowUserMenu(!showUserMenu)}
+                     className="w-10 h-10 rounded-full flex items-center justify-center bg-stone-100 text-2xl shadow-sm border border-white/50 hover:scale-105 active:scale-95 transition-transform"
+                     title="使用者選單"
+                   >
+                     {user.avatar}
+                   </button>
+                   
+                   {/* 🆕 使用者選單下拉 - 使用 Portal 渲染到 body */}
+                   {showUserMenu && createPortal(
+                     <div 
+                       className={`user-menu-portal fixed z-[9999] min-w-[160px] rounded-xl border shadow-xl overflow-hidden animate-fadeIn ${
+                         isDarkMode ? 'bg-neutral-900/95 border-white/10 backdrop-blur-xl' : 'bg-white/95 border-stone-200/50 backdrop-blur-xl'
+                       }`}
+                       style={{ top: menuPosition.top, left: menuPosition.left }}
+                     >
+                       <div className={`px-4 py-3 border-b ${isDarkMode ? 'border-white/10' : 'border-stone-200/50'}`}>
+                         <div className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>{user.name}</div>
+                         <div className={`text-xs ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>點擊登出或其他地方關閉</div>
+                       </div>
+                       <button
+                         onClick={() => {
+                           handleLogout();
+                           setShowUserMenu(false);
+                         }}
+                         className={`w-full px-4 py-3 flex items-center gap-2 text-left transition-colors ${
+                           isDarkMode 
+                             ? 'hover:bg-red-500/20 text-red-400' 
+                             : 'hover:bg-red-50 text-red-600'
+                         }`}
+                       >
+                         <LogOut className="w-4 h-4" />
+                         <span className="text-sm font-medium">登出</span>
+                       </button>
+                     </div>,
+                     document.body
+                   )}
+                 </>
+               )}
+               
+               {user && (
+                 <div>
+                    <div className={`text-sm font-bold ${theme.text}`}>
+                        {user.name}
+                    </div>
+                 </div>
+               )}
             </div>
+            
+            {/* 🆕 按鈕組 - 移除登出按鈕 */}
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className={`p-2 rounded-xl border transition-all active:scale-95 ${
+                  showSearch
+                    ? isDarkMode
+                      ? 'bg-sky-600 border-sky-500 text-white'
+                      : 'bg-sky-500 border-sky-400 text-white'
+                    : isDarkMode
+                      ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50'
+                      : 'bg-white/60 border-white/30 text-stone-500 hover:text-sky-600 hover:border-sky-400/50'
+                }`}
+                title="搜尋紀錄"
+              >
+                <Search className="w-4 h-4" />
+              </button>
               <button 
                 onClick={() => handleSyncData(false)} 
                 disabled={isSyncing}
-                className={`p-2 rounded-lg border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:text-sky-400 hover:border-sky-500' : 'bg-stone-50 border-stone-300 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]'}`}
+                className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50' : 'bg-white/60 border-white/30 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]/50'}`}
+                title="同步資料"
               >
                 <RefreshCcw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-sky-500' : ''}`} />
               </button>
-              <div className={`flex p-1 rounded-lg border gap-1 ${isDarkMode ? 'bg-neutral-900/60 border-neutral-600' : 'bg-stone-50 border-stone-300'}`}>
+              <div className={`flex p-1 rounded-xl border gap-1 ${isDarkMode ? 'bg-neutral-900/60 border-white/10' : 'bg-stone-100/80 border-white/30'}`}>
                   <button onClick={() => setMode('finance')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${mode === 'finance' ? (isDarkMode ? 'bg-sky-600 text-white shadow-lg hover:shadow-sky-600/50 hover:bg-sky-700' : 'bg-[#5D737E] text-white shadow-md hover:shadow-lg hover:bg-[#4A606A]') : (isDarkMode ? 'text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30' : 'text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50')}`}><DollarSign className="w-3.5 h-3.5 inline mr-0.5"/>記帳</button>
                   <button onClick={() => setMode('note')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${mode === 'note' ? (isDarkMode ? 'bg-orange-600 text-white shadow-lg hover:shadow-orange-600/50 hover:bg-orange-700' : 'bg-orange-500 text-white shadow-md hover:shadow-lg hover:bg-orange-600') : (isDarkMode ? 'text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30' : 'text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50')}`}><MessageSquare className="w-3.5 h-3.5 inline mr-0.5"/>記事</button>
               </div>
-              <button onClick={handleLogout} className={`p-2 rounded-lg border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:text-red-400 hover:border-red-600' : 'bg-stone-50 border-stone-300 text-stone-500 hover:text-red-600 hover:border-red-400'}`}><LogOut className="w-4 h-4" /></button>
             </div>
           </div>
+          
+          {/* 搜尋框 */}
+          {showSearch && (
+            <div className="mt-3 space-y-2">
+              <div className={`flex items-center gap-2 p-2 rounded-xl border ${
+                isDarkMode ? 'bg-neutral-900/60 border-white/10' : 'bg-stone-100/80 border-white/30'
+              }`}>
+                <Search className={`w-4 h-4 flex-shrink-0 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={`搜尋${mode === 'finance' ? '消費' : '記事'}內容...`}
+                  className={`flex-1 bg-transparent border-0 outline-none text-sm ${
+                    isDarkMode ? 'text-neutral-200 placeholder:text-neutral-500' : 'text-stone-700 placeholder:text-stone-400'
+                  }`}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 rounded-lg hover:bg-black/10 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <div className={`max-h-40 overflow-y-auto rounded-xl border ${
+                  isDarkMode ? 'bg-neutral-900/80 border-white/10' : 'bg-white/80 border-stone-200/50'
+                }`}>
+                  {getSearchResults().length > 0 ? (
+                    <div className="p-2 space-y-1">
+                      {getSearchResults().map((result) => (
+                        <button
+                          key={result.timestamp}
+                          onClick={() => {
+                            scrollToRecord(result.timestamp);
+                            setShowSearch(false);
+                            setSearchQuery('');
+                            // 展開該日期
+                            setExpandedDates(prev => ({ ...prev, [result.date]: true }));
+                          }}
+                          className={`w-full text-left p-2 rounded-lg transition-all hover:scale-[1.02] ${
+                            isDarkMode ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-stone-100 text-stone-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              {result.type === 'finance' ? (
+                                <DollarSign className="w-3 h-3 text-sky-500" />
+                              ) : (
+                                <MessageSquare className="w-3 h-3 text-orange-500" />
+                              )}
+                              <span className={`text-xs font-medium ${
+                                isDarkMode ? 'text-neutral-400' : 'text-stone-500'
+                              }`}>
+                                {result.date}
+                              </span>
+                            </div>
+                            {result.type === 'finance' && (
+                              <span className="text-xs font-bold text-sky-500">
+                                ¥{result.amount}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs line-clamp-1">
+                            {result.content}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`p-4 text-center text-xs ${
+                      isDarkMode ? 'text-neutral-500' : 'text-stone-400'
+                    }`}>
+                      沒有找到符合的{mode === 'finance' ? '消費' : '記事'}紀錄
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* 列表區域：移除 overflow-y-auto，讓內容自然撐開卡片 */}
-        <div className="flex-1 p-4 space-y-3">
+        {/* 列表區域：內容自然撐開卡片 */}
+        <div className={`flex-1 p-4 space-y-3 flex flex-col ${isDarkMode ? 'bg-black/20' : 'bg-[#F9F9F6]/50'}`}>
           {records.filter(r => r.type === mode).length === 0 && (
-             <div className={`flex flex-col items-center justify-center py-20 opacity-40 ${theme.textSec}`}>
+             <div className={`flex-1 flex flex-col items-center justify-center opacity-40 ${theme.textSec}`}>
                  <Wallet className="w-12 h-12 mb-2 stroke-1"/>
                  <p className="text-sm">尚無任何{mode === 'finance' ? '消費' : '記事'}紀錄</p>
              </div>
           )}
-          {records.filter(r => r.type === mode).map((record) => (
-            // Flex 容器
-            <div key={record.id} className={`group flex gap-2 ${record.user.name === user.name ? 'flex-row-reverse' : 'flex-row'}`}>
+
+          {/* 一鍵全部展開/收折按鈕 */}
+          {records.filter(r => r.type === mode).length > 0 && (
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => {
+                  const filteredRecords = records.filter(r => r.type === mode);
+                  const dates = [...new Set(filteredRecords.map(r => r.date))];
+                  const allExpanded = dates.every(date => expandedDates[date]);
+                  const newState = {};
+                  dates.forEach(date => { newState[date] = !allExpanded; });
+                  setExpandedDates(prev => ({ ...prev, ...newState }));
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 border ${isDarkMode ? 'bg-neutral-800/60 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/30' : 'bg-white/60 border-white/30 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]/30'}`}
+              >
+                <ChevronsUpDown className="w-3.5 h-3.5" />
+                {(() => {
+                  const filteredRecords = records.filter(r => r.type === mode);
+                  const dates = [...new Set(filteredRecords.map(r => r.date))];
+                  const allExpanded = dates.every(date => expandedDates[date]);
+                  return allExpanded ? '全部收折' : '全部展開';
+                })()}
+              </button>
+            </div>
+          )}
+
+          {/* 按日期分組顯示紀錄 */}
+          {(() => {
+            const filteredRecords = records.filter(r => r.type === mode);
+            
+            // 將日期標準化為 YYYY/M/D 格式以確保正確分組
+            const normalizeDate = (dateStr) => {
+              if (!dateStr) return '未知日期';
+              // 嘗試解析各種日期格式
+              const d = new Date(dateStr.replace(/-/g, '/'));
+              if (isNaN(d.getTime())) return dateStr;
+              return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+            };
+            
+            const groupedByDate = filteredRecords.reduce((acc, record) => {
+              const date = normalizeDate(record.date);
+              if (!acc[date]) acc[date] = [];
+              acc[date].push(record);
+              return acc;
+            }, {});
+            // 排序：舊到新（最新的在最下面）
+            const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(a.replace(/\//g, '-')) - new Date(b.replace(/\//g, '-')));
+            // 當日日期 (本地時間)
+            const now = new Date();
+            const today = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+
+            return sortedDates.map(date => {
+              const dateRecords = groupedByDate[date];
+              // 當日預設展開，其他日期按 expandedDates 狀態
+              const isExpanded = date === today ? (expandedDates[date] !== false) : (expandedDates[date] || false);
+              const dayTotal = mode === 'finance' 
+                ? dateRecords.reduce((sum, r) => sum + (r.amount || 0), 0) 
+                : dateRecords.length;
+              const dayTwdTotal = mode === 'finance'
+                ? dateRecords.reduce((sum, r) => sum + (r.twdAmount || 0), 0)
+                : 0;
+
+              return (
+                <div key={date} className="space-y-2">
+                  {/* 日期標頭 - 可點擊收折 */}
+                  <button
+                    onClick={() => setExpandedDates(prev => ({ ...prev, [date]: !prev[date] }))}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all active:scale-[0.99] border ${isDarkMode ? 'bg-neutral-800/60 border-white/10 hover:bg-neutral-700/60' : 'bg-white/60 border-white/30 hover:bg-white/80'}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isExpanded ? (
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isDarkMode ? 'text-sky-400' : 'text-[#5D737E]'}`} />
+                      ) : (
+                        <ChevronRight className={`w-4 h-4 transition-transform ${isDarkMode ? 'text-sky-400' : 'text-[#5D737E]'}`} />
+                      )}
+                      <span className={`text-sm font-bold ${theme.text}`}>{date}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-neutral-700/80 text-neutral-400' : 'bg-stone-100 text-stone-500'}`}>
+                        {dateRecords.length} 筆
+                      </span>
+                    </div>
+                    {mode === 'finance' && (
+                      <div className="text-right">
+                        <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-sky-400' : 'text-[#5D737E]'}`}>
+                          ¥{dayTotal.toLocaleString()}
+                        </span>
+                        <span className={`text-[10px] ml-1.5 ${theme.textSec}`}>
+                          ≈ NT${dayTwdTotal.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+
+                  {/* 展開時顯示該日期的所有紀錄 */}
+                  {isExpanded && dateRecords.map((record) => (
+                    // Flex 容器
+                    <div key={record.id} className={`group flex gap-3 ${record.user.name === user.name ? 'flex-row-reverse' : 'flex-row'}`}>
                
-               {/* 1. 頭像區域 */}
-               <div className="flex-shrink-0 flex flex-col items-center gap-1">
-                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-md border transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-gradient-to-br from-stone-100 to-stone-50 border-stone-200'}`}>{record.user.avatar}</div>
-                   <span className={`text-[10px] opacity-70 leading-tight max-w-[4.5rem] truncate text-center font-medium ${theme.textSec}`}>
-                     {record.user.name}
-                   </span>
-               </div>
+                       {/* 1. 頭像區域 */}
+                       <div className="flex-shrink-0 flex flex-col items-center gap-1">
+                           <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg shadow-sm border transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>{record.user.avatar}</div>
+                           <span className={`text-[10px] opacity-70 leading-tight max-w-[4rem] truncate text-center font-medium ${theme.textSec}`}>
+                             {record.user.name}
+                           </span>
+                       </div>
                
-               {/* 2. 內容卡片區域 */}
-               <div className={`flex flex-col max-w-[80%] ${record.user.name === user.name ? 'items-end' : 'items-start'}`}>
+                       {/* 2. 內容卡片區域 - 統一使用半透明風格（與 AI 導遊回覆一致） */}
+                       <div className={`flex flex-col max-w-[75%] ${record.user.name === user.name ? 'items-end' : 'items-start'}`}>
                    
-                   <div className={`relative overflow-hidden shadow-sm transition-all border
-                        ${record.type === 'finance' 
-                            ? (isDarkMode ? 'bg-neutral-800/80 border-neutral-700 rounded-xl w-60' : 'bg-white border-stone-200/80 rounded-xl w-60') 
-                            : (isDarkMode ? 'bg-neutral-800/80 border-neutral-700 rounded-xl p-3' : 'bg-white border-stone-200/80 rounded-xl p-3')
-                        }
-                   `}>
-                       {/* === 記帳模式 === */}
-                       {record.type === 'finance' ? (
-                           <div className="flex flex-col">
-                               <div className="flex justify-between items-start p-3 gap-3">
-                                   <div className="flex-1 min-w-0">
-                                       <div className={`text-sm font-bold truncate leading-tight ${theme.text}`}>{record.content || "未製品項"}</div>
-                                       <div className="flex items-center gap-1.5 mt-1.5">
-                                           <span className={`text-[10px] ${theme.textSec}`}>{formatTime(record.timestamp)}</span>
-                                           {record.synced ? (
-                                               <Check className="w-3 h-3 text-green-500" />
-                                           ) : (
-                                               <RefreshCcw className="w-3 h-3 text-orange-400 animate-spin" />
-                                           )}
-                                       </div>
-                                   </div>
+                           <div 
+                                id={`record-${record.timestamp}`}
+                                className={`relative overflow-hidden shadow-sm transition-all border p-3.5 text-sm leading-relaxed
+                                ${isDarkMode 
+                                    ? 'bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700' 
+                                    : 'bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200'
+                                }
+                                ${record.user.name === user.name ? 'rounded-2xl rounded-tr-none' : 'rounded-2xl rounded-tl-none'}
+                                ${record.type === 'finance' ? 'w-60' : ''}
+                           `}>
+                               {/* === 記帳模式 === */}
+                               {record.type === 'finance' ? (
+                                   <div className="flex flex-col">
+                                       <div className="flex justify-between items-start gap-3">
+                                           <div className="flex-1 min-w-0">
+                                               <div className={`text-sm font-bold truncate leading-tight ${theme.text}`}>{record.content || "未製品項"}</div>
+                                               <div className="flex items-center gap-1.5 mt-1.5">
+                                                   <span className={`text-[10px] ${theme.textSec}`}>{formatTime(record.timestamp)}</span>
+                                                   {record.synced ? (
+                                                       <Check className="w-3 h-3 text-green-500" />
+                                                   ) : (
+                                                       <RefreshCcw className="w-3 h-3 text-orange-400 animate-spin" />
+                                                   )}
+                                               </div>
+                                           </div>
 
-                                   <div className="text-right flex-shrink-0">
-                                       <div className={`text-base font-mono font-bold leading-tight ${isDarkMode ? 'text-sky-400' : 'text-[#5D737E]'}`}>
-                                            ¥{record.amount.toLocaleString()}
+                                           <div className="text-right flex-shrink-0">
+                                               <div className={`text-base font-mono font-bold leading-tight ${isDarkMode ? 'text-sky-400' : 'text-[#5D737E]'}`}>
+                                                    ¥{record.amount.toLocaleString()}
+                                               </div>
+                                               <div className={`text-[10px] mt-0.5 ${theme.textSec}`}>
+                                                    ≈ NT$ {record.twdAmount.toLocaleString()}
+                                               </div>
+                                           </div>
                                        </div>
-                                       <div className={`text-[10px] mt-0.5 ${theme.textSec}`}>
-                                            ≈ NT$ {record.twdAmount.toLocaleString()}
-                                       </div>
-                                   </div>
-                               </div>
 
-                               {record.image && (
-                                   <div className="px-3 pb-3">
-                                       <img 
-                                         src={record.image} 
-                                         alt="attachment" 
-                                         onClick={() => setFullPreviewImage(record.image)} 
-                                         className="w-full h-32 object-cover rounded-lg border border-black/5 cursor-zoom-in hover:opacity-90 transition-opacity" 
-                                       />
+                                       {record.image && (
+                                           <div className="mt-2">
+                                               <img 
+                                                 src={record.image} 
+                                                 alt="attachment" 
+                                                 onClick={() => setFullPreviewImage(record.image)} 
+                                                 className="w-full h-32 object-cover rounded-lg border border-white/20 shadow-sm cursor-zoom-in hover:opacity-90 transition-opacity" 
+                                               />
+                                           </div>
+                                       )}
                                    </div>
+                               ) : (
+                                   /* === 記事模式 === */
+                                   <>
+                                       {record.content && <div className={`text-sm break-words whitespace-pre-wrap ${theme.text}`}>{record.content}</div>}
+                                       {record.image && <img src={record.image} alt="attachment" onClick={() => setFullPreviewImage(record.image)} className="mt-2 rounded-lg max-h-40 object-cover border border-white/20 shadow-sm cursor-zoom-in" />}
+                                       <div className="flex items-center justify-end gap-1 mt-1.5">
+                                            <span className={`text-[9px] ${theme.textSec}`}>{formatTime(record.timestamp)}</span>
+                                            {record.synced ? <Check className="w-3 h-3 text-green-500" /> : <RefreshCcw className="w-3 h-3 text-orange-400 animate-spin" />}
+                                       </div>
+                                   </>
                                )}
                            </div>
-                       ) : (
-                           /* === 記事模式 === */
-                           <>
-                               {record.content && <div className={`text-sm break-words whitespace-pre-wrap ${theme.text}`}>{record.content}</div>}
-                               {record.image && <img src={record.image} alt="attachment" onClick={() => setFullPreviewImage(record.image)} className="mt-2 rounded-lg max-h-40 object-cover border border-black/5 cursor-zoom-in" />}
-                               <div className="flex items-center justify-end gap-1 mt-1">
-                                    <span className={`text-[9px] ${theme.textSec}`}>{formatTime(record.timestamp)}</span>
-                                    {record.synced ? <Check className="w-3 h-3 text-green-500" /> : <RefreshCcw className="w-3 h-3 text-orange-400 animate-spin" />}
-                               </div>
-                           </>
+                       </div>
+
+                       {/* 3. 操作按鈕區域 */}
+                       {record.user.name === user.name && (
+                           <div className="flex flex-col justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <button 
+                                     onClick={() => startEditing(record)} 
+                                     className={`p-2 rounded-full border transition-colors shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 hover:text-sky-400 hover:border-sky-500' : 'bg-white border-stone-200 hover:text-sky-600 hover:border-sky-400'}`}
+                                     title="編輯"
+                                >
+                                     <Edit3 className="w-4 h-4" />
+                                </button>
+                                <button 
+                                     onClick={() => handleDelete(record.id, record.type)} 
+                                     className={`p-2 rounded-full border transition-colors shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 hover:text-red-400 hover:border-red-500' : 'bg-white border-stone-200 hover:text-red-600 hover:border-red-400'}`}
+                                     title="刪除"
+                                >
+                                     <Trash2 className="w-4 h-4" />
+                                </button>
+                           </div>
                        )}
-                   </div>
-               </div>
 
-               {/* 3. 操作按鈕區域 */}
-               {record.user.name === user.name && (
-                   <div className="flex flex-col justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button 
-                             onClick={() => startEditing(record)} 
-                             className={`p-2 rounded-full border transition-colors shadow-sm ${theme.cardBg} ${isDarkMode ? 'border-neutral-700 hover:text-sky-400 hover:border-sky-500' : 'border-stone-200 hover:text-sky-600 hover:border-sky-400'}`}
-                             title="編輯"
-                        >
-                             <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button 
-                             onClick={() => handleDelete(record.id, record.type)} 
-                             className={`p-2 rounded-full border transition-colors shadow-sm ${theme.cardBg} ${isDarkMode ? 'border-neutral-700 hover:text-red-400 hover:border-red-500' : 'border-stone-200 hover:text-red-600 hover:border-red-400'}`}
-                             title="刪除"
-                        >
-                             <Trash2 className="w-4 h-4" />
-                        </button>
-                   </div>
-               )}
-
-            </div>
-          ))}
+                    </div>
+                  ))}
+                </div>
+              );
+            });
+          })()}
           <div ref={messagesEndRef} />
+          {/* 底部固定空間，確保滾到底時與無訊息時空間一致 */}
+          <div className="h-16"></div>
         </div>
 
         {/* Footer 輸入區 - 固定在卡片內容的最下方 */}
-        <div className={`shrink-0 border-t backdrop-blur-md transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/90 border-neutral-700' : 'bg-white/90 border-stone-200/80'}`}>
-          <div className="px-3 py-2 space-y-1.5">
+        <div className={`shrink-0 border-t backdrop-blur-2xl transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/80 border-white/10' : 'bg-white/70 border-stone-200/50'}`}>
+          <div className="px-3 py-2.5 space-y-2">
             {/* 圖片預覽區 */}
             {noteImages.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -620,23 +965,26 @@ const FinanceScreen = ({
                 {/* 相機按鈕 */}
                 <button 
                     onClick={() => fileInputRef.current?.click()} 
-                    className={`p-2 rounded-lg border transition-all shadow-sm flex-shrink-0 active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-700' : 'bg-stone-50 border-stone-300 text-stone-600 hover:text-stone-700 hover:bg-white'}`}
+                    className={`p-2.5 rounded-2xl border transition-all flex-shrink-0 active:scale-95 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200' : 'bg-stone-100 border-stone-200 text-stone-500 hover:text-stone-700'}`}
                     title="上傳圖片"
                 >
-                    <Camera className="w-4 h-4" />
+                    <Camera className="w-5 h-5" />
                 </button>
 
-                {/* 輸入框容器 - 金額與項目同一行 */}
-                <div className="flex-1 min-w-0 flex gap-1.5 items-center">
+                {/* 輸入框容器 - 金額與項目合併在同一輸入框 */}
+                <div className={`flex-1 min-w-0 flex items-center rounded-2xl overflow-hidden ${isDarkMode ? 'bg-neutral-800' : 'bg-stone-100'}`}>
                     {mode === 'finance' && (
                         <input 
                             type="number" 
                             value={amount} 
                             onChange={e => setAmount(e.target.value)} 
                             placeholder="金額"
-                            className={`flex-shrink-0 w-24 border rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-70 leading-tight font-mono
-                                ${isDarkMode ? 'bg-neutral-800/80 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-stone-50 border-stone-300 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-500'}`}
+                            className={`flex-shrink-0 w-20 border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0 transition-all placeholder:text-opacity-60 leading-tight font-mono
+                                ${isDarkMode ? 'text-neutral-200 placeholder:text-neutral-500' : 'text-stone-700 placeholder:text-stone-400'}`}
                         />
+                    )}
+                    {mode === 'finance' && (
+                        <div className={`w-px h-5 ${isDarkMode ? 'bg-neutral-700' : 'bg-stone-300'}`}></div>
                     )}
                     <textarea
                         value={inputText}
@@ -654,8 +1002,8 @@ const FinanceScreen = ({
                         }}
                         rows={1}
                         placeholder={mode === 'finance' ? "項目說明..." : "記事內容..."}
-                        className={`flex-1 min-w-0 border rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 transition-all shadow-inner placeholder:text-opacity-70 resize-none max-h-[40px] leading-snug
-                            ${isDarkMode ? 'bg-neutral-800/80 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500' : 'bg-stone-50 border-stone-300 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-500'}`}
+                        className={`flex-1 min-w-0 border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0 transition-all placeholder:text-opacity-60 resize-none max-h-[40px] leading-snug
+                            ${isDarkMode ? 'text-neutral-200 placeholder:text-neutral-500' : 'text-stone-700 placeholder:text-stone-400'}`}
                     />
                 </div>
 
@@ -667,17 +1015,17 @@ const FinanceScreen = ({
                         if (textarea) textarea.style.height = "auto";
                     }}
                     disabled={isUploading || isScanning || (mode === 'finance' && !amount)}
-                    className={`p-2 rounded-lg transition-all shadow-sm flex-shrink-0 font-bold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+                    className={`p-2.5 rounded-2xl transition-all flex-shrink-0 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
                         ${isUploading || isScanning || (mode === 'finance' && !amount)
                             ? isDarkMode
-                                ? 'bg-neutral-700 text-neutral-500 shadow-none'
-                                : 'bg-stone-200 text-stone-400 shadow-none'
+                                ? 'bg-neutral-700 text-neutral-500'
+                                : 'bg-stone-300 text-stone-400'
                             : isDarkMode
-                                ? 'bg-sky-600 text-white hover:bg-sky-700 shadow-md hover:shadow-lg'
-                                : 'bg-[#5D737E] text-white hover:bg-[#4A606A] shadow-md hover:shadow-lg'
+                                ? 'bg-neutral-700 text-white hover:bg-neutral-600'
+                                : 'bg-stone-500 text-white hover:bg-stone-600'
                         }`}
                 >
-                    {isUploading ? <Loader className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4" />}
+                    {isUploading ? <Loader className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5" />}
                 </button>
             </div>
           </div>

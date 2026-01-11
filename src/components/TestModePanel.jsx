@@ -8,8 +8,12 @@ import {
   ChevronUp,
   Save,
   RotateCcw,
+  Info,
 } from "lucide-react";
 import MapPicker from "./MapPicker.jsx";
+
+// 🆕 讀取構建版本號
+const BUILD_VERSION = import.meta.env.VITE_BUILD_VERSION || '開發模式';
 
 /**
  * TestModePanel Component
@@ -399,6 +403,12 @@ const TestModePanel = ({
                 )}
               </div>
             ))}
+          </div>
+
+          {/* 🆕 版本資訊 */}
+          <div className={`px-3 py-2 rounded-lg text-xs flex items-center gap-2 ${isDarkMode ? "bg-neutral-800/40 text-neutral-400" : "bg-white/40 text-stone-500"}`}>
+            <Info className="w-3.5 h-3.5" />
+            <span>構建版本：{BUILD_VERSION}</span>
           </div>
 
           {/* 🆕 底部按鈕組：儲存 + 凍結 + 退出 */}

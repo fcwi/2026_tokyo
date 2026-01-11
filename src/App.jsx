@@ -66,6 +66,7 @@ import {
   Key,
   DollarSign,
   Download,
+  Search,
 } from "lucide-react";
 import {
   itineraryData,
@@ -1224,7 +1225,12 @@ const ItineraryApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [listeningLang, setListeningLang] = useState(null);
+  const [expandedMessages, setExpandedMessages] = useState({});
+  const prevMessageCount = useRef(0); // 追蹤訊息數量以偵測新訊息
+  const [aiSearchQuery, setAiSearchQuery] = useState("");
+  const [showAiSearch, setShowAiSearch] = useState(false);
   const chatEndRef = useRef(null);
+  const messageRefs = useRef([]);
   const recognitionRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [tempImage, setTempImage] = useState(null);
@@ -1245,6 +1251,45 @@ const ItineraryApp = () => {
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  const toggleMessageExpand = (index) => {
+    setExpandedMessages((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  // 當有新訊息時自動展開（偵測 messages 長度變化）
+  useEffect(() => {
+    if (messages.length > prevMessageCount.current) {
+      // 有新訊息加入，自動展開最後一則
+      const newIndex = messages.length - 1;
+      setExpandedMessages((prev) => ({
+        ...prev,
+        [newIndex]: true,
+      }));
+    }
+    prevMessageCount.current = messages.length;
+  }, [messages.length]);
+
+  const scrollToMessage = (index) => {
+    if (messageRefs.current[index]) {
+      messageRefs.current[index].scrollIntoView({ behavior: "smooth", block: "center" });
+      // 高亮動畫
+      messageRefs.current[index].classList.add("ring-2", "ring-sky-400", "ring-offset-2");
+      setTimeout(() => {
+        messageRefs.current[index]?.classList.remove("ring-2", "ring-sky-400", "ring-offset-2");
+      }, 2000);
+    }
+  };
+
+  const getSearchResults = () => {
+    if (!aiSearchQuery.trim()) return [];
+    const query = aiSearchQuery.toLowerCase();
+    return messages
+      .map((msg, index) => ({ ...msg, index }))
+      .filter(msg => msg.text?.toLowerCase().includes(query));
   };
 
   const toggleGuide = (index) => {
@@ -1268,6 +1313,20 @@ const ItineraryApp = () => {
   useEffect(() => {
     if (activeTab === "ai") scrollToBottom();
   }, [messages, activeTab]);
+
+  // 追蹤上一次的 activeTab，用於偵測頁面切換
+  const prevActiveTab = useRef(activeTab);
+  
+  // 只有當「從其他頁面切換回 AI 頁面」時才收折舊訊息
+  useEffect(() => {
+    // 偵測是否是從非 AI 頁面切換到 AI 頁面
+    if (prevActiveTab.current !== "ai" && activeTab === "ai") {
+      // 從其他頁面回到 AI 頁面，收折所有訊息
+      setExpandedMessages({});
+    }
+    // 更新前一次的 tab 狀態
+    prevActiveTab.current = activeTab;
+  }, [activeTab]); // 只依賴 activeTab，不依賴 messages.length
 
   const showToast = React.useCallback((message, type = "success") => {
     setToast({ show: true, message, type });
@@ -2130,15 +2189,32 @@ const ItineraryApp = () => {
 
       recognitionRef.current.onresult = (event) => {
         let transcript = "";
+        let isFinalResult = false;
+        
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           transcript += event.results[i][0].transcript;
+          // 檢查是否為最終結果
+          if (event.results[i].isFinal) {
+            isFinalResult = true;
+          }
         }
         setInputMessage(transcript);
+        
+        // iOS和部分平台：當獲得最終結果時自動停止語音識別
+        // 這確保語音輸入會在句子完成後自動結束並釋放資源
+        if (isFinalResult && recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch (error) {
+            console.error("停止語音識別時出錯:", error);
+          }
+        }
       };
       recognitionRef.current.onend = () => {
         setListeningLang(null);
       };
-      recognitionRef.current.onerror = () => {
+      recognitionRef.current.onerror = (event) => {
+        console.error("語音識別錯誤:", event.error);
         setListeningLang(null);
       };
     }
@@ -4889,23 +4965,13 @@ const ItineraryApp = () => {
             >
               {/* 對話視窗標題與模式切換 */}
               <div
-                className={`p-4 border-b backdrop-blur-2xl flex flex-col gap-3 ${isDarkMode ? "bg-neutral-800/60 border-neutral-700" : "bg-white/60 border-stone-200/50"}
-                ${
-                  aiMode === "translate"
-                    ? isDarkMode
-                      ? "border-b-sky-900/50"
-                      : "border-b-sky-100"
-                    : isDarkMode
-                      ? "border-b-amber-900/50"
-                      : "border-b-amber-100"
-                }
-                `}
+                className={`p-4 border-b backdrop-blur-2xl transition-colors duration-300 ${isDarkMode ? "bg-neutral-800/60 border-white/10" : "bg-white/60 border-stone-200/50"}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {/* 模式頭像：隨導遊/口譯模式切換顏色與圖示 */}
                     <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all duration-500
+                      className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border border-white/50 transition-all duration-500
                         ${
                           aiMode === "translate"
                             ? "bg-gradient-to-br from-sky-400 to-blue-500"
@@ -4921,62 +4987,164 @@ const ItineraryApp = () => {
                     </div>
 
                     <div>
-                      <h2
-                        className={`text-base font-bold transition-colors duration-300 ${theme.text}`}
+                      <div
+                        className={`text-sm font-bold transition-colors duration-300 ${theme.text}`}
                       >
                         {aiMode === "translate" ? "AI 隨身口譯" : "AI 專屬導遊"}
-                      </h2>
-                      <p
-                        className={`text-xs flex items-center gap-1.5 ${theme.textSec}`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full animate-pulse 
-                            ${aiMode === "translate" ? "bg-blue-500" : "bg-orange-500"}`}
-                        ></span>
-                        {aiMode === "translate" ? "雙向翻譯中" : "行程助手待命"}
-
-                        {isSpeaking && (
-                          <span className="ml-2 text-amber-600 font-bold flex items-center bg-amber-50 px-2 py-0.5 rounded-full">
+                      </div>
+                      {isSpeaking && (
+                        <p className={`text-xs flex items-center gap-1.5 ${theme.textSec}`}>
+                          <span className="text-amber-600 font-medium flex items-center">
                             <Volume2 className="w-3 h-3 mr-1" /> 朗讀中...
                           </span>
-                        )}
-                      </p>
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* 清除紀錄按鈕 */}
+                  {/* 按鈕組 */}
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => setShowAiSearch(!showAiSearch)}
+                      className={`p-2 rounded-xl border transition-all active:scale-95 ${
+                        showAiSearch
+                          ? isDarkMode
+                            ? "bg-sky-600 border-sky-500 text-white"
+                            : "bg-sky-500 border-sky-400 text-white"
+                          : isDarkMode
+                            ? "bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50"
+                            : "bg-white/60 border-white/30 text-stone-500 hover:text-sky-600 hover:border-sky-400/50"
+                      }`}
+                      title="搜尋對話"
+                    >
+                      <Search className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={handleClearChat}
-                      className={`p-2.5 rounded-xl border transition-all active:scale-95 ${
+                      className={`p-2 rounded-xl border transition-all active:scale-95 ${
                         isDarkMode
-                          ? "bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-red-400 hover:bg-neutral-800"
-                          : "bg-stone-100 border-stone-200 text-stone-400 hover:text-red-500 hover:bg-red-50"
+                          ? "bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-red-400 hover:border-red-500/50"
+                          : "bg-white/60 border-white/30 text-stone-500 hover:text-red-600 hover:border-red-400/50"
                       }`}
                       title="清除聊天紀錄"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                  </div>
-
-                  {/* 模式切換開關 */}
-                  <div
-                    className={`flex p-1 rounded-xl border ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-stone-100 border-stone-200"}`}
-                  >
-                    <button
-                      onClick={() => handleSwitchMode("guide")}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${aiMode === "guide" ? (isDarkMode ? "bg-neutral-700 text-white shadow-sm" : "bg-white text-stone-800 shadow-sm") : isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
+                    
+                    {/* 模式切換開關 */}
+                    <div
+                      className={`flex p-1 rounded-xl border gap-1 ${
+                        isDarkMode
+                          ? "bg-neutral-900/60 border-white/10"
+                          : "bg-stone-100/80 border-white/30"
+                      }`}
                     >
-                      導遊
-                    </button>
-                    <button
-                      onClick={() => handleSwitchMode("translate")}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${aiMode === "translate" ? (isDarkMode ? "bg-sky-700 text-white shadow-sm" : "bg-white text-sky-600 shadow-sm") : isDarkMode ? "text-neutral-500" : "text-stone-400"}`}
-                    >
-                      口譯
-                    </button>
+                      <button
+                        onClick={() => handleSwitchMode("guide")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+                          aiMode === "guide"
+                            ? isDarkMode
+                              ? "bg-amber-600 text-white shadow-lg hover:shadow-amber-600/50 hover:bg-amber-700"
+                              : "bg-amber-500 text-white shadow-md hover:shadow-lg hover:bg-amber-600"
+                            : isDarkMode
+                              ? "text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30"
+                              : "text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50"
+                        }`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 inline mr-0.5" />
+                        導遊
+                      </button>
+                      <button
+                        onClick={() => handleSwitchMode("translate")}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+                          aiMode === "translate"
+                            ? isDarkMode
+                              ? "bg-sky-600 text-white shadow-lg hover:shadow-sky-600/50 hover:bg-sky-700"
+                              : "bg-sky-500 text-white shadow-md hover:shadow-lg hover:bg-sky-600"
+                            : isDarkMode
+                              ? "text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30"
+                              : "text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50"
+                        }`}
+                      >
+                        <Languages className="w-3.5 h-3.5 inline mr-0.5" />
+                        口譯
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {/* 搜尋框 */}
+                {showAiSearch && (
+                  <div className="mt-3 space-y-2">
+                    <div className={`flex items-center gap-2 p-2 rounded-xl border ${
+                      isDarkMode ? 'bg-neutral-900/60 border-white/10' : 'bg-stone-100/80 border-white/30'
+                    }`}>
+                      <Search className={`w-4 h-4 flex-shrink-0 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`} />
+                      <input
+                        type="text"
+                        value={aiSearchQuery}
+                        onChange={(e) => setAiSearchQuery(e.target.value)}
+                        placeholder="搜尋對話內容..."
+                        className={`flex-1 bg-transparent border-0 outline-none text-sm ${
+                          isDarkMode ? 'text-neutral-200 placeholder:text-neutral-500' : 'text-stone-700 placeholder:text-stone-400'
+                        }`}
+                      />
+                      {aiSearchQuery && (
+                        <button
+                          onClick={() => setAiSearchQuery('')}
+                          className={`p-1 rounded-lg hover:bg-black/10 transition-colors`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {aiSearchQuery && (
+                      <div className={`max-h-40 overflow-y-auto rounded-xl border ${
+                        isDarkMode ? 'bg-neutral-900/80 border-white/10' : 'bg-white/80 border-stone-200/50'
+                      }`}>
+                        {getSearchResults().length > 0 ? (
+                          <div className="p-2 space-y-1">
+                            {getSearchResults().map((result) => (
+                              <button
+                                key={result.index}
+                                onClick={() => {
+                                  scrollToMessage(result.index);
+                                  setShowAiSearch(false);
+                                  setAiSearchQuery('');
+                                }}
+                                className={`w-full text-left p-2 rounded-lg transition-all hover:scale-[1.02] ${
+                                  isDarkMode ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-stone-100 text-stone-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  {result.role === 'user' ? (
+                                    <User className="w-3 h-3 text-sky-500" />
+                                  ) : (
+                                    <Bot className="w-3 h-3 text-amber-500" />
+                                  )}
+                                  <span className={`text-xs font-medium ${
+                                    isDarkMode ? 'text-neutral-400' : 'text-stone-500'
+                                  }`}>
+                                    {result.role === 'user' ? '你' : 'AI'}
+                                  </span>
+                                </div>
+                                <p className="text-xs line-clamp-2">
+                                  {result.text?.substring(0, 100)}{result.text?.length > 100 ? '...' : ''}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className={`p-4 text-center text-xs ${
+                            isDarkMode ? 'text-neutral-500' : 'text-stone-400'
+                          }`}>
+                            沒有找到符合的對話
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* 停止朗讀控制項 */}
                 {isSpeaking && (
@@ -5013,12 +5181,15 @@ const ItineraryApp = () => {
                   loadingText={loadingText}
                   chatEndRef={chatEndRef}
                   setFullPreviewImage={setFullPreviewImage}
+                  expandedMessages={expandedMessages}
+                  toggleMessageExpand={toggleMessageExpand}
+                  messageRefs={messageRefs}
                 />
               </Suspense>
 
               {/* 快速建議問題：根據當前模式動態切換 */}
               <div
-                className={`px-4 py-3 border-t flex gap-2.5 overflow-x-auto scrollbar-hide backdrop-blur-2xl ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/60 border-stone-200/50"}`}
+                className={`px-4 py-3 border-t flex gap-2.5 overflow-x-auto scrollbar-hide backdrop-blur-2xl transition-colors duration-300 ${isDarkMode ? "bg-black/20 border-white/10" : "bg-[#F9F9F6]/50 border-stone-200/50"}`}
               >
                 {(aiMode === "translate"
                   ? tripConfig.translationQuestions || [

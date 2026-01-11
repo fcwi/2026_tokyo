@@ -1,5 +1,5 @@
 import React from "react";
-import { Bot, User, Loader, Volume2 } from "lucide-react";
+import { Bot, User, Loader, Volume2, ChevronDown, ChevronUp } from "lucide-react";
 
 const ChatMessageList = ({
   messages,
@@ -12,6 +12,9 @@ const ChatMessageList = ({
   loadingText,
   chatEndRef,
   setFullPreviewImage,
+  expandedMessages = {},
+  toggleMessageExpand,
+  messageRefs = { current: [] },
 }) => {
   // 根據主題配置定義聊天氣泡顏色
   const chatColors = currentTheme?.chatColors || {
@@ -79,6 +82,7 @@ const ChatMessageList = ({
 
           {/* 訊息氣泡：包含圖片預覽與文字內容 */}
           <div
+            ref={(el) => messageRefs.current[idx] = el}
             className={`max-w-[75%] group relative transition-all duration-300`}
           >
             <div
@@ -103,7 +107,44 @@ const ChatMessageList = ({
                 />
               )}
               {/* 渲染文字內容 (支援 Markdown 或特殊格式) */}
-              {renderMessage(msg.text)}
+              {(() => {
+                const textLength = msg.text?.length || 0;
+                const isLongMessage = textLength > 150;
+                const isExpanded = expandedMessages[idx];
+                const shouldCollapse = isLongMessage && !isExpanded;
+                
+                return (
+                  <div>
+                    <div className={shouldCollapse ? "line-clamp-4" : ""}>
+                      {renderMessage(msg.text)}
+                    </div>
+                    {isLongMessage && (
+                      <button
+                        onClick={() => toggleMessageExpand(idx)}
+                        className={`mt-2 flex items-center gap-1 text-xs font-medium transition-all hover:opacity-80 ${
+                          msg.role === "user"
+                            ? "text-white/90"
+                            : isDarkMode
+                              ? "text-sky-400"
+                              : "text-[#5D737E]"
+                        }`}
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp className="w-3.5 h-3.5" />
+                            收起
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3.5 h-3.5" />
+                            展開完整內容 ({textLength} 字)
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

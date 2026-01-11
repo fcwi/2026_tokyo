@@ -2,8 +2,24 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa"; // 🆕 引入 PWA 套件
 
+// 🆕 生成構建版本號（使用當前時間）
+const generateBuildVersion = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
 // https://vitejs.dev/config/
 export default defineConfig({
+  // 🆕 定義環境變數
+  define: {
+    'import.meta.env.VITE_BUILD_VERSION': JSON.stringify(generateBuildVersion()),
+  },
+  
   // 🆕 在 plugins 陣列中加入 VitePWA
   plugins: [
     react(),

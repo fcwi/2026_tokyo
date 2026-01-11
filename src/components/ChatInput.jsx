@@ -36,8 +36,8 @@ const ChatInput = ({
 
   return (
     <div
-      className={`p-2 border-t backdrop-blur-md transition-colors duration-300 flex-shrink-0 z-10 
-        ${isDarkMode ? `bg-${cBase}-800/90 border-${cBase}-700` : `bg-white/90 border-${cBase}-200/80`}`}
+      className={`p-4 transition-colors duration-300 flex-shrink-0 z-10 
+        ${isDarkMode ? 'bg-black/20' : 'bg-[#F9F9F6]/50'}`}
     >
       {/* 圖片附件預覽：顯示已選擇但尚未發送的圖片 */}
       {selectedImage && (
@@ -67,24 +67,37 @@ const ChatInput = ({
       />
 
       {/* 輸入控制區域 */}
-      <div className="flex items-end gap-2">
-        {/* 功能選單按鈕：展開/收納語音與圖片功能 */}
-        <div className="flex items-center gap-1 pb-0.5 relative">
+      <div className="flex items-center gap-1.5">
+        {/* 相機按鈕 */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className={`p-2.5 rounded-2xl border transition-all flex-shrink-0 active:scale-95 ${
+            isDarkMode
+              ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200'
+              : 'bg-stone-100 border-stone-200 text-stone-500 hover:text-stone-700'
+          }`}
+          title="上傳圖片"
+        >
+          <Camera className="w-5 h-5" />
+        </button>
+
+        {/* 功能選單按鈕：展開/收納語音功能 */}
+        <div className="flex items-center gap-1 relative">
           <button
             onClick={() => setShowActions(!showActions)}
-            className={`p-2.5 rounded-xl ${transitions.normal || "transition-all"} ${shadows.subtle || "shadow-sm"} border flex-shrink-0 ${interactions.active || "active:scale-95"} z-20
+            className={`p-2.5 rounded-2xl ${transitions.normal || "transition-all"} border flex-shrink-0 ${interactions.active || "active:scale-95"} z-20
               ${
                 showActions
                   ? isDarkMode
-                    ? `bg-${cBase}-700 border-${cBase}-600 text-white rotate-45`
-                    : `bg-${cBase}-100 border-${cBase}-300 text-${cBase}-600 rotate-45`
+                    ? 'bg-neutral-700 border-neutral-600 text-white rotate-45'
+                    : 'bg-stone-200 border-stone-300 text-stone-600 rotate-45'
                   : isDarkMode
-                    ? `bg-${cBase}-800 border-${cBase}-700 ${blueText}`
-                    : `bg-white border-${cBase}-200 ${blueText}`
+                    ? 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200'
+                    : 'bg-stone-100 border-stone-200 text-stone-500 hover:text-stone-700'
               }`}
-            title="展開/收納功能"
+            title="展開/收納語音功能"
           >
-            <Plus className="w-5 h-5" />
+            <Mic className="w-5 h-5" />
           </button>
 
           {/* 展開後的功能按鈕列表 */}
@@ -157,53 +170,44 @@ const ChatInput = ({
                   )}
                 </button>
               )}
-
-              {/* 圖片上傳按鈕 */}
-              <button
-                onClick={() => {
-                  fileInputRef.current?.click();
-                  setShowActions(false);
-                }}
-                className={`p-2.5 rounded-xl ${transitions.normal || "transition-all"} ${shadows.subtle || "shadow-sm"} border flex-shrink-0 ${interactions.active || "active:scale-95"}
-                  ${isDarkMode ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 border-neutral-600" : "bg-white text-stone-500 hover:bg-stone-50 border-stone-200"}`}
-                title="上傳圖片"
-              >
-                <Camera className="w-5 h-5" />
-              </button>
             </div>
           )}
         </div>
 
         {/* 文字輸入框：支援自動增高與 Enter 發送 */}
-        <textarea
-          value={inputMessage}
-          onChange={(e) => {
-            setInputMessage(e.target.value);
-            e.target.style.height = "auto";
-            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
+        <div className={`flex-1 min-w-0 rounded-2xl overflow-hidden ${
+          isDarkMode ? 'bg-neutral-800' : 'bg-stone-100'
+        }`}>
+          <textarea
+            value={inputMessage}
+            onChange={(e) => {
+              setInputMessage(e.target.value);
               e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 40)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+                e.target.style.height = "auto";
+              }
+            }}
+            rows={1}
+            placeholder={
+              listeningLang
+                ? "正在聽取..."
+                : tripConfig?.language?.name
+                  ? `輸入中文或${tripConfig.language.name}...`
+                  : "輸入問題或上傳照片..."
             }
-          }}
-          rows={1}
-          placeholder={
-            listeningLang
-              ? "正在聽取..."
-              : tripConfig?.language?.name
-                ? `輸入中文或${tripConfig.language.name}...`
-                : "輸入問題或上傳照片..."
-          }
-          className={`flex-1 min-w-0 border rounded-2xl px-3 py-3 ${typography.body?.size || "text-base"} ${interactions.focus || "focus:outline-none focus:ring-2"} ${transitions.normal || "transition-all"} ${shadows.inner || "shadow-inner"} placeholder:text-opacity-50 resize-none max-h-[120px] ${typography.body?.leading || "leading-relaxed"} tracking-wide
-            ${
-              isDarkMode
-                ? "bg-neutral-900/50 border-neutral-600 text-neutral-200 focus:border-sky-500 focus:ring-sky-500/20 placeholder:text-neutral-500"
-                : "bg-white border-stone-200 text-stone-700 focus:border-[#5D737E] focus:ring-[#5D737E]/20 placeholder:text-stone-400"
-            }`}
-        />
+            className={`flex-1 w-full min-w-0 border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0 transition-all placeholder:text-opacity-60 resize-none max-h-[40px] leading-snug
+              ${
+                isDarkMode
+                  ? "text-neutral-200 placeholder:text-neutral-500"
+                  : "text-stone-700 placeholder:text-stone-400"
+              }`}
+          />
+        </div>
 
         {/* 發送按鈕：根據輸入狀態動態啟用 */}
         <button
@@ -213,15 +217,15 @@ const ChatInput = ({
             if (textarea) textarea.style.height = "auto";
           }}
           disabled={isLoading || (!inputMessage.trim() && !selectedImage)}
-          className={`p-3 rounded-xl ${transitions.normal || "transition-all"} ${shadows.card || "shadow-md"} flex-shrink-0 mb-0.5 font-bold ${interactions.active || "active:scale-95"} ${interactions.disabled || "disabled:opacity-50 disabled:cursor-not-allowed"}
+          className={`p-2.5 rounded-2xl transition-all flex-shrink-0 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
             ${
               isLoading || (!inputMessage.trim() && !selectedImage)
                 ? isDarkMode
-                  ? "bg-neutral-700 text-neutral-500 shadow-none"
-                  : "bg-stone-200 text-stone-400 shadow-none"
+                  ? "bg-neutral-700 text-neutral-500"
+                  : "bg-stone-300 text-stone-400"
                 : isDarkMode
-                  ? "bg-gradient-to-r from-sky-600 to-blue-700 text-white hover:shadow-lg"
-                  : "bg-gradient-to-r from-[#5D737E] to-[#3F5561] text-white hover:shadow-lg"
+                  ? "bg-neutral-700 text-white hover:bg-neutral-600"
+                  : "bg-stone-500 text-white hover:bg-stone-600"
             }`}
         >
           <Send className="w-5 h-5" />
