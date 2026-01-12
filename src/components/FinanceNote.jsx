@@ -531,7 +531,7 @@ const FinanceScreen = ({
   if (!user) {
     return (
       <div className={`flex flex-col items-center justify-center min-h-[60vh] p-6 space-y-6 animate-fadeIn`}>
-         <div className={`w-full max-w-sm backdrop-blur-2xl border rounded-[2rem] p-8 shadow-xl text-center space-y-6 ${theme.cardBg} ${theme.cardBorder}`}>
+         <div className={`w-full max-w-sm backdrop-blur-2xl border rounded-[2rem] p-8 shadow-lg text-center space-y-6 ${isDarkMode ? "bg-slate-900/70 border-white/10 ring-1 ring-white/10 shadow-black/5" : "bg-white/70 border-white/40 ring-1 ring-black/5 shadow-black/5"}`}>
            <div className="space-y-2">
             <h2 className={`text-2xl font-bold ${theme.text}`}>歡迎使用旅程記帳</h2>
             <p className={`text-sm ${theme.textSec}`}>請設定您的暱稱與頭像以識別紀錄</p>
@@ -577,10 +577,10 @@ const FinanceScreen = ({
     <div className={`px-4 pb-28 animate-fadeIn flex flex-col min-h-[calc(100vh-130px)]`}>
       
       {/* 主卡片容器：內容多時自然撐開 */}
-      <div className={`flex-1 flex flex-col backdrop-blur-2xl border rounded-[2rem] shadow-xl transition-colors duration-300 ${isDarkMode ? 'bg-[#1F1F1F]/92 backdrop-saturate-180 border-white/15' : 'bg-white/85 backdrop-saturate-180 border-white/30'}`}>
+      <div className={`flex-1 flex flex-col backdrop-blur-2xl border rounded-[2rem] transition-all duration-300 ${isDarkMode ? 'bg-slate-900/60 border-white/10 ring-1 ring-white/10 shadow-lg shadow-black/5' : 'bg-white/70 border-white/40 ring-1 ring-black/5 shadow-lg shadow-black/5'}`}>
         
         {/* Header */}
-        <div className={`shrink-0 p-4 border-b backdrop-blur-2xl transition-colors duration-300 ${isDarkMode ? 'border-white/10 bg-neutral-800/60' : 'border-stone-200/50 bg-white/60'}`}>
+        <div className={`shrink-0 p-4 border-b backdrop-blur-lg transition-all duration-300 ${isDarkMode ? 'border-white/10 bg-neutral-800/60' : 'border-stone-200/50 bg-white/60'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
                {/* 🆕 頭像按鈕 - 點擊顯示選單 */}
@@ -599,7 +599,7 @@ const FinanceScreen = ({
                    {showUserMenu && createPortal(
                      <div 
                        className={`user-menu-portal fixed z-[9999] min-w-[160px] rounded-xl border shadow-xl overflow-hidden animate-fadeIn ${
-                         isDarkMode ? 'bg-neutral-900/95 border-white/10 backdrop-blur-xl' : 'bg-white/95 border-stone-200/50 backdrop-blur-xl'
+                         isDarkMode ? 'bg-neutral-900/85 border-white/10 backdrop-blur-lg ring-1 ring-white/5 shadow-lg' : 'bg-white/90 border-white/40 backdrop-blur-lg ring-1 ring-black/5 shadow-lg'
                        }`}
                        style={{ top: menuPosition.top, left: menuPosition.left }}
                      >
@@ -860,8 +860,8 @@ const FinanceScreen = ({
                                 id={`record-${record.timestamp}`}
                                 className={`relative overflow-hidden shadow-sm transition-all border p-3.5 text-sm leading-relaxed
                                 ${isDarkMode 
-                                    ? 'bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700' 
-                                    : 'bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200'
+                                    ? 'bg-neutral-800/85 backdrop-blur-lg text-neutral-200 border-neutral-700/60 ring-1 ring-neutral-600/30 shadow-md' 
+                                    : 'bg-white/85 backdrop-blur-lg text-stone-700 border-white/40 ring-1 ring-black/5 shadow-md'
                                 }
                                 ${record.user.name === user.name ? 'rounded-2xl rounded-tr-none' : 'rounded-2xl rounded-tl-none'}
                                 ${record.type === 'finance' ? 'w-60' : ''}
@@ -949,7 +949,7 @@ const FinanceScreen = ({
         </div>
 
         {/* Footer 輸入區 - 固定在卡片內容的最下方 */}
-        <div className={`shrink-0 border-t backdrop-blur-2xl transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900/80 border-white/10' : 'bg-white/70 border-stone-200/50'}`}>
+        <div className={`shrink-0 border-t backdrop-blur-lg transition-all duration-300 ${isDarkMode ? 'bg-neutral-900/70 border-white/10 ring-1 ring-white/5' : 'bg-white/70 border-stone-200/50 ring-1 ring-black/5'}`}>
           <div className="px-3 py-2.5 space-y-2">
             {/* 圖片預覽區 */}
             {noteImages.length > 0 && (
@@ -1048,12 +1048,12 @@ const FinanceScreen = ({
       {/* --- 發票批次確認 Modal (保持不變) --- */}
       {showReceiptModal && (
         <div 
-            className="fixed inset-0 z-[9999] flex items-center justify-center px-4 pt-4 pb-28 bg-black/80 backdrop-blur-sm animate-fadeIn transform-gpu"
+            className="fixed inset-0 z-[9999] flex items-center justify-center px-4 pt-4 pb-28 bg-black/85 backdrop-blur-lg animate-fadeIn transform-gpu"
             style={{ willChange: 'opacity, transform' }}
         >
             <div className={`w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-200/50'}`}>
                 {/* Modal Header */}
-                <div className="p-4 border-b flex items-center justify-between shrink-0 bg-opacity-50 backdrop-blur-md">
+                <div className="p-4 border-b flex items-center justify-between shrink-0 bg-opacity-50 backdrop-blur-lg">
                     <h3 className={`text-lg font-bold flex items-center gap-2 ${theme.text}`}>
                         {isScanning ? <Loader className="w-5 h-5 animate-spin text-sky-500"/> : <ScanLine className="w-5 h-5 text-sky-500"/>}
                         {isScanning ? '正在分析...' : '確認發票明細'}
@@ -1071,7 +1071,7 @@ const FinanceScreen = ({
                         {receiptImages.map((img, idx) => (
                             <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border shadow-sm group">
                                 <img src={img} alt={`Receipt ${idx}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" decoding="async" />
-                                <div className="absolute top-1 right-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded-full backdrop-blur-md">
+                                <div className="absolute top-1 right-1 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded-full backdrop-blur-lg ring-1 ring-white/10">
                                     {idx + 1}
                                 </div>
                             </div>
@@ -1157,7 +1157,7 @@ const FinanceScreen = ({
                 </div>
 
                 {/* Modal Footer */}
-                <div className="p-4 pb-8 border-t bg-opacity-50 backdrop-blur-md shrink-0">
+                <div className="p-4 pb-8 border-t bg-opacity-50 backdrop-blur-lg shrink-0">
                     <button 
                         onClick={handleBatchConfirm}
                         disabled={isScanning || receiptItems.filter(i=>i.selected).length === 0}
@@ -1173,7 +1173,7 @@ const FinanceScreen = ({
 
       {/* --- 編輯紀錄 Modal --- */}
       {editingRecord && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/85 backdrop-blur-lg animate-fadeIn">
             <div className={`w-full max-w-sm rounded-2xl shadow-2xl p-6 border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-200/50'}`}>
                 <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}>
                     <Edit3 className="w-5 h-5 text-sky-500"/>

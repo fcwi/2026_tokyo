@@ -1,29 +1,29 @@
 /* WeatherDetail.css - Ultra Compact Version */
 
 :root {
-  --wc-bg-glass: rgba(255, 255, 255, 0.9);
-  --wc-border: rgba(255, 255, 255, 0.2);
+  --wc-bg-glass: rgba(255, 255, 255, 0.7);
+  --wc-border: rgba(255, 255, 255, 0.4);
   --wc-text-primary: #1d1d1f;
   --wc-text-secondary: #6e6e73;
-  --wc-panel-bg: rgba(255, 255, 255, 0.5);
-  --wc-divider: rgba(0, 0, 0, 0.08);
-  --wc-bar-bg: rgba(0, 0, 0, 0.1);
+  --wc-panel-bg: rgba(255, 255, 255, 0.6);
+  --wc-divider: rgba(0, 0, 0, 0.05);
+  --wc-bar-bg: rgba(0, 0, 0, 0.08);
 }
 
 .weather-card.theme-dark {
-  --wc-bg-glass: rgba(38, 38, 38, 0.9);
+  --wc-bg-glass: rgba(30, 41, 59, 0.6);
   --wc-border: rgba(255, 255, 255, 0.1);
   --wc-text-primary: #ffffff;
   --wc-text-secondary: #98989d;
-  --wc-panel-bg: rgba(255, 255, 255, 0.1);
-  --wc-divider: rgba(255, 255, 255, 0.15);
-  --wc-bar-bg: rgba(255, 255, 255, 0.2);
+  --wc-panel-bg: rgba(255, 255, 255, 0.08);
+  --wc-divider: rgba(255, 255, 255, 0.1);
+  --wc-bar-bg: rgba(255, 255, 255, 0.15);
 }
 
 .weather-card {
   background: var(--wc-bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--wc-border);
   border-radius: 32px;
   /* ⬇️ 內距再縮小 */
@@ -32,7 +32,7 @@
   max-width: 360px; /* 寬度稍微縮窄，讓視覺更集中 */
   max-height: 85vh; 
   overflow-y: auto;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.05);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   color: var(--wc-text-primary);
   display: flex;
@@ -40,6 +40,14 @@
   /* ⬇️ 關鍵：大幅縮小區塊間距 (原本16px) */
   gap: 8px; 
   box-sizing: border-box;
+  /* 🆕 Pro Max: 添加 ring 效果 */
+  outline: 1px solid rgba(0, 0, 0, 0.05);
+  outline-offset: -1px;
+}
+
+.weather-card.theme-dark {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  outline: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .weather-card::-webkit-scrollbar { display: none; }

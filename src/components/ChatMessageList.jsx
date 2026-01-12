@@ -19,12 +19,12 @@ const ChatMessageList = ({
   // 根據主題配置定義聊天氣泡顏色
   const chatColors = currentTheme?.chatColors || {
     userBubble: {
-      light: "bg-[#5D737E] text-white border-[#4A606A]",
-      dark: "bg-sky-800 text-white border-sky-700"
+      light: "bg-[#5D737E]/90 backdrop-blur-md text-white border-[#4A606A]/60 ring-1 ring-[#4A606A]/30",
+      dark: "bg-sky-800/85 backdrop-blur-md text-white border-sky-700/60 ring-1 ring-sky-600/30"
     },
     modelBubble: {
-      light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
-      dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700"
+      light: "bg-white/85 backdrop-blur-lg text-stone-700 border-white/40 ring-1 ring-black/5",
+      dark: "bg-neutral-800/80 backdrop-blur-lg text-neutral-200 border-white/10 ring-1 ring-white/5"
     },
     bg: {
       light: "bg-[#F9F9F6]/50",
@@ -86,15 +86,15 @@ const ChatMessageList = ({
             className={`max-w-[75%] group relative transition-all duration-300`}
           >
             <div
-              className={`p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm border
+              className={`p-3.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words shadow-md border transition-all duration-300
                 ${
                   msg.role === "user"
                     ? isDarkMode
                       ? chatColors.userBubble.dark + " rounded-tr-none"
                       : chatColors.userBubble.light + " rounded-tr-none"
                     : isDarkMode
-                      ? chatColors.modelBubble.dark + " rounded-tl-none"
-                      : chatColors.modelBubble.light + " rounded-tl-none"
+                      ? chatColors.modelBubble.dark + " rounded-tl-none hover:shadow-lg"
+                      : chatColors.modelBubble.light + " rounded-tl-none hover:shadow-lg"
                 }`}
             >
               {/* 圖片附件預覽 */}
