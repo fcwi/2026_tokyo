@@ -31,47 +31,33 @@
                 -webkit-overflow-scrolling: touch;
                 height: 100vh;
             }
-            
-            /* iOS 橫向模式 */
-            @media (orientation: landscape) and (max-width: 1023px) {
-                #root {
-                    transform: rotate(-90deg);
-                    transform-origin: center center;
-                    width: 100vh !important;
-                    height: 100vw !important;
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    margin-top: calc(-50vw);
-                    margin-left: calc(-50vh);
-                    overflow-y: auto;
-                    overflow-x: hidden;
-                }
-            }
         }
 
-        /* 非 iOS 設備 */
+        /* CSS Fallback 方向鎖定 - 簡化版避免全白 */
         @media screen and (max-width: 1023px) and (orientation: landscape) {
-            @supports not (-webkit-touch-callout: none) {
-                body {
-                    width: 100vw;
-                    height: 100vh;
-                    overflow: hidden;
-                }
-                
-                #root {
-                    transform: rotate(-90deg);
-                    transform-origin: center center;
-                    width: 100vh;
-                    height: 100vw;
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    margin-top: calc(-50vw);
-                    margin-left: calc(-50vh);
-                    overflow-y: auto;
-                    overflow-x: hidden;
-                }
+            html {
+                overflow: hidden;
+            }
+            
+            body {
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+                margin: 0;
+                padding: 0;
+            }
+            
+            #root {
+                width: 100vh;
+                height: 100vw;
+                overflow-y: auto;
+                overflow-x: hidden;
+                transform-origin: top left;
+                transform: rotate(-90deg) translateX(-100%);
+                position: absolute;
+                top: 0;
+                left: 0;
+                -webkit-overflow-scrolling: touch;
             }
         }
 
