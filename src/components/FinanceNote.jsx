@@ -553,6 +553,7 @@ const FinanceScreen = ({
               placeholder="輸入您的暱稱"
               value={setupName}
               onChange={e => setSetupName(e.target.value)}
+              style={{ fontSize: '16px' }}
               className={`w-full p-3 rounded-lg border text-center font-bold outline-none focus:ring-2 transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20' : 'bg-stone-50 border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20'}`}
             />
             <button 
@@ -949,7 +950,7 @@ const FinanceScreen = ({
         </div>
 
         {/* Footer 輸入區 - 固定在卡片內容的最下方 */}
-        <div className={`shrink-0 border-t backdrop-blur-lg transition-all duration-300 ${isDarkMode ? 'bg-neutral-900/70 border-white/10 ring-1 ring-white/5' : 'bg-white/70 border-stone-200/50 ring-1 ring-black/5'}`}>
+        <div className={`shrink-0 border-t backdrop-blur-2xl transition-all duration-300 ${isDarkMode ? 'bg-neutral-900/80 border-white/10' : 'bg-white/70 border-stone-200/50'}`}>
           <div className="px-3 py-2.5 space-y-2">
             {/* 圖片預覽區 */}
             {noteImages.length > 0 && (
@@ -984,19 +985,20 @@ const FinanceScreen = ({
                 </button>
 
                 {/* 輸入框容器 - 金額與項目合併在同一輸入框 */}
-                <div className={`flex-1 min-w-0 flex items-center rounded-2xl overflow-hidden ${isDarkMode ? 'bg-neutral-800' : 'bg-stone-100'}`}>
+                <div className={`flex-1 min-w-0 flex items-center rounded-2xl overflow-hidden ${isDarkMode ? 'bg-neutral-900/80 border border-neutral-700' : 'bg-stone-100'}`}>
                     {mode === 'finance' && (
                         <input 
                             type="number" 
                             value={amount} 
                             onChange={e => setAmount(e.target.value)} 
                             placeholder="金額"
-                            className={`flex-shrink-0 w-20 border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0 transition-all placeholder:text-opacity-60 leading-tight font-mono
-                                ${isDarkMode ? 'text-neutral-200 placeholder:text-neutral-500' : 'text-stone-700 placeholder:text-stone-400'}`}
+                            style={{ fontSize: '16px' }}
+                            className={`flex-shrink-0 w-20 border-0 bg-transparent px-3 py-2.5 focus:outline-none focus:ring-0 transition-all placeholder:text-opacity-60 leading-tight font-mono
+                                ${isDarkMode ? 'text-white placeholder:text-neutral-400' : 'text-stone-700 placeholder:text-stone-400'}`}
                         />
                     )}
                     {mode === 'finance' && (
-                        <div className={`w-px h-5 ${isDarkMode ? 'bg-neutral-700' : 'bg-stone-300'}`}></div>
+                        <div className={`w-px h-5 ${isDarkMode ? 'bg-neutral-600' : 'bg-stone-300'}`}></div>
                     )}
                     <textarea
                         value={inputText}
@@ -1014,8 +1016,9 @@ const FinanceScreen = ({
                         }}
                         rows={1}
                         placeholder={mode === 'finance' ? "項目說明..." : "記事內容..."}
-                        className={`flex-1 min-w-0 border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0 transition-all placeholder:text-opacity-60 resize-none max-h-[40px] leading-snug
-                            ${isDarkMode ? 'text-neutral-200 placeholder:text-neutral-500' : 'text-stone-700 placeholder:text-stone-400'}`}
+                        style={{ fontSize: '16px' }}
+                        className={`flex-1 min-w-0 border-0 bg-transparent px-3 py-2.5 focus:outline-none focus:ring-0 transition-all placeholder:text-opacity-60 resize-none max-h-[40px] leading-snug
+                            ${isDarkMode ? 'text-white placeholder:text-neutral-400' : 'text-stone-700 placeholder:text-stone-400'}`}
                     />
                 </div>
 
@@ -1026,14 +1029,14 @@ const FinanceScreen = ({
                         const textarea = document.querySelector("textarea");
                         if (textarea) textarea.style.height = "auto";
                     }}
-                    disabled={isUploading || isScanning || (mode === 'finance' && !amount)}
+                    disabled={isUploading || isScanning || (mode === 'finance' && !amount) || (mode === 'note' && !inputText.trim() && noteImages.length === 0)}
                     className={`p-2.5 rounded-2xl transition-all flex-shrink-0 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
-                        ${isUploading || isScanning || (mode === 'finance' && !amount)
+                        ${isUploading || isScanning || (mode === 'finance' && !amount) || (mode === 'note' && !inputText.trim() && noteImages.length === 0)
                             ? isDarkMode
-                                ? 'bg-neutral-700 text-neutral-500'
+                                ? 'bg-neutral-800 border border-neutral-700 text-neutral-500'
                                 : 'bg-stone-300 text-stone-400'
                             : isDarkMode
-                                ? 'bg-neutral-700 text-white hover:bg-neutral-600'
+                                ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-500 hover:to-amber-500 shadow-lg'
                                 : 'bg-stone-500 text-white hover:bg-stone-600'
                         }`}
                 >

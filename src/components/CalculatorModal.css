@@ -36,6 +36,9 @@
   color: var(--calc-text-primary);
   display: flex;
   flex-direction: column;
+  /* iOS 觸控優化 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Header */
@@ -84,10 +87,18 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  /* iOS 觸控優化 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .calc-close-btn:hover {
   background: rgba(0, 0, 0, 0.1);
+}
+
+.calc-close-btn:active {
+  transform: scale(0.95);
+  opacity: 0.7;
 }
 
 .calc-modal.theme-dark .calc-close-btn:hover {
@@ -192,10 +203,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* iOS 觸控優化 */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .calc-btn:active {
   transform: scale(0.95);
+  opacity: 0.7;
 }
 
 .calc-btn:hover {

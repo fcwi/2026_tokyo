@@ -3,7 +3,35 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  /* iOS 安全區域支援 */
+  padding-left: max(2rem, env(safe-area-inset-left));
+  padding-right: max(2rem, env(safe-area-inset-right));
+  padding-top: max(2rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
 }
+
+/* iOS 按鈕觸控優化 */
+button, a, [role="button"], [tabindex="0"] {
+  /* 移除 iOS 預設按鈕樣式 */
+  -webkit-appearance: none;
+  appearance: none;
+  /* 改善觸控反饋 - 使用 active 狀態替代 tap-highlight */
+  transition: opacity 0.15s ease-in-out, transform 0.1s ease-in-out;
+}
+
+button:active, a:active, [role="button"]:active {
+  /* iOS 觸控時的視覺反饋 */
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+
+/* 防止 iOS 輸入框自動縮放 */
+input, textarea, select {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
+}
+
 
 .logo {
   height: 6em;

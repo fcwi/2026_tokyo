@@ -246,6 +246,12 @@ const ItineraryApp = () => {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false); // 新增：追蹤地圖彈窗狀態
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [isIOSSafari, setIsIOSSafari] = useState(false);
+  
+  // iOS PWA 安裝提示
+  const [showIOSInstallPrompt, setShowIOSInstallPrompt] = useState(false);
+  
+  // 螢幕方向鎖定警告
+  const [showOrientationWarning, setShowOrientationWarning] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -267,7 +273,67 @@ const ItineraryApp = () => {
     const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const isSafariEngine = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
     setIsIOSSafari(isIOSDevice && isSafariEngine);
+    
+    // iOS PWA 安裝提示邏輯
+    if (isIOSDevice && isSafariEngine) {
+      // 檢查是否已在獨立模式運行（已加入主畫面）
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                          window.navigator.standalone === true;
+      
+      // 檢查用戶是否已關閉過提示
+      const hasClosedPrompt = localStorage.getItem('ios_install_prompt_closed');
+      
+      // 只在非獨立模式且未關閉過提示時顯示
+      if (!isStandalone && !hasClosedPrompt) {
+        // 延遲 3 秒顯示，避免初次載入時過於干擾
+        const timer = setTimeout(() => {
+          setShowIOSInstallPrompt(true);
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }
   }, []);
+  
+  // 螢幕方向鎖定監聽
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      // 檢測是否為橫向
+      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+      
+      if (isLandscape && isMobile) {
+        setShowOrientationWarning(true);
+        
+        // 3 秒後自動隱藏警告
+        const timer = setTimeout(() => {
+          setShowOrientationWarning(false);
+        }, 3000);
+        
+        return () => clearTimeout(timer);
+      } else {
+        setShowOrientationWarning(false);
+      }
+    };
+    
+    // 初始檢查
+    handleOrientationChange();
+    
+    // 監聽方向變化（同時支援舊版和新版 API）
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleOrientationChange);
+    
+    // 使用 Screen Orientation API（較新的瀏覽器）
+    if (screen.orientation) {
+      screen.orientation.addEventListener('change', handleOrientationChange);
+    }
+    
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      window.removeEventListener('resize', handleOrientationChange);
+      if (screen.orientation) {
+        screen.orientation.removeEventListener('change', handleOrientationChange);
+      }
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -5672,6 +5738,107 @@ const ItineraryApp = () => {
                   <Check className="w-5 h-5" /> 確認使用
                 </button>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* iOS PWA 安裝提示橫幅 */}
+        <AnimatePresence>
+          {showIOSInstallPrompt && (
+            <motion.div
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -100, opacity: 0 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="fixed top-0 left-0 right-0 z-[9999] mx-auto max-w-md"
+              style={{ 
+                paddingTop: 'max(1rem, env(safe-area-inset-top))',
+                paddingLeft: 'max(1rem, env(safe-area-inset-left))',
+                paddingRight: 'max(1rem, env(safe-area-inset-right))'
+              }}
+            >
+              <div className="mx-4 bg-gradient-to-br from-blue-600 to-blue-700 backdrop-blur-xl rounded-2xl shadow-2xl border border-blue-400/30 overflow-hidden">
+                <div className="p-4 relative">
+                  {/* 關閉按鈕 */}
+                  <button
+                    onClick={() => {
+                      setShowIOSInstallPrompt(false);
+                      localStorage.setItem('ios_install_prompt_closed', 'true');
+                    }}
+                    className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
+                    aria-label="關閉提示"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+
+                  {/* 內容 */}
+                  <div className="flex items-start gap-3 pr-6">
+                    <div className="flex-shrink-0 w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                      <Download className="w-7 h-7 text-blue-600" />
+                    </div>
+                    <div className="flex-1 text-white">
+                      <h3 className="font-bold text-base mb-1">安裝到主畫面</h3>
+                      <p className="text-sm text-blue-100 leading-relaxed mb-3">
+                        將此 App 加入主畫面，享受完整螢幕體驗
+                      </p>
+                      
+                      {/* 步驟說明 */}
+                      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-xs text-blue-50 space-y-2 border border-white/20">
+                        <div className="flex items-start gap-2">
+                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">1</span>
+                          <span>點擊底部的 <Share2 className="inline w-4 h-4 mx-0.5" /> 分享按鈕</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">2</span>
+                          <span>選擇「加入主畫面」</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">3</span>
+                          <span>點擊右上角「新增」完成</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 螢幕方向鎖定警告 */}
+        <AnimatePresence>
+          {showOrientationWarning && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", damping: 25, stiffness: 400 }}
+              className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+              onClick={() => setShowOrientationWarning(false)}
+            >
+              <motion.div
+                initial={{ rotate: 90 }}
+                animate={{ rotate: 0 }}
+                className="bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl shadow-2xl p-8 max-w-sm text-center border-2 border-orange-300/50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="w-20 h-20 mx-auto mb-4 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                  <Phone className="w-12 h-12 text-white transform rotate-90" />
+                </div>
+                
+                <h3 className="text-2xl font-bold text-white mb-3">請旋轉螢幕</h3>
+                <p className="text-white/90 text-base leading-relaxed mb-6">
+                  為了獲得最佳體驗<br />
+                  請將裝置轉回直向模式
+                </p>
+                
+                <button
+                  onClick={() => setShowOrientationWarning(false)}
+                  className="px-6 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors shadow-lg"
+                >
+                  我知道了
+                </button>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

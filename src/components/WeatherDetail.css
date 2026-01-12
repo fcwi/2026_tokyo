@@ -32,6 +32,9 @@
   max-width: 360px; /* 寬度稍微縮窄，讓視覺更集中 */
   max-height: 85vh; 
   overflow-y: auto;
+  /* iOS 滾動優化 */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.05);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   color: var(--wc-text-primary);

@@ -2,6 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🆕 iOS 安全區域支援 - 防止內容被瀏海/Home Indicator 遮擋 */
+:root {
+  /* iOS 安全區域變數 */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+
+/* iOS 專用全域設定 */
+@supports (-webkit-touch-callout: none) {
+  /* 僅針對 iOS Safari */
+  body {
+    /* 防止橡皮筋效果（過度滾動彈跳） */
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+  
+  #root {
+    /* 允許內部滾動，但防止整個頁面彈跳 */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    height: 100vh;
+    height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+  }
+}
+
+/* 🆕 iOS 觸控優化 */
+* {
+  /* 移除 iOS 點擊高亮效果 */
+  -webkit-tap-highlight-color: transparent;
+  /* 防止長按選單彈出 */
+  -webkit-touch-callout: none;
+  /* 平滑滾動 */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 允許特定元素的文字選擇 */
+input, textarea, [contenteditable="true"] {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* 🆕 毛玻璃效果優化 - 解決滑動/切換時的視覺閃爍 */
 
 /* 全局 backdrop-filter 優化 */

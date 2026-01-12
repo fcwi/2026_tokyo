@@ -3,8 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/2026_tokyo/icon-192.png" />
+    
+    <!-- iOS 專用圖示 (多尺寸支援) -->
     <link rel="apple-touch-icon" href="/2026_tokyo/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/2026_tokyo/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/2026_tokyo/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/2026_tokyo/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/2026_tokyo/icon-192.png" />
+    
+    <!-- iOS Safari 獨立模式設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="東京旅遊" />
+    
+    <!-- 防止 iOS Safari 自動偵測電話號碼 -->
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- 視口設定 - 支援 iOS 安全區域 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
     <link rel="manifest" href="/manifest.json" />
     <title>tokyo-trip</title>
   </head>

@@ -163,7 +163,7 @@ const ChatInput = ({
           {/* 文字輸入框：對標記帳頁面，移除外邊框改用背景色區分 */}
           <div
             className={`flex-1 min-w-0 flex items-center rounded-2xl overflow-hidden transition-all duration-300
-            ${isDarkMode ? "bg-neutral-800" : "bg-stone-100"}`}
+            ${isDarkMode ? "bg-neutral-900/80 border border-neutral-700" : "bg-stone-100"}`}
           >
             <textarea
               value={inputMessage}
@@ -181,10 +181,11 @@ const ChatInput = ({
               }}
               rows={1}
               placeholder={listeningLang ? "正在聽取聲音..." : "輸入問題..."}
-              className={`w-full bg-transparent px-3 py-2.5 text-base focus:outline-none transition-all placeholder:text-opacity-50 resize-none max-h-[80px] leading-snug
+              style={{ fontSize: '16px' }}
+              className={`w-full bg-transparent px-3 py-2.5 focus:outline-none transition-all placeholder:text-opacity-50 resize-none max-h-[80px] leading-snug
                 ${
                   isDarkMode
-                    ? "text-neutral-200 placeholder:text-neutral-500"
+                    ? "text-white placeholder:text-neutral-400"
                     : "text-stone-700 placeholder:text-stone-400"
                 }`}
             />
@@ -198,10 +199,10 @@ const ChatInput = ({
               ${
                 isLoading || (!inputMessage.trim() && !selectedImage)
                   ? isDarkMode
-                    ? "bg-neutral-700 text-neutral-500"
+                    ? "bg-neutral-800 border border-neutral-700 text-neutral-500"
                     : "bg-stone-300 text-stone-400"
                   : isDarkMode
-                    ? "bg-neutral-700 text-white hover:bg-neutral-600"
+                    ? "bg-gradient-to-r from-sky-600 to-blue-600 text-white hover:from-sky-500 hover:to-blue-500 shadow-lg"
                     : "bg-stone-500 text-white hover:bg-stone-600"
               }`}
           >
