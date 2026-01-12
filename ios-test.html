@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>iOS PWA 功能測試</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        body {
+            padding: max(1rem, env(safe-area-inset-top)) 
+                     max(1rem, env(safe-area-inset-right))
+                     max(1rem, env(safe-area-inset-bottom))
+                     max(1rem, env(safe-area-inset-left));
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #ffd700;
+        }
+        .info-item {
+            margin-bottom: 0.8rem;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 0.5rem;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #ffd700;
+            margin-bottom: 0.3rem;
+        }
+        .info-value {
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: #fff;
+            color: #667eea;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.2s;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .status {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .status.yes {
+            background: #10b981;
+            color: white;
+        }
+        .status.no {
+            background: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍎 iOS PWA 功能測試</h1>
+        
+        <div class="test-section">
+            <h2>📱 設備檢測</h2>
+            <div class="info-item">
+                <div class="info-label">iOS 設備：</div>
+                <div class="info-value" id="isIOS">檢測中...</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Safari 瀏覽器：</div>
+                <div class="info-value" id="isSafari">檢測中...</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">獨立模式（已安裝）：</div>
+                <div class="info-value" id="isStandalone">檢測中...</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔒 安全區域支援</h2>
+            <div class="info-item">
+                <div class="info-label">上方安全區：</div>
+                <div class="info-value" id="safeTop">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">下方安全區：</div>
+                <div class="info-value" id="safeBottom">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">左側安全區：</div>
+                <div class="info-value" id="safeLeft">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">右側安全區：</div>
+                <div class="info-value" id="safeRight">--</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 螢幕方向</h2>
+            <div class="info-item">
+                <div class="info-label">目前方向：</div>
+                <div class="info-value" id="orientation">檢測中...</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">螢幕角度：</div>
+                <div class="info-value" id="angle">--</div>
+            </div>
+            <button class="btn" onclick="testOrientation()">🔄 測試方向鎖定</button>
+        </div>
+
+        <div class="test-section">
+            <h2>✨ Touch UX 測試</h2>
+            <div class="info-item">
+                <div class="info-label">點擊下方按鈕測試觸控反饋：</div>
+                <button class="btn" onclick="alert('✅ 觸控反饋正常！')">測試觸控</button>
+            </div>
+        </div>
+
+        <div class="test-section" style="text-align: center;">
+            <a href="/" class="btn">返回 App 主頁</a>
+        </div>
+    </div>
+
+    <script>
+        // 設備檢測
+        function detectDevice() {
+            const ua = navigator.userAgent;
+            const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || 
+                               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+            const isSafariEngine = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                window.navigator.standalone === true;
+
+            document.getElementById('isIOS').innerHTML = 
+                isIOSDevice 
+                ? '<span class="status yes">✓ 是</span>' 
+                : '<span class="status no">✗ 否</span>';
+            
+            document.getElementById('isSafari').innerHTML = 
+                isSafariEngine 
+                ? '<span class="status yes">✓ 是</span>' 
+                : '<span class="status no">✗ 否</span>';
+            
+            document.getElementById('isStandalone').innerHTML = 
+                isStandalone 
+                ? '<span class="status yes">✓ 已安裝</span>' 
+                : '<span class="status no">✗ 未安裝</span>';
+        }
+
+        // 安全區域檢測
+        function detectSafeArea() {
+            const computedStyle = getComputedStyle(document.documentElement);
+            const top = computedStyle.getPropertyValue('padding-top');
+            const bottom = computedStyle.getPropertyValue('padding-bottom');
+            const left = computedStyle.getPropertyValue('padding-left');
+            const right = computedStyle.getPropertyValue('padding-right');
+
+            document.getElementById('safeTop').textContent = top || '0px';
+            document.getElementById('safeBottom').textContent = bottom || '0px';
+            document.getElementById('safeLeft').textContent = left || '0px';
+            document.getElementById('safeRight').textContent = right || '0px';
+        }
+
+        // 螢幕方向檢測
+        function updateOrientation() {
+            const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+            const orientation = isLandscape ? '🔄 橫向' : '📱 直向';
+            
+            let angle = 0;
+            if (window.orientation !== undefined) {
+                angle = window.orientation;
+            } else if (screen.orientation) {
+                angle = screen.orientation.angle;
+            }
+
+            document.getElementById('orientation').innerHTML = 
+                `<span class="status ${isLandscape ? 'no' : 'yes'}">${orientation}</span>`;
+            document.getElementById('angle').textContent = angle + '°';
+        }
+
+        function testOrientation() {
+            const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+            if (isLandscape) {
+                alert('⚠️ 檢測到橫向模式！\n在實際 App 中會顯示警告提示。');
+            } else {
+                alert('✅ 目前為直向模式，符合要求！');
+            }
+        }
+
+        // 初始化
+        detectDevice();
+        detectSafeArea();
+        updateOrientation();
+
+        // 監聽方向變化
+        window.addEventListener('orientationchange', updateOrientation);
+        window.addEventListener('resize', updateOrientation);
+        if (screen.orientation) {
+            screen.orientation.addEventListener('change', updateOrientation);
+        }
+    </script>
+</body>
+</html>
