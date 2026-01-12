@@ -1297,7 +1297,6 @@ const ItineraryApp = () => {
   const [showAiSearch, setShowAiSearch] = useState(false);
   const chatEndRef = useRef(null);
   const messageRefs = useRef([]);
-  const recognitionRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [tempImage, setTempImage] = useState(null);
   const fileInputRef = useRef(null);
@@ -2244,119 +2243,32 @@ const ItineraryApp = () => {
     };
   }, []);
 
-  // === iOS PWA 語音識別：只在卸載時清理 ===
-  useEffect(() => {
-    return () => {
-      // 組件卸載時，如果有正在執行的語音識別，將其終止
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // 忽略錯誤
-        }
-      }
-    };
-  }, []);
-
-  // === iOS PWA 關鍵：每次點擊都建立全新實例 ===
-  // Fresh Instance + User Activation + Clean State
-  const toggleListening = async (lang) => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    // 0. 瀏覽器支援檢查
-    if (!SpeechRecognition) {
+  const toggleListening = (lang) => {
+    if (!("webkitSpeechRecognition" in window)) {
       showToast("抱歉，您的瀏覽器不支援語音輸入功能。", "error");
       return;
     }
 
-    // 1. 如果正在聆聽，則停止
     if (listeningLang) {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {
-          console.error("停止失敗", e);
-        }
-      }
       setListeningLang(null);
       return;
     }
 
-    // --- 新增修正：針對 iPad PWA 的「暖機」動作 ---
-    // iPadOS PWA 有時會因為 Audio Session 未激活而導致 SpeechRecognition 瞬間結束或報錯
-    // 我們先請求一次 getUserMedia 來強制激活麥克風權限與硬體通道
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // 成功取得後立刻關閉，我們只需要激活權限，不需要真的錄音
-      stream.getTracks().forEach(track => track.stop());
-    } catch (err) {
-      console.error("麥克風權限獲取失敗", err);
-      showToast("請允許麥克風權限", "error");
-      return;
-    }
-    // ----------------------------------------------
+    setListeningLang(lang);
+    setInputMessage("");
 
-    // 2. 【關鍵】每次點擊時，建立全新的實例
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false; // iOS PWA 建議設為 false，講完一句自動停
-    recognition.interimResults = true;
+    const recognition = new window.webkitSpeechRecognition();
     recognition.lang = lang;
-
-    // 3. 重新綁定事件 (因為是新實例，必須重新綁定)
-    recognition.onstart = () => {
-      setListeningLang(lang);
-      setInputMessage(""); // 清空輸入框開始新輸入
-    };
+    recognition.continuous = false;
+    recognition.interimResults = false;
 
     recognition.onresult = (event) => {
-      let finalStr = '';
-      let interimStr = '';
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalStr += event.results[i][0].transcript;
-        } else {
-          interimStr += event.results[i][0].transcript;
-        }
-      }
-
-      // 更新 State
-      if (finalStr) {
-        setInputMessage(finalStr);
-      } else if (interimStr) {
-        setInputMessage(interimStr);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error("語音識別錯誤:", event.error);
-
-      // 忽略 abort 與 no-speech (通常是用戶停止或沒說話)
-      if (event.error !== "aborted" && event.error !== "no-speech") {
-        if (event.error === "not-allowed") {
-          showToast("請檢查設定中的麥克風權限", "error");
-        } else {
-          showToast("語音辨識發生錯誤，請重試", "error");
-        }
-      }
+      const transcript = event.results[0][0].transcript;
+      setInputMessage(transcript);
       setListeningLang(null);
     };
 
-    recognition.onend = () => {
-      // 自動結束時重置狀態
-      setListeningLang(null);
-    };
-
-    // 4. 更新 Ref 並啟動
-    recognitionRef.current = recognition;
-
-    try {
-      recognition.start();
-    } catch (error) {
-      console.error("啟動語音識別失敗:", error);
-      setListeningLang(null);
-      showToast("無法啟動麥克風", "error");
-    }
+    recognition.start();
   };
 
   const LANGUAGE_SPECS = {
@@ -2760,12 +2672,6 @@ const ItineraryApp = () => {
       hour12: false,
     });
 
-    const userMsg = {
-      role: "user",
-      text: inputMessage,
-      image: selectedImage,
-    };
-
     // 根據模式設定隨機的 Loading 提示，增加互動感
     let nextLoadingText = "";
     if (aiMode === "translate") {
@@ -2783,9 +2689,19 @@ const ItineraryApp = () => {
     }
     setLoadingText(nextLoadingText);
 
-    setMessages((prev) => [...prev, userMsg]);
+    // 🔧 【重要】先清空輸入框，避免語音識別的異步更新覆蓋
+    const messageText = inputMessage;
+    const messageImage = selectedImage;
     setInputMessage("");
     setSelectedImage(null);
+
+    const userMsg = {
+      role: "user",
+      text: messageText,
+      image: messageImage,
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
 
     try {
