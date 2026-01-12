@@ -142,7 +142,15 @@
                 <div class="info-label">螢幕角度：</div>
                 <div class="info-value" id="angle">--</div>
             </div>
-            <button class="btn" onclick="testOrientation()">🔄 測試方向鎖定</button>
+            <div class="info-item" style="background: rgba(255, 215, 0, 0.2); border: 1px solid rgba(255, 215, 0, 0.5);">
+                <div class="info-label" style="color: #ffd700;">⚡ 新功能：強制方向鎖定</div>
+                <div style="font-size: 0.85rem; line-height: 1.5; margin-top: 0.5rem;">
+                    當您旋轉裝置至橫向時，App 內容會自動旋轉 90 度，<br>
+                    讓畫面始終保持直向顯示。<br>
+                    <strong>現在就試試旋轉您的裝置！</strong>
+                </div>
+            </div>
+            <button class="btn" onclick="testOrientation()">🔄 檢查方向鎖定狀態</button>
         </div>
 
         <div class="test-section">
@@ -218,9 +226,9 @@
         function testOrientation() {
             const isLandscape = window.matchMedia('(orientation: landscape)').matches;
             if (isLandscape) {
-                alert('⚠️ 檢測到橫向模式！\n在實際 App 中會顯示警告提示。');
+                alert('✅ 檢測到橫向模式！\n在實際 App 中，內容已自動旋轉 90 度保持直向顯示。');
             } else {
-                alert('✅ 目前為直向模式，符合要求！');
+                alert('✅ 目前為直向模式，無需旋轉內容。');
             }
         }
 

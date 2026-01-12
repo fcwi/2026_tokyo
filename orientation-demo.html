@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>螢幕方向鎖定示範</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        /* 🔒 方向鎖定 - 與主 App 相同的邏輯 */
+        @media screen and (max-width: 1023px) {
+            @media (orientation: landscape) {
+                body {
+                    width: 100vw;
+                    height: 100vh;
+                    overflow: hidden;
+                }
+                
+                #root {
+                    transform: rotate(-90deg);
+                    transform-origin: left top;
+                    width: 100vh;
+                    height: 100vw;
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                }
+            }
+        }
+
+        #root {
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .demo-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            padding: 2rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .status-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .label {
+            font-weight: 600;
+            color: #ffd700;
+        }
+
+        .value {
+            font-family: monospace;
+            font-size: 1.1rem;
+            padding: 0.3rem 0.8rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 0.5rem;
+        }
+
+        .instruction {
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .rotate-icon {
+            font-size: 3rem;
+            display: block;
+            margin: 1rem auto;
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            margin-top: 1rem;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="demo-card">
+            <h1>🔒 螢幕方向鎖定</h1>
+            
+            <div class="status-box">
+                <div class="status-item">
+                    <span class="label">目前方向：</span>
+                    <span class="value" id="orientation">--</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">裝置類型：</span>
+                    <span class="value" id="deviceType">--</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">鎖定狀態：</span>
+                    <span class="value" id="lockStatus">--</span>
+                </div>
+            </div>
+
+            <div class="instruction">
+                <span class="rotate-icon">📱</span>
+                <strong>請旋轉您的裝置</strong><br>
+                在行動裝置上，當您將手機轉為橫向時，<br>
+                App 內容會自動旋轉 90 度保持直向顯示。<br>
+                <br>
+                <em style="font-size: 0.9rem; opacity: 0.9;">
+                    PC 瀏覽器可以調整視窗寬度至 &lt; 1024px<br>
+                    然後使用開發者工具模擬橫向模式
+                </em>
+            </div>
+
+            <button class="btn" onclick="location.href='/'">返回主 App</button>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            // 檢測方向
+            const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+            const orientationText = isLandscape ? '🔄 橫向' : '📱 直向';
+            document.getElementById('orientation').textContent = orientationText;
+
+            // 檢測裝置
+            const isMobile = window.innerWidth < 1024;
+            const deviceText = isMobile ? '📱 行動裝置' : '🖥️ 桌面';
+            document.getElementById('deviceType').textContent = deviceText;
+
+            // 檢測鎖定狀態
+            const isLocked = isMobile && isLandscape;
+            const lockText = isLocked ? '✅ 已鎖定（內容已旋轉）' : '⭕ 未鎖定';
+            document.getElementById('lockStatus').textContent = lockText;
+            document.getElementById('lockStatus').style.background = 
+                isLocked ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255, 255, 255, 0.2)';
+        }
+
+        // 初始化
+        updateStatus();
+
+        // 監聽變化
+        window.addEventListener('resize', updateStatus);
+        window.addEventListener('orientationchange', updateStatus);
+        if (screen.orientation) {
+            screen.orientation.addEventListener('change', updateStatus);
+        }
+
+        // 每秒更新一次（確保即時性）
+        setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>
