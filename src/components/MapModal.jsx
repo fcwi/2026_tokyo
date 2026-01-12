@@ -107,8 +107,8 @@ const MapModal = ({
 
   // 使用主題設定或回退預設值 - 統一與主卡片樣式
   const glassClass = isDarkMode 
-    ? (theme?.glassColors?.card?.dark || "bg-[#262626]/90 backdrop-blur-md border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]")
-    : (theme?.glassColors?.card?.light || "bg-white/90 backdrop-blur-md border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]" );
+    ? (theme?.glassColors?.card?.dark || "bg-[#262626]/85 backdrop-blur-[24px] border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]")
+    : (theme?.glassColors?.card?.light || "bg-white/95 backdrop-blur-[24px] border-white/40 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]" );
 
   const textClass = isDarkMode ? theme?.textColors?.dark || "text-stone-100" : theme?.textColors?.light || "text-stone-800";
   const textSecClass = isDarkMode ? theme?.textColors?.secDark || "text-stone-300" : theme?.textColors?.secLight || "text-stone-500";

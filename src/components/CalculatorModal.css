@@ -133,22 +133,7 @@
   opacity: 0.9;
 }
 
-.calc-convert-btn {
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: var(--calc-panel-bg);
-  color: var(--calc-text-primary);
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
 
-.calc-modal.theme-dark .calc-convert-btn {
-  border-color: rgba(255, 255, 255, 0.15);
-}
 
 .calc-convert-btn:hover {
   background: rgba(0, 0, 0, 0.1);
@@ -163,8 +148,12 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--calc-text-secondary);
-  opacity: 0.8;
-  padding: 6px 0;
+  opacity: 1;
+  padding: 8px 16px;
+  text-align: center;
+  background: var(--calc-panel-bg);
+  border-radius: 8px;
+  margin-bottom: 8px;
 }
 
 /* Display */
@@ -248,8 +237,12 @@
 
 /* FX Conversion Button Specific */
 .calc-btn-fx {
-  font-size: 15px;
+  font-size: 13px !important;
   line-height: 1.2;
+  letter-spacing: -0.8px;
+  white-space: nowrap;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
 }
 
 /* Operator Buttons */

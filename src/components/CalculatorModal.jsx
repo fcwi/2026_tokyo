@@ -46,12 +46,17 @@ const CalculatorModal = ({
       setPendingOperator(null);
       setIsNewEntry(true);
       setFxDirection("baseToTarget");
-      setFxHint("");
       setCurrentUnit(base);
+      // 初始化匯率提示：當前貨幣是base(JPY)，顯示1 JPY = X TWD
+      if (rateReady) {
+        setFxHint(`1 ${base} = ${rateData.current.toFixed(4)} ${target}`);
+      } else if (rateData?.error) {
+        setFxHint("匯率連線失敗，稍後再試");
+      } else {
+        setFxHint("匯率更新中...");
+      }
     });
-  }, [isOpen, base]);
-
-  const formattedRate = rateReady ? rateData.current.toFixed(3) : "--";
+  }, [isOpen, base, target, rateReady, rateData]);
 
   if (!isOpen) return null;
 
@@ -70,7 +75,6 @@ const CalculatorModal = ({
   // --- Input Handlers ---
 
   const inputDigit = (digit) => {
-    setFxHint("");
     setDisplayValue((prev) => {
       if (isNewEntry || prev === "0") {
         setIsNewEntry(false);
@@ -81,7 +85,6 @@ const CalculatorModal = ({
   };
 
   const inputDot = () => {
-    setFxHint("");
     setDisplayValue((prev) => {
       if (isNewEntry) {
         setIsNewEntry(false);
@@ -97,8 +100,12 @@ const CalculatorModal = ({
     setStoredValue(null);
     setPendingOperator(null);
     setIsNewEntry(true);
-    setFxHint("");
     setCurrentUnit(base);
+    setFxDirection("baseToTarget");
+    // 重置為初始匯率提示：當前貨幣是base(JPY)，顯示1 JPY = X TWD
+    if (rateReady) {
+      setFxHint(`1 ${base} = ${rateData.current.toFixed(4)} ${target}`);
+    }
   };
 
   const toggleSign = () => {
@@ -134,7 +141,6 @@ const CalculatorModal = ({
     }
     setPendingOperator(op);
     setIsNewEntry(true);
-    setFxHint("");
   };
 
   const handleEqual = () => {
@@ -145,7 +151,6 @@ const CalculatorModal = ({
     setStoredValue(null);
     setPendingOperator(null);
     setIsNewEntry(true);
-    setFxHint("");
   };
 
   /**
@@ -160,15 +165,17 @@ const CalculatorModal = ({
     const rate = rateData.current;
     let result = current;
     if (fxDirection === "baseToTarget") {
+      // 從 JPY 轉到 TWD，轉換後當前貨幣是 TWD
       result = current * rate;
       setFxDirection("targetToBase");
-      setFxHint(`使用 1 ${base} = ${formattedRate} ${target}`);
       setCurrentUnit(target);
+      setFxHint(`1 ${target} = ${(1 / rate).toFixed(4)} ${base}`);
     } else {
+      // 從 TWD 轉回 JPY，轉換後當前貨幣是 JPY
       result = rate === 0 ? NaN : current / rate;
       setFxDirection("baseToTarget");
-      setFxHint(`使用 1 ${target} ~ ${(1 / rate).toFixed(4)} ${base}`);
       setCurrentUnit(base);
+      setFxHint(`1 ${base} = ${rate.toFixed(4)} ${target}`);
     }
     setDisplayValue(clampLength(result));
     setStoredValue(null);
@@ -212,6 +219,13 @@ const CalculatorModal = ({
           >
             {displayValue}
           </div>
+
+          {/* Hint Message */}
+          {fxHint && (
+            <div className="calc-hint" role="status" aria-live="polite">
+              {fxHint}
+            </div>
+          )}
 
           {/* Keypad */}
           <div className="calc-keypad">
