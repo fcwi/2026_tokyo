@@ -32,12 +32,14 @@
                 
                 #root {
                     transform: rotate(-90deg);
-                    transform-origin: left top;
+                    transform-origin: center center;
                     width: 100vh;
                     height: 100vw;
-                    position: absolute;
-                    top: 100%;
-                    left: 0;
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    margin-top: calc(-50vw);
+                    margin-left: calc(-50vh);
                     overflow-y: auto;
                     overflow-x: hidden;
                 }

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>橫向旋轉測試</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        /* iOS 專用 */
+        @supports (-webkit-touch-callout: none) {
+            body {
+                overflow: hidden;
+                position: fixed;
+                width: 100%;
+                height: 100%;
+            }
+            
+            #root {
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                height: 100vh;
+            }
+            
+            /* iOS 橫向模式 */
+            @media (orientation: landscape) and (max-width: 1023px) {
+                #root {
+                    transform: rotate(-90deg);
+                    transform-origin: center center;
+                    width: 100vh !important;
+                    height: 100vw !important;
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    margin-top: calc(-50vw);
+                    margin-left: calc(-50vh);
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                }
+            }
+        }
+
+        /* 非 iOS 設備 */
+        @media screen and (max-width: 1023px) and (orientation: landscape) {
+            @supports not (-webkit-touch-callout: none) {
+                body {
+                    width: 100vw;
+                    height: 100vh;
+                    overflow: hidden;
+                }
+                
+                #root {
+                    transform: rotate(-90deg);
+                    transform-origin: center center;
+                    width: 100vh;
+                    height: 100vw;
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    margin-top: calc(-50vw);
+                    margin-left: calc(-50vh);
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                }
+            }
+        }
+
+        #root {
+            color: white;
+            padding: 2rem;
+        }
+
+        .test-box {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid white;
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .status {
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .info {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .color-blocks {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .color-block {
+            flex: 1;
+            height: 100px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="test-box">
+            <h1>🔍 橫向旋轉測試</h1>
+            <div class="status" id="status">檢測中...</div>
+            <div class="info">
+                如果您看到這段文字是<strong>直立的</strong>，<br>
+                即使手機是橫向的，代表旋轉功能正常！
+            </div>
+        </div>
+
+        <div class="test-box">
+            <h2>📏 尺寸資訊</h2>
+            <div style="font-family: monospace; font-size: 0.9rem; line-height: 1.8;">
+                <div>視窗寬度: <span id="width">--</span></div>
+                <div>視窗高度: <span id="height">--</span></div>
+                <div>螢幕方向: <span id="orientation">--</span></div>
+                <div>裝置類型: <span id="device">--</span></div>
+            </div>
+        </div>
+
+        <div class="test-box">
+            <h2>🎨 顏色測試</h2>
+            <div class="info" style="margin-bottom: 1rem;">
+                如果看到下方彩色方塊，代表內容沒有跑出畫面
+            </div>
+            <div class="color-blocks">
+                <div class="color-block" style="background: #ef4444;">紅</div>
+                <div class="color-block" style="background: #10b981;">綠</div>
+                <div class="color-block" style="background: #3b82f6;">藍</div>
+            </div>
+        </div>
+
+        <div class="test-box">
+            <h2>📱 測試指示</h2>
+            <div class="info" style="text-align: left;">
+                <strong>步驟：</strong><br>
+                1. 在手機上開啟此頁面<br>
+                2. 先在直向模式查看（應該正常）<br>
+                3. 旋轉手機至橫向<br>
+                4. 確認內容仍然是直立的<br>
+                5. 檢查是否看到彩色方塊<br>
+                <br>
+                <strong>如果變成全白：</strong><br>
+                代表內容被推到畫面外了，CSS 需要調整
+            </div>
+        </div>
+
+        <div class="test-box" style="height: 300px; background: rgba(255, 255, 255, 0.1);">
+            <h2>📜 滾動測試</h2>
+            <div class="info">
+                這是一個可滾動區域的測試<br>
+                請嘗試向下滾動此頁面<br>
+                確認滾動功能正常
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateInfo() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+            const isMobile = width < 1024;
+
+            document.getElementById('width').textContent = width + 'px';
+            document.getElementById('height').textContent = height + 'px';
+            document.getElementById('orientation').textContent = isLandscape ? '橫向 🔄' : '直向 📱';
+            document.getElementById('device').textContent = isMobile ? '行動裝置' : '桌面';
+
+            const status = document.getElementById('status');
+            if (isMobile && isLandscape) {
+                status.textContent = '✅ 橫向模式 - 內容已自動旋轉';
+                status.style.background = 'rgba(16, 185, 129, 0.3)';
+            } else if (isMobile) {
+                status.textContent = '✅ 直向模式 - 正常顯示';
+                status.style.background = 'rgba(59, 130, 246, 0.3)';
+            } else {
+                status.textContent = '🖥️ 桌面模式';
+                status.style.background = 'rgba(107, 114, 128, 0.3)';
+            }
+        }
+
+        updateInfo();
+        window.addEventListener('resize', updateInfo);
+        window.addEventListener('orientationchange', updateInfo);
+        setInterval(updateInfo, 500);
+    </script>
+</body>
+</html>
