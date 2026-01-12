@@ -578,10 +578,10 @@ const FinanceScreen = ({
     <div className={`px-4 pb-28 animate-fadeIn flex flex-col min-h-[calc(100vh-130px)]`}>
       
       {/* 主卡片容器：內容多時自然撐開 */}
-      <div className={`flex-1 flex flex-col backdrop-blur-2xl border rounded-[2rem] transition-all duration-300 ${isDarkMode ? 'bg-slate-900/60 border-white/10 ring-1 ring-white/10 shadow-lg shadow-black/5' : 'bg-white/70 border-white/40 ring-1 ring-black/5 shadow-lg shadow-black/5'}`}>
+      <div className={`flex-1 flex flex-col backdrop-blur-xl border rounded-[2rem] transition-all duration-300 ${isDarkMode ? 'bg-slate-900/50 border-white/20 ring-1 ring-white/5 shadow-xl shadow-black/10' : 'bg-white/75 border-white/60 ring-1 ring-black/5 shadow-xl shadow-black/10'}`}>
         
         {/* Header */}
-        <div className={`shrink-0 p-4 border-b backdrop-blur-lg transition-all duration-300 ${isDarkMode ? 'border-white/10 bg-neutral-800/60' : 'border-stone-200/50 bg-white/60'}`}>
+        <div className={`shrink-0 p-4 border-b backdrop-blur-xl transition-all duration-300 ${isDarkMode ? 'border-white/20 bg-neutral-800/50 ring-1 ring-white/5' : 'border-stone-200/60 bg-white/70 ring-1 ring-black/5'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
                {/* 🆕 頭像按鈕 - 點擊顯示選單 */}
@@ -677,7 +677,7 @@ const FinanceScreen = ({
                 <button 
                   onClick={() => handleSyncData(false)} 
                   disabled={isSyncing}
-                  className={`p-1.5 rounded-lg border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50' : 'bg-white/60 border-white/30 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]/50'}`}
+                  className={`p-1.5 rounded-lg border transition-all active:scale-95 backdrop-blur-md ${isDarkMode ? 'bg-neutral-800/70 border-white/15 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50 ring-1 ring-white/5' : 'bg-white/80 border-white/40 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]/50 ring-1 ring-black/5'}`}
                   title="同步資料"
                 >
                   <RefreshCcw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-sky-500' : ''}`} />
@@ -770,7 +770,7 @@ const FinanceScreen = ({
         </div>
 
         {/* 列表區域：內容自然撐開卡片 */}
-        <div className={`flex-1 p-4 space-y-3 flex flex-col ${isDarkMode ? 'bg-black/20' : 'bg-[#F9F9F6]/50'}`}>
+        <div className={`flex-1 p-4 space-y-3 flex flex-col backdrop-blur-md ${isDarkMode ? 'bg-black/15' : 'bg-[#F9F9F6]/70'}`}>
           {records.filter(r => r.type === mode).length === 0 && (
              <div className={`flex-1 flex flex-col items-center justify-center opacity-40 ${theme.textSec}`}>
                  <Wallet className="w-12 h-12 mb-2 stroke-1"/>
@@ -816,7 +816,7 @@ const FinanceScreen = ({
                   {/* 日期標頭 - 可點擊收折 */}
                   <button
                     onClick={() => setExpandedDates(prev => ({ ...prev, [date]: !prev[date] }))}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all active:scale-[0.99] border ${isDarkMode ? 'bg-neutral-800/60 border-white/10 hover:bg-neutral-700/60' : 'bg-white/60 border-white/30 hover:bg-white/80'}`}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all active:scale-[0.99] border backdrop-blur-md ${isDarkMode ? 'bg-neutral-800/50 border-white/15 hover:bg-neutral-700/60 ring-1 ring-white/5' : 'bg-white/70 border-white/40 hover:bg-white/90 ring-1 ring-black/5'}`}
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded ? (

@@ -36,7 +36,7 @@ const FlightInfoCard = memo(({
         <div className="animate-fadeIn">
           <div className="grid grid-cols-2 gap-4 mb-4">
             {/* 航班資訊 */}
-            <div className={`rounded-xl p-3 border flex flex-col gap-2 ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}>
+            <div className={`rounded-xl p-3 border flex flex-col gap-2 backdrop-blur-md ${isDarkMode ? "bg-neutral-800/30 border-neutral-700/60 ring-1 ring-white/5" : "bg-white/60 border-stone-200/60 ring-1 ring-black/5"}`}>
               <div className={`text-xs font-bold ${theme.textSec}`}>去程 ({tripConfig.flights.outbound.code})</div>
               <div className="text-sm font-bold tracking-wide">{tripConfig.flights.outbound.time}</div>
               <div className={`w-full h-px my-0.5 ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`} />
@@ -45,7 +45,7 @@ const FlightInfoCard = memo(({
             </div>
 
             {/* 飯店與地址 */}
-            <div className={`rounded-xl p-3 border flex flex-col justify-center gap-2 ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}>
+            <div className={`rounded-xl p-3 border flex flex-col justify-center gap-2 backdrop-blur-md ${isDarkMode ? "bg-neutral-800/30 border-neutral-700/60 ring-1 ring-white/5" : "bg-white/60 border-stone-200/60 ring-1 ring-black/5"}`}>
               {tripConfig.hotels.map((hotel, index) => (
                 <React.Fragment key={index}>
                   <div className="flex flex-col gap-1">

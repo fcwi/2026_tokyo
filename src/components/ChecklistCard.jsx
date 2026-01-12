@@ -65,7 +65,7 @@ const ChecklistCard = memo(({ isDarkMode, theme, colors, initialData }) => {
   };
 
   return (
-    <div className={`rounded-2xl p-4 border transition-colors ${isDarkMode ? "bg-neutral-800/40 border-neutral-700" : "bg-white/40 border-stone-200"}`}>
+    <div className={`rounded-2xl p-4 border transition-colors backdrop-blur-md ${isDarkMode ? "bg-neutral-800/30 border-neutral-700/60 ring-1 ring-white/5" : "bg-white/60 border-stone-200/60 ring-1 ring-black/5"}`}>
       <div className="flex justify-between items-center mb-3">
         <h3 className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}>
           <ListTodo className={`w-4 h-4 ${colors.pink}`} /> 出發前檢查清單

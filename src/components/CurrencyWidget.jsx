@@ -53,8 +53,8 @@ const CurrencyWidget = ({ isDarkMode, rateData, isOnline }) => {
       ${isOnline ? `cursor-pointer ${interactions.hover || "hover:scale-105"} ${interactions.active || "active:scale-95"} hover:shadow-md` : "cursor-not-allowed opacity-80"}
       ${
         isDarkMode
-          ? `bg-${cBase}-800/60 border-${cBase}-600 text-${cBase}-200 hover:bg-${cBase}-800/80`
-          : `bg-white/60 border-${cBase}-200 text-${cBase}-700 hover:bg-white/90`
+          ? `bg-${cBase}-800/50 border-${cBase}-600/60 text-${cBase}-200 hover:bg-${cBase}-800/70 ring-1 ring-white/5`
+          : `bg-white/70 border-${cBase}-200/60 text-${cBase}-700 hover:bg-white/95 ring-1 ring-black/5`
       }`}
     >
       {/* Conditional Rendering: Priority 1 - Offline State */}

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Camera, X, Mic, MicOff, Send } from "lucide-react";
 
 const ChatInput = ({
@@ -17,6 +18,17 @@ const ChatInput = ({
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [sendAttempts, setSendAttempts] = useState(0);
+  const micButtonRef = useRef(null);
+
+  // 計算語音按鈕列表位置
+  const getPopupPosition = () => {
+    if (!micButtonRef.current) return { bottom: '80px', left: '16px' };
+    const rect = micButtonRef.current.getBoundingClientRect();
+    return {
+      bottom: `${window.innerHeight - rect.top + 12}px`,
+      left: `${rect.left}px`,
+    };
+  };
 
   // 🚀 智慧重試包裝器：如果發送失敗，可在此層級進行簡單重試或狀態管理
   const onSendMessage = async () => {
@@ -36,11 +48,11 @@ const ChatInput = ({
 
   return (
     <div
-      className={`shrink-0 border-t backdrop-blur-2xl transition-all duration-300 z-20 
+      className={`shrink-0 border-t backdrop-blur-xl transition-all duration-300 z-20 
         ${
           isDarkMode
-            ? "bg-neutral-900/80 border-white/10"
-            : "bg-white/70 border-stone-200/50"
+            ? "bg-neutral-900/70 border-white/20 ring-1 ring-white/5"
+            : "bg-white/80 border-stone-200/60 ring-1 ring-black/5"
         }`}
     >
       <div className="px-3 py-2.5">
@@ -91,8 +103,9 @@ const ChatInput = ({
           {/* 功能選單按鈕 */}
           <div className="relative">
             <button
+              ref={micButtonRef}
               onClick={() => setShowActions(!showActions)}
-              className={`p-2.5 rounded-2xl border transition-all flex-shrink-0 active:scale-95 z-30 relative
+              className={`p-2.5 rounded-2xl border transition-all flex-shrink-0 active:scale-95 relative
                 ${
                   showActions
                     ? isDarkMode
@@ -107,14 +120,15 @@ const ChatInput = ({
               <Mic className="w-5 h-5" />
             </button>
 
-            {/* 語音按鈕列表 */}
-            {showActions && (
+            {/* 語音按鈕列表 - 使用 Portal 渲染到 body，避免被任何容器遮擋 */}
+            {showActions && createPortal(
               <div
-                className={`flex gap-1.5 animate-fadeInLeft absolute left-0 bottom-[calc(100%+12px)] p-1.5 rounded-2xl border shadow-xl z-20 backdrop-blur-2xl
+                style={getPopupPosition()}
+                className={`fixed flex gap-1.5 animate-fadeInLeft p-1.5 rounded-2xl border shadow-2xl z-[9999] backdrop-blur-2xl
                 ${
                   isDarkMode
-                    ? "bg-neutral-800 border-white/10"
-                    : "bg-white border-stone-200"
+                    ? "bg-neutral-800/95 border-white/10"
+                    : "bg-white/95 border-stone-200"
                 }`}
               >
                 <button
@@ -156,7 +170,8 @@ const ChatInput = ({
                     </span>
                   </button>
                 )}
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 

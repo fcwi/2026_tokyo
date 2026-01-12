@@ -1,22 +1,22 @@
 /* CalculatorModal.css - Glassmorphism Design */
 
 :root {
-  --calc-bg-glass: rgba(255, 255, 255, 0.9);
-  --calc-border: rgba(255, 255, 255, 0.2);
+  --calc-bg-glass: rgba(255, 255, 255, 0.95);
+  --calc-border: rgba(255, 255, 255, 0.4);
   --calc-text-primary: #1d1d1f;
   --calc-text-secondary: #6e6e73;
-  --calc-panel-bg: rgba(255, 255, 255, 0.5);
-  --calc-btn-bg: rgba(255, 255, 255, 0.6);
+  --calc-panel-bg: rgba(255, 255, 255, 0.7);
+  --calc-btn-bg: rgba(255, 255, 255, 0.8);
   --calc-accent: #007aff;
 }
 
 .calc-modal.theme-dark {
-  --calc-bg-glass: rgba(38, 38, 38, 0.9);
-  --calc-border: rgba(255, 255, 255, 0.1);
+  --calc-bg-glass: rgba(38, 38, 38, 0.85);
+  --calc-border: rgba(255, 255, 255, 0.2);
   --calc-text-primary: #ffffff;
   --calc-text-secondary: #98989d;
-  --calc-panel-bg: rgba(255, 255, 255, 0.1);
-  --calc-btn-bg: rgba(255, 255, 255, 0.12);
+  --calc-panel-bg: rgba(255, 255, 255, 0.15);
+  --calc-btn-bg: rgba(255, 255, 255, 0.18);
   --calc-accent: #0a84ff;
 }
 
@@ -28,9 +28,9 @@
   border-radius: 32px;
   border: 1px solid var(--calc-border);
   background: var(--calc-bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   color: var(--calc-text-primary);
@@ -39,6 +39,9 @@
   /* iOS 觸控優化 */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  /* 🆕 Pro Max: 添加 ring 效果 */
+  outline: 1px solid rgba(0, 0, 0, 0.05);
+  outline-offset: -1px;
 }
 
 /* Header */
