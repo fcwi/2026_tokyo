@@ -5023,51 +5023,22 @@ const ItineraryApp = () => {
                       )}
                     </div>
 
-                    <div>
+                    <div className="flex flex-col">
                       <div
-                        className={`text-sm font-bold transition-colors duration-300 ${theme.text}`}
+                        className={`text-base font-bold transition-colors duration-300 ${theme.text}`}
                       >
                         {aiMode === "translate" ? "AI 隨身口譯" : "AI 專屬導遊"}
                       </div>
                       {isSpeaking && (
-                        <p className={`text-xs flex items-center gap-1.5 ${theme.textSec}`}>
-                          <span className="text-amber-600 font-medium flex items-center">
-                            <Volume2 className="w-3 h-3 mr-1" /> 朗讀中...
-                          </span>
+                        <p className={`text-[10px] flex items-center gap-1 mt-0.5 ${theme.textSec}`}>
+                          <Volume2 className="w-2.5 h-2.5" /> 朗讀中...
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* 按鈕組 */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowAiSearch(!showAiSearch)}
-                      className={`p-2 rounded-xl border transition-all active:scale-95 ${
-                        showAiSearch
-                          ? isDarkMode
-                            ? "bg-sky-600 border-sky-500 text-white"
-                            : "bg-sky-500 border-sky-400 text-white"
-                          : isDarkMode
-                            ? "bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50"
-                            : "bg-white/60 border-white/30 text-stone-500 hover:text-sky-600 hover:border-sky-400/50"
-                      }`}
-                      title="搜尋對話"
-                    >
-                      <Search className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={handleClearChat}
-                      className={`p-2 rounded-xl border transition-all active:scale-95 ${
-                        isDarkMode
-                          ? "bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-red-400 hover:border-red-500/50"
-                          : "bg-white/60 border-white/30 text-stone-500 hover:text-red-600 hover:border-red-400/50"
-                      }`}
-                      title="清除聊天紀錄"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    
+                  {/* 按鈕組 - 重新排列 */}
+                  <div className="flex flex-col items-end gap-1.5">
                     {/* 模式切換開關 */}
                     <div
                       className={`flex p-1 rounded-xl border gap-1 ${
@@ -5105,6 +5076,35 @@ const ItineraryApp = () => {
                       >
                         <Languages className="w-3.5 h-3.5 inline mr-0.5" />
                         口譯
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowAiSearch(!showAiSearch)}
+                        className={`p-1.5 rounded-lg border transition-all active:scale-95 ${
+                          showAiSearch
+                            ? isDarkMode
+                              ? "bg-sky-600 border-sky-500 text-white"
+                              : "bg-sky-500 border-sky-400 text-white"
+                            : isDarkMode
+                              ? "bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50"
+                              : "bg-white/60 border-white/30 text-stone-500 hover:text-sky-600 hover:border-sky-400/50"
+                        }`}
+                        title="搜尋對話"
+                      >
+                        <Search className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={handleClearChat}
+                        className={`p-1.5 rounded-lg border transition-all active:scale-95 ${
+                          isDarkMode
+                            ? "bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-red-400 hover:border-red-500/50"
+                            : "bg-white/60 border-white/30 text-stone-500 hover:text-red-600 hover:border-red-400/50"
+                        }`}
+                        title="清除聊天紀錄"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

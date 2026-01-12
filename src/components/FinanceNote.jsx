@@ -40,6 +40,12 @@ const FinanceScreen = ({
   gasUrl, gasToken, apiKey, 
   setFullPreviewImage, showToast 
 }) => {
+  // --- 0. 輔助工具 ---
+  const todayStr = React.useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+  }, []);
+
   // --- 1. 基礎狀態 ---
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('finance_user')) || null);
   const [setupName, setSetupName] = useState('');
@@ -79,6 +85,23 @@ const FinanceScreen = ({
   // --- 4.6. 搜尋功能狀態 ---
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+
+  // --- 4.7. 計算當前分組狀態 ---
+  const currentModeRecords = records.filter(r => r.type === mode);
+  const currentModeDates = [...new Set(currentModeRecords.map(r => r.date))];
+  
+  const allExpanded = currentModeDates.length > 0 && currentModeDates.every(date => {
+    // 今日預設展開 (!== false)，其餘日期預設收折 (|| false)
+    return date === todayStr ? (expandedDates[date] !== false) : (expandedDates[date] || false);
+  });
+
+  const handleToggleAllExpanded = () => {
+    const newState = {};
+    currentModeDates.forEach(date => {
+      newState[date] = !allExpanded;
+    });
+    setExpandedDates(prev => ({ ...prev, ...newState }));
+  };
 
   // --- 5. Effect 與 邏輯 ---
 
@@ -605,42 +628,59 @@ const FinanceScreen = ({
                )}
                
                {user && (
-                 <div>
-                    <div className={`text-sm font-bold ${theme.text}`}>
-                        {user.name}
-                    </div>
+                 <div className={`text-base font-bold ${theme.text} self-center`}>
+                   {user.name}
                  </div>
                )}
             </div>
             
-            {/* 🆕 按鈕組 - 移除登出按鈕 */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowSearch(!showSearch)}
-                className={`p-2 rounded-xl border transition-all active:scale-95 ${
-                  showSearch
-                    ? isDarkMode
-                      ? 'bg-sky-600 border-sky-500 text-white'
-                      : 'bg-sky-500 border-sky-400 text-white'
-                    : isDarkMode
-                      ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50'
-                      : 'bg-white/60 border-white/30 text-stone-500 hover:text-sky-600 hover:border-sky-400/50'
-                }`}
-                title="搜尋紀錄"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => handleSyncData(false)} 
-                disabled={isSyncing}
-                className={`p-2 rounded-xl border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50' : 'bg-white/60 border-white/30 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]/50'}`}
-                title="同步資料"
-              >
-                <RefreshCcw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-sky-500' : ''}`} />
-              </button>
+            {/* 🆕 按鈕組 - 重新排列：模式切換在上，功能按鈕在下 */}
+            <div className="flex flex-col items-end gap-1.5">
               <div className={`flex p-1 rounded-xl border gap-1 ${isDarkMode ? 'bg-neutral-900/60 border-white/10' : 'bg-stone-100/80 border-white/30'}`}>
                   <button onClick={() => setMode('finance')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${mode === 'finance' ? (isDarkMode ? 'bg-sky-600 text-white shadow-lg hover:shadow-sky-600/50 hover:bg-sky-700' : 'bg-[#5D737E] text-white shadow-md hover:shadow-lg hover:bg-[#4A606A]') : (isDarkMode ? 'text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30' : 'text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50')}`}><DollarSign className="w-3.5 h-3.5 inline mr-0.5"/>記帳</button>
                   <button onClick={() => setMode('note')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all whitespace-nowrap ${mode === 'note' ? (isDarkMode ? 'bg-orange-600 text-white shadow-lg hover:shadow-orange-600/50 hover:bg-orange-700' : 'bg-orange-500 text-white shadow-md hover:shadow-lg hover:bg-orange-600') : (isDarkMode ? 'text-neutral-400 bg-transparent hover:text-neutral-200 hover:bg-neutral-700/30' : 'text-stone-600 bg-transparent hover:text-stone-700 hover:bg-stone-200/50')}`}><MessageSquare className="w-3.5 h-3.5 inline mr-0.5"/>記事</button>
+              </div>
+              <div className="flex items-center gap-2">
+                {currentModeRecords.length > 0 && (
+                  <button
+                    onClick={handleToggleAllExpanded}
+                    className={`p-1.5 rounded-lg border transition-all active:scale-95 ${
+                      allExpanded
+                        ? isDarkMode
+                          ? 'bg-sky-600/20 border-sky-500/50 text-sky-400'
+                          : 'bg-sky-50 border-sky-200 text-sky-600'
+                        : isDarkMode
+                          ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50'
+                          : 'bg-white/60 border-white/30 text-stone-500 hover:text-sky-600 hover:border-sky-400/50'
+                    }`}
+                    title={allExpanded ? '全部收折' : '全部展開'}
+                  >
+                    <ChevronsUpDown className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowSearch(!showSearch)}
+                  className={`p-1.5 rounded-lg border transition-all active:scale-95 ${
+                    showSearch
+                      ? isDarkMode
+                        ? 'bg-sky-600 border-sky-500 text-white'
+                        : 'bg-sky-500 border-sky-400 text-white'
+                      : isDarkMode
+                        ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50'
+                        : 'bg-white/60 border-white/30 text-stone-500 hover:text-sky-600 hover:border-sky-400/50'
+                  }`}
+                  title="搜尋紀錄"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+                <button 
+                  onClick={() => handleSyncData(false)} 
+                  disabled={isSyncing}
+                  className={`p-1.5 rounded-lg border transition-all active:scale-95 ${isDarkMode ? 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/50' : 'bg-white/60 border-white/30 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]/50'}`}
+                  title="同步資料"
+                >
+                  <RefreshCcw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-sky-500' : ''}`} />
+                </button>
               </div>
             </div>
           </div>
@@ -737,31 +777,6 @@ const FinanceScreen = ({
              </div>
           )}
 
-          {/* 一鍵全部展開/收折按鈕 */}
-          {records.filter(r => r.type === mode).length > 0 && (
-            <div className="flex justify-end mb-2">
-              <button
-                onClick={() => {
-                  const filteredRecords = records.filter(r => r.type === mode);
-                  const dates = [...new Set(filteredRecords.map(r => r.date))];
-                  const allExpanded = dates.every(date => expandedDates[date]);
-                  const newState = {};
-                  dates.forEach(date => { newState[date] = !allExpanded; });
-                  setExpandedDates(prev => ({ ...prev, ...newState }));
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 border ${isDarkMode ? 'bg-neutral-800/60 border-white/10 text-neutral-400 hover:text-sky-400 hover:border-sky-500/30' : 'bg-white/60 border-white/30 text-stone-500 hover:text-[#5D737E] hover:border-[#5D737E]/30'}`}
-              >
-                <ChevronsUpDown className="w-3.5 h-3.5" />
-                {(() => {
-                  const filteredRecords = records.filter(r => r.type === mode);
-                  const dates = [...new Set(filteredRecords.map(r => r.date))];
-                  const allExpanded = dates.every(date => expandedDates[date]);
-                  return allExpanded ? '全部收折' : '全部展開';
-                })()}
-              </button>
-            </div>
-          )}
-
           {/* 按日期分組顯示紀錄 */}
           {(() => {
             const filteredRecords = records.filter(r => r.type === mode);
@@ -783,14 +798,11 @@ const FinanceScreen = ({
             }, {});
             // 排序：舊到新（最新的在最下面）
             const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(a.replace(/\//g, '-')) - new Date(b.replace(/\//g, '-')));
-            // 當日日期 (本地時間)
-            const now = new Date();
-            const today = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
 
             return sortedDates.map(date => {
               const dateRecords = groupedByDate[date];
               // 當日預設展開，其他日期按 expandedDates 狀態
-              const isExpanded = date === today ? (expandedDates[date] !== false) : (expandedDates[date] || false);
+              const isExpanded = date === todayStr ? (expandedDates[date] !== false) : (expandedDates[date] || false);
               const dayTotal = mode === 'finance' 
                 ? dateRecords.reduce((sum, r) => sum + (r.amount || 0), 0) 
                 : dateRecords.length;
