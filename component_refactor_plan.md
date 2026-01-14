@@ -4,15 +4,15 @@
 
 | 序號 | 組件名稱             | 預定路徑                                  | 依賴 Props (Inputs)                                | 外部依賴 (Icons/Utils)           | 主程式清理狀態 |
 | :--- | :------------------- | :---------------------------------------- | :------------------------------------------------- | :------------------------------- | :------------- |
-| 01   | **ThemeConfig**      | `src/config/ThemeConfig.jsx`              | 無 (Static Config)                                 | `tripConfig`                     | ✅ 已提取      |
-| 02   | **FlightInfoCard**   | `src/components/FlightInfoCard.jsx`       | `flightData`, `isExpanded`, `onToggle`             | `ChevronDown`, `Plane`           | ✅ 已抽離      |
+| 01   | **ThemeConfig**      | `src/config/ThemeConfig.jsx`              | 無 (Static Config)                                 | `tripConfig`                     | ✅ [V] 已確認  |
+| 02   | **FlightInfoCard**   | `src/components/FlightInfoCard.jsx`       | `flightData`, `isExpanded`, `onToggle`             | `ChevronDown`, `Plane`           | ✅ [V] 已確認  |
 | 03   | **ChecklistCard**    | `src/components/ChecklistCard.jsx`        | `checklistData`                                    | `Check`, `ListTodo`              | ✅ 已抽離      |
 | 04   | **WeatherCard**      | `src/components/WeatherCard.jsx`          | `userWeather`, `onRefresh`                         | `Sun`, `Cloud`, `getWeatherData` | ✅ 已拆分      |
-| 05   | **BottomNav**        | `src/components/Navigation/BottomNav.jsx` | `activeTab`, `onTabChange`, `isDarkMode`, `theme`  | `Home`, `Store`, `MessageSquare` | ⏳ 待拆分      |
-| 06   | **AIPanel**          | `src/components/AI/AIPanel.jsx`           | `messages`, `aiMode`, `isLoading`, `onSendMessage` | `ChatMessageList`, `ChatInput`   | ⏳ 待拆分      |
-| 07   | **ItineraryTab**     | `src/components/Tabs/ItineraryTab.jsx`    | `itineraryData`, `activeDay`, `onDayChange`        | `Framer Motion`, `DayMap`        | ⏳ 待拆分      |
-| 08   | **FinanceTab**       | `src/components/Tabs/FinanceTab.jsx`      | `rateData`, `gasUrl`, `gasToken`                   | `FinanceNote`                    | ⏳ 待拆分      |
-| 09   | **Hooks Extraction** | `src/hooks/useAppLogic.js`                | 無                                                 | `weatherHelpers`, `crypto`       | ⏳ 待提取      |
+| 05   | **BottomNav**        | `src/components/Navigation/BottomNav.jsx` | `activeTab`, `onTabChange`, `isDarkMode`, `theme`  | `Home`, `Store`, `MessageSquare` | ✅ 已提取      |
+| 06   | **AIPanel**          | `src/components/AI/AIPanel.jsx`           | `messages`, `aiMode`, `isLoading`, `onSendMessage` | `ChatMessageList`, `ChatInput`   | ✅ 已提取      |
+| 07   | **ItineraryTab**     | `src/components/Tabs/ItineraryTab.jsx`    | `itineraryData`, `activeDay`, `onDayChange`        | `Framer Motion`, `DayMap`        | ✅ 已提取      |
+| 08   | **FinanceTab**       | `src/components/Tabs/FinanceTab.jsx`      | `rateData`, `gasUrl`, `gasToken`                   | `FinanceNote`                    | ✅ 已提取      |
+| 09   | **Hooks Extraction** | `src/hooks/useAppLogic.js`                | 無                                                 | `weatherHelpers`, `crypto`       | ✅ 已提取      |
 
 ## 重構原則
 
