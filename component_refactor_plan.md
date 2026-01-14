@@ -7,7 +7,7 @@
 | 01   | **ThemeConfig**      | `src/config/ThemeConfig.jsx`              | 無 (Static Config)                                 | `tripConfig`                     | ✅ 已提取      |
 | 02   | **FlightInfoCard**   | `src/components/FlightInfoCard.jsx`       | `flightData`, `isExpanded`, `onToggle`             | `ChevronDown`, `Plane`           | ✅ 已抽離      |
 | 03   | **ChecklistCard**    | `src/components/ChecklistCard.jsx`        | `checklistData`                                    | `Check`, `ListTodo`              | ✅ 已抽離      |
-| 04   | **WeatherCard**      | `src/components/WeatherCard.jsx`          | `userWeather`, `onRefresh`                         | `Sun`, `Cloud`, `getWeatherData` | ⏳ 待拆分      |
+| 04   | **WeatherCard**      | `src/components/WeatherCard.jsx`          | `userWeather`, `onRefresh`                         | `Sun`, `Cloud`, `getWeatherData` | ✅ 已拆分      |
 | 05   | **BottomNav**        | `src/components/Navigation/BottomNav.jsx` | `activeTab`, `onTabChange`, `isDarkMode`, `theme`  | `Home`, `Store`, `MessageSquare` | ⏳ 待拆分      |
 | 06   | **AIPanel**          | `src/components/AI/AIPanel.jsx`           | `messages`, `aiMode`, `isLoading`, `onSendMessage` | `ChatMessageList`, `ChatInput`   | ⏳ 待拆分      |
 | 07   | **ItineraryTab**     | `src/components/Tabs/ItineraryTab.jsx`    | `itineraryData`, `activeDay`, `onDayChange`        | `Framer Motion`, `DayMap`        | ⏳ 待拆分      |
