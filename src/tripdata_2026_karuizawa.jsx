@@ -126,7 +126,7 @@ export const guidesData = [
   {
     title: "Visit Japan Web 入境申報",
     icon: <QrCode className="w-5 h-5" />,
-    summary: "2025年最新入境必備，節省通關時間。",
+    summary: "入境必備，節省通關時間。",
     steps: [
       "出發前一週：註冊帳號並登入 Visit Japan Web。",
       "登錄本人資料 (掃描護照) 與同行家人資料。",
@@ -1305,7 +1305,8 @@ export const tripConfig = {
         dark: "bg-[#1F1F1F]/92 backdrop-blur-lg backdrop-saturate-180 border border-white/15 shadow-xl shadow-black/40",
       },
       nav: {
-        light: "bg-white/25 backdrop-blur-3xl backdrop-saturate-150 border border-white/20 shadow-md shadow-black/3",
+        light:
+          "bg-white/25 backdrop-blur-3xl backdrop-saturate-150 border border-white/20 shadow-md shadow-black/3",
         dark: "bg-[#2A2A2A]/50 backdrop-blur-3xl backdrop-saturate-150 border border-white/10 shadow-lg shadow-black/50",
       },
       chatBubble: {
@@ -1597,13 +1598,15 @@ export const tripConfig = {
     componentStyles: {
       // 行程卡片 (Day Overview, Event Cards)
       itineraryCard: {
-        light: "bg-white/85 backdrop-blur-lg backdrop-saturate-180 border border-white/30 rounded-2xl shadow-lg shadow-black/5",
+        light:
+          "bg-white/85 backdrop-blur-lg backdrop-saturate-180 border border-white/30 rounded-2xl shadow-lg shadow-black/5",
         dark: "bg-[#1F1F1F]/92 backdrop-blur-lg backdrop-saturate-180 border border-white/15 rounded-2xl shadow-xl shadow-black/40",
       },
 
       // 導航按鈕 (Day Navigation Tabs)
       navButton: {
-        light: "bg-white/25 backdrop-blur-3xl backdrop-saturate-150 border border-white/20 rounded-xl hover:bg-white/35 transition-all duration-300",
+        light:
+          "bg-white/25 backdrop-blur-3xl backdrop-saturate-150 border border-white/20 rounded-xl hover:bg-white/35 transition-all duration-300",
         dark: "bg-[#2A2A2A]/50 backdrop-blur-3xl backdrop-saturate-150 border border-white/10 rounded-xl hover:bg-[#3A3A3A]/60 transition-all duration-300",
       },
 
@@ -1621,7 +1624,8 @@ export const tripConfig = {
 
       // 對話泡泡 - 模型端
       chatModelBubble: {
-        light: "bg-white/88 backdrop-blur-lg border border-white/25 text-stone-700 shadow-md shadow-black/4",
+        light:
+          "bg-white/88 backdrop-blur-lg border border-white/25 text-stone-700 shadow-md shadow-black/4",
         dark: "bg-neutral-800/88 backdrop-blur-lg border border-white/12 text-neutral-200 shadow-lg shadow-black/50",
       },
 
@@ -1633,31 +1637,36 @@ export const tripConfig = {
 
       // 資訊卡片 (Flight, Hotel, Checklist)
       infoCard: {
-        light: "bg-white/80 backdrop-blur-md border border-white/25 rounded-2xl shadow-md",
+        light:
+          "bg-white/80 backdrop-blur-md border border-white/25 rounded-2xl shadow-md",
         dark: "bg-[#262626]/85 backdrop-blur-md border border-white/12 rounded-2xl shadow-lg",
       },
 
       // 標籤與分類 (Tags)
       tagBase: {
-        light: "rounded-full px-3 py-1 text-sm font-medium shadow-sm backdrop-blur-sm",
+        light:
+          "rounded-full px-3 py-1 text-sm font-medium shadow-sm backdrop-blur-sm",
         dark: "rounded-full px-3 py-1 text-sm font-medium shadow-md backdrop-blur-sm",
       },
 
       // 輸入框與焦點狀態
       inputField: {
-        light: "bg-white/70 backdrop-blur-sm border border-stone-200/50 rounded-xl focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20",
+        light:
+          "bg-white/70 backdrop-blur-sm border border-stone-200/50 rounded-xl focus:border-[#5D737E] focus:ring-2 focus:ring-[#5D737E]/20",
         dark: "bg-[#262626]/60 backdrop-blur-sm border border-white/10 rounded-xl focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20",
       },
 
       // 按鈕 - 主要 (Primary Action)
       buttonPrimary: {
-        light: "bg-gradient-to-br from-[#5D737E] to-[#3F5561] text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all",
+        light:
+          "bg-gradient-to-br from-[#5D737E] to-[#3F5561] text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all",
         dark: "bg-gradient-to-br from-sky-700 to-blue-900 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all",
       },
 
       // 按鈕 - 次要 (Secondary Action)
       buttonSecondary: {
-        light: "bg-white/40 backdrop-blur-md border border-white/25 hover:bg-white/50 active:scale-95 transition-all",
+        light:
+          "bg-white/40 backdrop-blur-md border border-white/25 hover:bg-white/50 active:scale-95 transition-all",
         dark: "bg-[#2A2A2A]/50 backdrop-blur-md border border-white/10 hover:bg-[#3A3A3A]/60 active:scale-95 transition-all",
       },
 
@@ -1669,7 +1678,8 @@ export const tripConfig = {
 
       // 模態框容器
       modalContent: {
-        light: "bg-white/95 backdrop-blur-lg border border-white/30 rounded-3xl shadow-2xl",
+        light:
+          "bg-white/95 backdrop-blur-lg border border-white/30 rounded-3xl shadow-2xl",
         dark: "bg-[#1F1F1F]/98 backdrop-blur-lg border border-white/15 rounded-3xl shadow-2xl shadow-black/50",
       },
 
@@ -1681,7 +1691,8 @@ export const tripConfig = {
 
       // 懸停效果 - 卡片提升
       cardHover: {
-        light: "hover:shadow-xl hover:shadow-black/8 transition-all duration-300",
+        light:
+          "hover:shadow-xl hover:shadow-black/8 transition-all duration-300",
         dark: "hover:shadow-2xl hover:shadow-black/60 transition-all duration-300",
       },
 

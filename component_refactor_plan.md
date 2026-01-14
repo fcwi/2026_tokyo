@@ -6,9 +6,9 @@
 | :--- | :------------------- | :---------------------------------------- | :------------------------------------------------- | :------------------------------- | :------------- |
 | 01   | **ThemeConfig**      | `src/config/ThemeConfig.jsx`              | 無 (Static Config)                                 | `tripConfig`                     | ✅ [V] 已確認  |
 | 02   | **FlightInfoCard**   | `src/components/FlightInfoCard.jsx`       | `flightData`, `isExpanded`, `onToggle`             | `ChevronDown`, `Plane`           | ✅ [V] 已確認  |
-| 03   | **ChecklistCard**    | `src/components/ChecklistCard.jsx`        | `checklistData`                                    | `Check`, `ListTodo`              | ✅ 已抽離      |
-| 04   | **WeatherCard**      | `src/components/WeatherCard.jsx`          | `userWeather`, `onRefresh`                         | `Sun`, `Cloud`, `getWeatherData` | ✅ 已拆分      |
-| 05   | **BottomNav**        | `src/components/Navigation/BottomNav.jsx` | `activeTab`, `onTabChange`, `isDarkMode`, `theme`  | `Home`, `Store`, `MessageSquare` | ✅ 已提取      |
+| 03   | **ChecklistCard**    | `src/components/ChecklistCard.jsx`        | `checklistData`                                    | `Check`, `ListTodo`              | ✅ [V] 已確認  |
+| 04   | **WeatherCard**      | `src/components/WeatherCard.jsx`          | `userWeather`, `onRefresh`                         | `Sun`, `Cloud`, `getWeatherData` | ✅ [V] 已確認  |
+| 05   | **BottomNav**        | `src/components/Navigation/BottomNav.jsx` | `activeTab`, `onTabChange`, `isDarkMode`, `theme`  | `Home`, `Store`, `MessageSquare` | ✅ [V] 已確認  |
 | 06   | **AIPanel**          | `src/components/AI/AIPanel.jsx`           | `messages`, `aiMode`, `isLoading`, `onSendMessage` | `ChatMessageList`, `ChatInput`   | ✅ 已提取      |
 | 07   | **ItineraryTab**     | `src/components/Tabs/ItineraryTab.jsx`    | `itineraryData`, `activeDay`, `onDayChange`        | `Framer Motion`, `DayMap`        | ✅ 已提取      |
 | 08   | **FinanceTab**       | `src/components/Tabs/FinanceTab.jsx`      | `rateData`, `gasUrl`, `gasToken`                   | `FinanceNote`                    | ✅ 已提取      |
