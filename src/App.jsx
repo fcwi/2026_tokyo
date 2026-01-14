@@ -76,17 +76,16 @@ import {
   tripConfig,
   checklistData,
 } from "./tripdata_2026_karuizawa.jsx";
-import { 
-  flattenItinerary, 
-  flattenGuides, 
-  flattenShops, 
-  escapeRegex, 
+import {
+  flattenItinerary,
+  flattenGuides,
+  flattenShops,
+  escapeRegex,
   getWeatherData,
-  getDailyLocationKey,    // 新增
-  getAiWelcomeTemplate,  // 新增
-  buildShareTextLogic    // 新增
+  getDailyLocationKey, // 新增
+  getAiWelcomeTemplate, // 新增
+  buildShareTextLogic, // 新增
 } from "./utils/itineraryHelpers.js";
-
 
 // 抑制 ESLint 對於 JSX 中 motion 未使用的誤判
 // eslint-disable-next-line no-unused-vars
@@ -128,6 +127,9 @@ import FlightInfoCard from "./components/FlightInfoCard.jsx";
 // ChecklistCard 組件
 import ChecklistCard from "./components/ChecklistCard.jsx";
 
+// 提取主題設定
+import { useThemeConfig } from "./config/ThemeConfig.jsx";
+
 // 自定義 Hook：匯率管理
 import { useCurrency } from "./hooks/useCurrency.js";
 
@@ -159,7 +161,7 @@ const ItineraryApp = () => {
   const [password, setPassword] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [mapsApiKey, setMapsApiKey] = useState("");
-  const [gasUrl, setGasUrl] = useState(""); 
+  const [gasUrl, setGasUrl] = useState("");
   const [gasToken, setGasToken] = useState("");
   // const [gasUrl] = useState("https://script.google.com/macros/s/AKfycbzT2nqj-bq5OUoRT6M2j7V4rxa6bTE5DWCxCpey65C54AG_Mnzz1XMFIwxXlsro8whR/exec"); // 部署後的 URL (正式版建議加密)
   // const [gasToken] = useState("GAS_TOKEN_FCWI");     // 設定的密碼 (正式版建議加密)
@@ -182,7 +184,11 @@ const ItineraryApp = () => {
     if (e) e.stopPropagation();
     try {
       if (isIOSSafari) {
-        setToast({ show: true, message: "iOS：長按圖片即可儲存", type: "success" });
+        setToast({
+          show: true,
+          message: "iOS：長按圖片即可儲存",
+          type: "success",
+        });
         return;
       }
       if (!fullPreviewImage) return;
@@ -246,10 +252,10 @@ const ItineraryApp = () => {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false); // 新增：追蹤地圖彈窗狀態
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [isIOSSafari, setIsIOSSafari] = useState(false);
-  
+
   // iOS PWA 安裝提示
   const [showIOSInstallPrompt, setShowIOSInstallPrompt] = useState(false);
-  
+
   // 螢幕方向鎖定警告
   const [showOrientationWarning, setShowOrientationWarning] = useState(false);
 
@@ -257,8 +263,11 @@ const ItineraryApp = () => {
     const checkMobile = () => {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
       const isAndroid = /android/i.test(ua);
-      const isIOSLike = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      const isWindowsTouch = /Windows/i.test(ua) && navigator.maxTouchPoints > 0;
+      const isIOSLike =
+        /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isWindowsTouch =
+        /Windows/i.test(ua) && navigator.maxTouchPoints > 0;
       const byViewport = window.innerWidth < 768;
       setIsMobile(isAndroid || isIOSLike || isWindowsTouch || byViewport);
     };
@@ -270,19 +279,23 @@ const ItineraryApp = () => {
   // 偵測 iOS Safari（iPadOS 也涵蓋）以提供友善提示
   useEffect(() => {
     const ua = navigator.userAgent;
-    const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const isSafariEngine = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
+    const isIOSDevice =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isSafariEngine =
+      /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
     setIsIOSSafari(isIOSDevice && isSafariEngine);
-    
+
     // iOS PWA 安裝提示邏輯
     if (isIOSDevice && isSafariEngine) {
       // 檢查是否已在獨立模式運行（已加入主畫面）
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                          window.navigator.standalone === true;
-      
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+
       // 檢查用戶是否已關閉過提示
-      const hasClosedPrompt = localStorage.getItem('ios_install_prompt_closed');
-      
+      const hasClosedPrompt = localStorage.getItem("ios_install_prompt_closed");
+
       // 只在非獨立模式且未關閉過提示時顯示
       if (!isStandalone && !hasClosedPrompt) {
         // 延遲 3 秒顯示，避免初次載入時過於干擾
@@ -293,44 +306,47 @@ const ItineraryApp = () => {
       }
     }
   }, []);
-  
+
   // 螢幕方向鎖定監聽
   useEffect(() => {
     const handleOrientationChange = () => {
       // 檢測是否為橫向
-      const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-      
+      const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+
       if (isLandscape && isMobile) {
         setShowOrientationWarning(true);
-        
+
         // 3 秒後自動隱藏警告
         const timer = setTimeout(() => {
           setShowOrientationWarning(false);
         }, 3000);
-        
+
         return () => clearTimeout(timer);
       } else {
         setShowOrientationWarning(false);
       }
     };
-    
+
     // 初始檢查
     handleOrientationChange();
-    
+
     // 監聽方向變化（同時支援舊版和新版 API）
-    window.addEventListener('orientationchange', handleOrientationChange);
-    window.addEventListener('resize', handleOrientationChange);
-    
+    window.addEventListener("orientationchange", handleOrientationChange);
+    window.addEventListener("resize", handleOrientationChange);
+
     // 使用 Screen Orientation API（較新的瀏覽器）
     if (screen.orientation) {
-      screen.orientation.addEventListener('change', handleOrientationChange);
+      screen.orientation.addEventListener("change", handleOrientationChange);
     }
-    
+
     return () => {
-      window.removeEventListener('orientationchange', handleOrientationChange);
-      window.removeEventListener('resize', handleOrientationChange);
+      window.removeEventListener("orientationchange", handleOrientationChange);
+      window.removeEventListener("resize", handleOrientationChange);
       if (screen.orientation) {
-        screen.orientation.removeEventListener('change', handleOrientationChange);
+        screen.orientation.removeEventListener(
+          "change",
+          handleOrientationChange,
+        );
       }
     };
   }, [isMobile]);
@@ -346,7 +362,7 @@ const ItineraryApp = () => {
     };
   }, []);
 
-    // 使用自定義 Hook 簡化狀態管理
+  // 使用自定義 Hook 簡化狀態管理
   const { code, target } = tripConfig.currency;
   const rateData = useCurrency(code, target, isOnline);
 
@@ -526,188 +542,7 @@ const ItineraryApp = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const currentTheme = React.useMemo(() => {
-    const theme = tripConfig.theme || {};
-    return {
-      colorBase: theme.colorBase || "stone",
-      colorAccent: theme.colorAccent || "amber",
-      bgTexture:
-        theme.bgTexture ||
-        `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E")`,
-      bgGradientLight:
-        theme.bgGradientLight ||
-        "bg-[#FDFBF7] from-stone-100/50 via-white to-transparent",
-      bgGradientDark:
-        theme.bgGradientDark ||
-        "bg-[#1A1A1A] from-[#252525] via-[#1A1A1A]/80 to-transparent",
-      blobs: theme.blobs || {
-        light: ["bg-orange-200/30", "bg-stone-200/30", "bg-amber-100/40"],
-        dark: ["bg-amber-500/10", "bg-purple-500/10", "bg-blue-500/10"],
-      },
-      textColors: theme.textColors || {
-        light: "text-stone-800",
-        dark: "text-stone-100",
-        secLight: "text-stone-500",
-        secDark: "text-stone-300",
-      },
-      semanticColors: theme.semanticColors || {
-        blue: { light: "text-[#5D737E]", dark: "text-sky-300" },
-        green: { light: "text-[#556B2F]", dark: "text-emerald-300" },
-        red: { light: "text-[#A04040]", dark: "text-red-300" },
-        orange: { light: "text-[#CD853F]", dark: "text-amber-300" },
-        pink: { light: "text-[#BC8F8F]", dark: "text-rose-300" },
-      },
-      weatherIconColors: theme.weatherIconColors || {
-        sun: "text-amber-400",
-        moon: "text-indigo-300",
-        cloud: "text-gray-400",
-        fog: "text-slate-400",
-        rain: "text-blue-400",
-        snow: "text-cyan-300",
-        lightning: "text-yellow-500",
-      },
-      weatherColors: theme.weatherColors || {
-        rain: "#94a3b8",
-        cloud: "#cbd5e1",
-        snow: "#94a3b8",
-      },
-      glassColors: theme.glassColors || {
-        card: {
-          light:
-            "bg-white/90 backdrop-blur-md backdrop-saturate-150 border-white/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)]",
-          dark: "bg-[#262626]/90 backdrop-blur-md backdrop-saturate-150 border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]",
-        },
-        nav: {
-          light:
-            "bg-white/60 backdrop-blur-2xl backdrop-saturate-150 border-white/20 shadow-lg",
-          dark: "bg-[#2A2A2A]/60 backdrop-blur-2xl backdrop-saturate-150 border-white/10 shadow-2xl shadow-black/30",
-        },
-      },
-      tagColors: theme.tagColors || {
-        transport: {
-          light: "bg-[#E8F0FE] text-[#3B5998]",
-          dark: "bg-sky-900/30 text-sky-200",
-        },
-        food: {
-          light: "bg-[#F0F5E5] text-[#556B2F]",
-          dark: "bg-emerald-900/30 text-emerald-200",
-        },
-        shopping: {
-          light: "bg-[#FFF8E1] text-[#8B6B23]",
-          dark: "bg-amber-900/30 text-amber-200",
-        },
-        hotel: {
-          light: "bg-[#E6E6FA] text-[#6A5ACD]",
-          dark: "bg-purple-900/30 text-purple-200",
-        },
-        spot: {
-          light: "bg-[#FFF0F5] text-[#BC8F8F]",
-          dark: "bg-rose-900/30 text-rose-200",
-        },
-      },
-      chatColors: theme.chatColors || {
-        userBubble: {
-          light: "bg-[#5D737E] text-white border-[#4A606A]",
-          dark: "bg-sky-800 text-white border-sky-700",
-        },
-        modelBubble: {
-          light: "bg-white/90 backdrop-blur-sm text-stone-700 border-stone-200",
-          dark: "bg-neutral-800/90 backdrop-blur-sm text-neutral-200 border-neutral-700",
-        },
-        bg: {
-          light: "bg-[#F9F9F6]/50",
-          dark: "bg-black/20",
-        },
-      },
-      mainBg: theme.mainBg || {
-        light: "bg-[#F0F2F5] text-slate-700",
-        dark: "bg-[#1A1A1A] text-neutral-200",
-      },
-      particleColors: theme.particleColors || {
-        rain: {
-          light: "rgba(100, 149, 237, 0.6)",
-          dark: "rgba(255, 255, 255, 0.5)",
-        },
-        snow: "rgba(255, 255, 255, 0.8)",
-        stars: "rgba(255, 255, 255, ALPHA)",
-        fog: "rgba(200, 200, 200, ALPHA)",
-        lightning: "rgba(255, 255, 200, BRIGHTNESS)",
-      },
-      cloudColors: theme.cloudColors || {
-        heavy: "#bdc3c7",
-        medium: "#d1d5db",
-        light: "#ecf0f1",
-      },
-      celestialColors: theme.celestialColors || {
-        sun: "#f1c40f",
-        sunGlow: "#f39c12",
-        moon: "#f5f6fa",
-        moonShadow: "rgba(245, 246, 250, 0.4)",
-      },
-      ambientColors: theme.ambientColors || {
-        clear: {
-          light: "rgba(255, 255, 255, 0.8)",
-          dark: "rgba(30, 41, 59, 0.5)",
-        },
-        cloudy: {
-          light: "rgba(241, 245, 249, 0.85)",
-          dark: "rgba(51, 65, 85, 0.6)",
-        },
-        rain: {
-          light: "rgba(219, 234, 254, 0.85)",
-          dark: "rgba(30, 58, 138, 0.4)",
-        },
-        snow: {
-          light: "rgba(248, 250, 252, 0.9)",
-          dark: "rgba(71, 85, 105, 0.5)",
-        },
-        thunderstorm: {
-          light: "rgba(200, 200, 220, 0.85)",
-          dark: "rgba(30, 30, 50, 0.7)",
-        },
-        fog: {
-          light: "rgba(226, 232, 240, 0.85)",
-          dark: "rgba(71, 85, 105, 0.4)",
-        },
-      },
-      dynamicBg: theme.dynamicBg || {
-        rain: { light: "#c7d2e0", dark: "#4a5568" },
-        cloud: "#cbd5e1",
-      },
-      buttonGradients: theme.buttonGradients || {
-        primary: {
-          light: "from-[#5D737E] to-[#3F5561]",
-          dark: "from-sky-800 to-blue-900",
-        },
-      },
-      inputColors: theme.inputColors || {
-        focusBorder: { light: "#5D737E", dark: "sky-500" },
-        focusRing: {
-          light: "rgba(93, 115, 126, 0.2)",
-          dark: "rgba(14, 165, 233, 0.2)",
-        },
-      },
-      linkColors: theme.linkColors || {
-        hover: { light: "#5D737E", dark: "sky-300" },
-      },
-      textShadow: theme.textShadow || {
-        light: "0 1px 1px rgba(255,255,255,0.5)",
-        dark: "0 2px 4px rgba(0,0,0,0.3)",
-      },
-      borderRadius: theme.borderRadius || {
-        small: "rounded-xl",
-        card: "rounded-2xl",
-        modal: "rounded-3xl",
-        full: "rounded-full",
-      },
-      spacing: theme.spacing || {
-        cardSmall: "p-3",
-        card: "p-4",
-        cardLarge: "p-5",
-      },
-      componentStyles: theme.componentStyles || {},
-    };
-  }, []);
+  const { currentTheme, componentStyles } = useThemeConfig(isDarkMode);
 
   const cBase = currentTheme.colorBase;
   const cAccent = currentTheme.colorAccent;
@@ -729,38 +564,6 @@ const ItineraryApp = () => {
       pink: isDarkMode ? sc.pink.dark : sc.pink.light,
     };
   }, [isDarkMode, currentTheme.semanticColors]);
-
-  // 🎨 新增：useComponentStyles Hook - Pro Max 級組件樣式管理
-  const useComponentStyles = (isDarkMode, currentTheme) => {
-    return React.useMemo(() => {
-      const styles = currentTheme.componentStyles;
-      return {
-        itineraryCard: isDarkMode ? styles.itineraryCard.dark : styles.itineraryCard.light,
-        navButton: isDarkMode ? styles.navButton.dark : styles.navButton.light,
-        navContainer: isDarkMode ? styles.navContainer.dark : styles.navContainer.light,
-        chatUserBubble: isDarkMode ? styles.chatUserBubble.dark : styles.chatUserBubble.light,
-        chatModelBubble: isDarkMode ? styles.chatModelBubble.dark : styles.chatModelBubble.light,
-        chatContainer: isDarkMode ? styles.chatContainer.dark : styles.chatContainer.light,
-        infoCard: isDarkMode ? styles.infoCard.dark : styles.infoCard.light,
-        tagBase: isDarkMode ? styles.tagBase.dark : styles.tagBase.light,
-        inputField: isDarkMode ? styles.inputField.dark : styles.inputField.light,
-        buttonPrimary: isDarkMode ? styles.buttonPrimary.dark : styles.buttonPrimary.light,
-        buttonSecondary: isDarkMode ? styles.buttonSecondary.dark : styles.buttonSecondary.light,
-        modalBackdrop: isDarkMode ? styles.modalBackdrop.dark : styles.modalBackdrop.light,
-        modalContent: isDarkMode ? styles.modalContent.dark : styles.modalContent.light,
-        divider: isDarkMode ? styles.divider.dark : styles.divider.light,
-        cardHover: isDarkMode ? styles.cardHover.dark : styles.cardHover.light,
-        loadingOverlay: isDarkMode ? styles.loadingOverlay.dark : styles.loadingOverlay.light,
-        toastSuccess: isDarkMode ? styles.toastSuccess.dark : styles.toastSuccess.light,
-        toastWarning: isDarkMode ? styles.toastWarning.dark : styles.toastWarning.light,
-        toastError: isDarkMode ? styles.toastError.dark : styles.toastError.light,
-        mainBackground: isDarkMode ? styles.mainBackground.dark : styles.mainBackground.light,
-        pageContainer: isDarkMode ? styles.pageContainer.dark : styles.pageContainer.light,
-      };
-    }, [isDarkMode, currentTheme.componentStyles]);
-  };
-
-  const componentStyles = useComponentStyles(isDarkMode, currentTheme);
 
   useEffect(() => {
     const checkSavedPassword = async () => {
@@ -805,20 +608,30 @@ const ItineraryApp = () => {
       }
       if (ENCRYPTED_GAS_URL_PAYLOAD) {
         try {
-          const decryptedUrl = await CryptoUtils.decrypt(ENCRYPTED_GAS_URL_PAYLOAD, inputPwd);
+          const decryptedUrl = await CryptoUtils.decrypt(
+            ENCRYPTED_GAS_URL_PAYLOAD,
+            inputPwd,
+          );
           if (decryptedUrl && decryptedUrl.startsWith("http")) {
             setGasUrl(decryptedUrl);
           }
-        } catch (e) { console.warn("GAS URL 解密失敗", e); }
+        } catch (e) {
+          console.warn("GAS URL 解密失敗", e);
+        }
       }
 
       if (ENCRYPTED_GAS_TOKEN_PAYLOAD) {
         try {
-          const decryptedToken = await CryptoUtils.decrypt(ENCRYPTED_GAS_TOKEN_PAYLOAD, inputPwd);
+          const decryptedToken = await CryptoUtils.decrypt(
+            ENCRYPTED_GAS_TOKEN_PAYLOAD,
+            inputPwd,
+          );
           if (decryptedToken) {
             setGasToken(decryptedToken);
           }
-        } catch (e) { console.warn("GAS Token 解密失敗", e); }
+        } catch (e) {
+          console.warn("GAS Token 解密失敗", e);
+        }
       }
 
       setIsVerified(true);
@@ -862,7 +675,7 @@ const ItineraryApp = () => {
   useEffect(() => {
     const handlePopState = (event) => {
       const state = event.state;
-      
+
       if (!state) {
         // 如果沒有狀態，表示要退出應用
         return;
@@ -871,16 +684,16 @@ const ItineraryApp = () => {
       // 處理模態框關閉
       if (state.modal) {
         switch (state.modal) {
-          case 'calculator':
+          case "calculator":
             setIsCalculatorOpen(false);
             break;
-          case 'map':
+          case "map":
             setIsMapModalOpen(false);
             break;
-          case 'weather':
+          case "weather":
             setShowWeatherDetail(false);
             break;
-          case 'testMode':
+          case "testMode":
             setIsTestMode(false);
             break;
           default:
@@ -896,36 +709,39 @@ const ItineraryApp = () => {
       }
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
 
     // 初始化：將當前狀態推入歷史記錄
     if (!window.history.state) {
-      window.history.replaceState({ tab: activeTab }, '');
+      window.history.replaceState({ tab: activeTab }, "");
     }
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener("popstate", handlePopState);
     };
   }, [activeTab]);
 
   // 包裝 setActiveTab，添加歷史記錄
-  const handleTabChange = React.useCallback((newTab) => {
-    if (newTab === activeTab) return;
-    
-    setActiveTab(newTab);
-    window.history.pushState({ tab: newTab }, '');
-  }, [activeTab]);
+  const handleTabChange = React.useCallback(
+    (newTab) => {
+      if (newTab === activeTab) return;
+
+      setActiveTab(newTab);
+      window.history.pushState({ tab: newTab }, "");
+    },
+    [activeTab],
+  );
 
   // 包裝模態框的開關，添加歷史記錄
   const handleCalculatorOpen = React.useCallback(() => {
     setIsCalculatorOpen(true);
-    window.history.pushState({ modal: 'calculator' }, '');
+    window.history.pushState({ modal: "calculator" }, "");
   }, []);
 
   const handleCalculatorClose = React.useCallback(() => {
     setIsCalculatorOpen(false);
     // 只在最後一個歷史記錄是計算機時才返回
-    if (window.history.state?.modal === 'calculator') {
+    if (window.history.state?.modal === "calculator") {
       window.history.back();
     }
   }, []);
@@ -934,10 +750,10 @@ const ItineraryApp = () => {
   const handleMapModalToggle = React.useCallback((isOpen) => {
     if (isOpen) {
       setIsMapModalOpen(true);
-      window.history.pushState({ modal: 'map' }, '');
+      window.history.pushState({ modal: "map" }, "");
     } else {
       setIsMapModalOpen(false);
-      if (window.history.state?.modal === 'map') {
+      if (window.history.state?.modal === "map") {
         window.history.back();
       }
     }
@@ -945,24 +761,24 @@ const ItineraryApp = () => {
 
   const handleWeatherDetailOpen = React.useCallback(() => {
     setShowWeatherDetail(true);
-    window.history.pushState({ modal: 'weather' }, '');
+    window.history.pushState({ modal: "weather" }, "");
   }, []);
 
   const handleWeatherDetailClose = React.useCallback(() => {
     setShowWeatherDetail(false);
-    if (window.history.state?.modal === 'weather') {
+    if (window.history.state?.modal === "weather") {
       window.history.back();
     }
   }, []);
 
   const handleTestModeOpen = React.useCallback(() => {
     setIsTestMode(true);
-    window.history.pushState({ modal: 'testMode' }, '');
+    window.history.pushState({ modal: "testMode" }, "");
   }, []);
 
   const handleTestModeClose = React.useCallback(() => {
     setIsTestMode(false);
-    if (window.history.state?.modal === 'testMode') {
+    if (window.history.state?.modal === "testMode") {
       window.history.back();
     }
   }, []);
@@ -1340,11 +1156,22 @@ const ItineraryApp = () => {
 
   const scrollToMessage = (index) => {
     if (messageRefs.current[index]) {
-      messageRefs.current[index].scrollIntoView({ behavior: "smooth", block: "center" });
+      messageRefs.current[index].scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
       // 高亮動畫
-      messageRefs.current[index].classList.add("ring-2", "ring-sky-400", "ring-offset-2");
+      messageRefs.current[index].classList.add(
+        "ring-2",
+        "ring-sky-400",
+        "ring-offset-2",
+      );
       setTimeout(() => {
-        messageRefs.current[index]?.classList.remove("ring-2", "ring-sky-400", "ring-offset-2");
+        messageRefs.current[index]?.classList.remove(
+          "ring-2",
+          "ring-sky-400",
+          "ring-offset-2",
+        );
       }, 2000);
     }
   };
@@ -1354,7 +1181,7 @@ const ItineraryApp = () => {
     const query = aiSearchQuery.toLowerCase();
     return messages
       .map((msg, index) => ({ ...msg, index }))
-      .filter(msg => msg.text?.toLowerCase().includes(query));
+      .filter((msg) => msg.text?.toLowerCase().includes(query));
   };
 
   const toggleGuide = (index) => {
@@ -1381,7 +1208,7 @@ const ItineraryApp = () => {
 
   // 追蹤上一次的 activeTab，用於偵測頁面切換
   const prevActiveTab = useRef(activeTab);
-  
+
   // 只有當「從其他頁面切換回 AI 頁面」時才收折舊訊息
   useEffect(() => {
     // 偵測是否是從非 AI 頁面切換到 AI 頁面
@@ -1803,13 +1630,7 @@ const ItineraryApp = () => {
         }
       }
     },
-    [
-      showToast,
-      isAppReady,
-      isTestMode,
-      testLatitude,
-      testLongitude,
-    ],
+    [showToast, isAppReady, isTestMode, testLatitude, testLongitude],
   );
 
   useEffect(() => {
@@ -2589,10 +2410,10 @@ const ItineraryApp = () => {
     debugGroupEnd();
 
     const { baseMessage, fullText } = buildShareTextLogic(
-      latitude, 
-      longitude, 
-      finalLandmark, 
-      locationName
+      latitude,
+      longitude,
+      finalLandmark,
+      locationName,
     );
     return {
       baseMessage,
@@ -2849,11 +2670,19 @@ const ItineraryApp = () => {
     () => (current?.events ? current.events : []),
     [current?.events],
   );
-  const currentLocation = getDailyLocationKey(activeDay, itineraryData, tripConfig);
+  const currentLocation = getDailyLocationKey(
+    activeDay,
+    itineraryData,
+    tripConfig,
+  );
 
   // 使用 useMemo 鎖定天氣資料，優化滑動效能並處理測試模式覆蓋
   const displayWeather = React.useMemo(() => {
-    const currentLocation = getDailyLocationKey(activeDay, itineraryData, tripConfig);
+    const currentLocation = getDailyLocationKey(
+      activeDay,
+      itineraryData,
+      tripConfig,
+    );
     const weatherData = weatherForecast[currentLocation];
     const effectiveWeatherOverride =
       frozenTestWeatherOverride || testWeatherOverride;
@@ -3047,11 +2876,7 @@ const ItineraryApp = () => {
       daily: forecast,
       loading: weatherForecast.loading,
     };
-  }, [
-    activeDay,
-    userWeather,
-    weatherForecast,
-  ]);
+  }, [activeDay, userWeather, weatherForecast]);
 
   const weatherDetailLoading =
     !isAppReady ||
@@ -3696,7 +3521,11 @@ const ItineraryApp = () => {
                               targetName = "明天";
                             } else if (tripStatus === "before") {
                               targetDayIndex = 0;
-                              const firstLocKey = getDailyLocationKey(0, itineraryData, tripConfig);
+                              const firstLocKey = getDailyLocationKey(
+                                0,
+                                itineraryData,
+                                tripConfig,
+                              );
                               const locObj = tripConfig.locations.find(
                                 (l) => l.key === firstLocKey,
                               );
@@ -3711,7 +3540,11 @@ const ItineraryApp = () => {
                               );
                             }
 
-                            const targetLoc = getDailyLocationKey(targetDayIndex, itineraryData, tripConfig);
+                            const targetLoc = getDailyLocationKey(
+                              targetDayIndex,
+                              itineraryData,
+                              tripConfig,
+                            );
                             const forecast = weatherForecast[targetLoc];
 
                             if (!forecast || !forecast.temperature_2m_max) {
@@ -3796,7 +3629,7 @@ const ItineraryApp = () => {
                     </div>
 
                     {/* --- 航班與緊急資訊卡片 --- */}
-                    <FlightInfoCard 
+                    <FlightInfoCard
                       isDarkMode={isDarkMode}
                       theme={theme}
                       colors={colors}
@@ -3834,7 +3667,7 @@ const ItineraryApp = () => {
                             </span>
                           </div>
                         </div>
-                        <ChecklistCard 
+                        <ChecklistCard
                           isDarkMode={isDarkMode}
                           theme={theme}
                           colors={colors}
@@ -4023,7 +3856,7 @@ const ItineraryApp = () => {
                             <div
                               className={`flex items-center gap-1.5 text-xs font-bold mb-1.5 uppercase tracking-wide ${theme.textSec}`}
                             >
-                              <Calendar className="w-3.5 h-3.5" /> 
+                              <Calendar className="w-3.5 h-3.5" />
                               <span className="flex items-center gap-1">
                                 {tripConfig.locations.find(
                                   (l) => l.key === currentLocation,
@@ -5012,7 +4845,9 @@ const ItineraryApp = () => {
                         {aiMode === "translate" ? "AI 隨身口譯" : "AI 專屬導遊"}
                       </div>
                       {isSpeaking && (
-                        <p className={`text-[10px] flex items-center gap-1 mt-0.5 ${theme.textSec}`}>
+                        <p
+                          className={`text-[10px] flex items-center gap-1 mt-0.5 ${theme.textSec}`}
+                        >
                           <Volume2 className="w-2.5 h-2.5" /> 朗讀中...
                         </p>
                       )}
@@ -5095,22 +4930,30 @@ const ItineraryApp = () => {
                 {/* 搜尋框 */}
                 {showAiSearch && (
                   <div className="mt-3 space-y-2">
-                    <div className={`flex items-center gap-2 p-2 rounded-xl border backdrop-blur-lg transition-all duration-300 ${
-                      isDarkMode ? 'bg-neutral-900/60 border-white/10 ring-1 ring-white/5 shadow-md' : 'bg-white/80 border-white/40 ring-1 ring-black/5 shadow-md'
-                    }`}>
-                      <Search className={`w-4 h-4 flex-shrink-0 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`} />
+                    <div
+                      className={`flex items-center gap-2 p-2 rounded-xl border backdrop-blur-lg transition-all duration-300 ${
+                        isDarkMode
+                          ? "bg-neutral-900/60 border-white/10 ring-1 ring-white/5 shadow-md"
+                          : "bg-white/80 border-white/40 ring-1 ring-black/5 shadow-md"
+                      }`}
+                    >
+                      <Search
+                        className={`w-4 h-4 flex-shrink-0 ${isDarkMode ? "text-neutral-400" : "text-stone-500"}`}
+                      />
                       <input
                         type="text"
                         value={aiSearchQuery}
                         onChange={(e) => setAiSearchQuery(e.target.value)}
                         placeholder="搜尋對話內容..."
                         className={`flex-1 bg-transparent border-0 outline-none text-sm ${
-                          isDarkMode ? 'text-neutral-200 placeholder:text-neutral-500' : 'text-stone-700 placeholder:text-stone-400'
+                          isDarkMode
+                            ? "text-neutral-200 placeholder:text-neutral-500"
+                            : "text-stone-700 placeholder:text-stone-400"
                         }`}
                       />
                       {aiSearchQuery && (
                         <button
-                          onClick={() => setAiSearchQuery('')}
+                          onClick={() => setAiSearchQuery("")}
                           className={`p-1 rounded-lg hover:bg-black/10 transition-all backdrop-blur-md ${isDarkMode ? "hover:bg-white/10" : "hover:bg-black/10"}`}
                         >
                           <X className="w-3.5 h-3.5" />
@@ -5118,9 +4961,13 @@ const ItineraryApp = () => {
                       )}
                     </div>
                     {aiSearchQuery && (
-                      <div className={`max-h-40 overflow-y-auto rounded-xl border backdrop-blur-lg transition-all duration-300 ${
-                        isDarkMode ? 'bg-neutral-900/70 border-white/10 ring-1 ring-white/5 shadow-md' : 'bg-white/85 border-white/40 ring-1 ring-black/5 shadow-md'
-                      }`}>
+                      <div
+                        className={`max-h-40 overflow-y-auto rounded-xl border backdrop-blur-lg transition-all duration-300 ${
+                          isDarkMode
+                            ? "bg-neutral-900/70 border-white/10 ring-1 ring-white/5 shadow-md"
+                            : "bg-white/85 border-white/40 ring-1 ring-black/5 shadow-md"
+                        }`}
+                      >
                         {getSearchResults().length > 0 ? (
                           <div className="p-2 space-y-1">
                             {getSearchResults().map((result) => (
@@ -5129,34 +4976,43 @@ const ItineraryApp = () => {
                                 onClick={() => {
                                   scrollToMessage(result.index);
                                   setShowAiSearch(false);
-                                  setAiSearchQuery('');
+                                  setAiSearchQuery("");
                                 }}
                                 className={`w-full text-left p-2 rounded-lg transition-all hover:scale-[1.02] ${
-                                  isDarkMode ? 'hover:bg-neutral-800 text-neutral-300' : 'hover:bg-stone-100 text-stone-700'
+                                  isDarkMode
+                                    ? "hover:bg-neutral-800 text-neutral-300"
+                                    : "hover:bg-stone-100 text-stone-700"
                                 }`}
                               >
                                 <div className="flex items-center gap-2 mb-1">
-                                  {result.role === 'user' ? (
+                                  {result.role === "user" ? (
                                     <User className="w-3 h-3 text-sky-500" />
                                   ) : (
                                     <Bot className="w-3 h-3 text-amber-500" />
                                   )}
-                                  <span className={`text-xs font-medium ${
-                                    isDarkMode ? 'text-neutral-400' : 'text-stone-500'
-                                  }`}>
-                                    {result.role === 'user' ? '你' : 'AI'}
+                                  <span
+                                    className={`text-xs font-medium ${
+                                      isDarkMode
+                                        ? "text-neutral-400"
+                                        : "text-stone-500"
+                                    }`}
+                                  >
+                                    {result.role === "user" ? "你" : "AI"}
                                   </span>
                                 </div>
                                 <p className="text-xs line-clamp-2">
-                                  {result.text?.substring(0, 100)}{result.text?.length > 100 ? '...' : ''}
+                                  {result.text?.substring(0, 100)}
+                                  {result.text?.length > 100 ? "..." : ""}
                                 </p>
                               </button>
                             ))}
                           </div>
                         ) : (
-                          <div className={`p-4 text-center text-xs ${
-                            isDarkMode ? 'text-neutral-500' : 'text-stone-400'
-                          }`}>
+                          <div
+                            className={`p-4 text-center text-xs ${
+                              isDarkMode ? "text-neutral-500" : "text-stone-400"
+                            }`}
+                          >
                             沒有找到符合的對話
                           </div>
                         )}
@@ -5258,15 +5114,15 @@ const ItineraryApp = () => {
         {/* --- 頁籤：記帳/記事 (Finance Tab) --- */}
         {activeTab === "finance" && (
           <div className="flex-1 animate-fadeIn">
-            <FinanceNote 
+            <FinanceNote
               isDarkMode={isDarkMode}
               theme={theme}
-              rateData={rateData}        // 傳遞匯率資料
-              gasUrl={gasUrl}            // 傳遞 GAS URL
-              gasToken={gasToken}        // 傳遞 Token
-              apiKey={apiKey}            // 傳遞 Gemini API Key
+              rateData={rateData} // 傳遞匯率資料
+              gasUrl={gasUrl} // 傳遞 GAS URL
+              gasToken={gasToken} // 傳遞 Token
+              apiKey={apiKey} // 傳遞 Gemini API Key
               setFullPreviewImage={setFullPreviewImage} // 複用 App.jsx 的圖片預覽遮罩
-              showToast={showToast}      // 複用 Toast 提示
+              showToast={showToast} // 複用 Toast 提示
             />
           </div>
         )}
@@ -5667,10 +5523,10 @@ const ItineraryApp = () => {
               exit={{ y: -100, opacity: 0 }}
               transition={{ type: "spring", damping: 20, stiffness: 300 }}
               className="fixed top-0 left-0 right-0 z-[9999] mx-auto max-w-md"
-              style={{ 
-                paddingTop: 'max(1rem, env(safe-area-inset-top))',
-                paddingLeft: 'max(1rem, env(safe-area-inset-left))',
-                paddingRight: 'max(1rem, env(safe-area-inset-right))'
+              style={{
+                paddingTop: "max(1rem, env(safe-area-inset-top))",
+                paddingLeft: "max(1rem, env(safe-area-inset-left))",
+                paddingRight: "max(1rem, env(safe-area-inset-right))",
               }}
             >
               <div className="mx-4 bg-gradient-to-br from-blue-600 to-blue-700 backdrop-blur-xl rounded-2xl shadow-2xl border border-blue-400/30 overflow-hidden">
@@ -5679,7 +5535,7 @@ const ItineraryApp = () => {
                   <button
                     onClick={() => {
                       setShowIOSInstallPrompt(false);
-                      localStorage.setItem('ios_install_prompt_closed', 'true');
+                      localStorage.setItem("ios_install_prompt_closed", "true");
                     }}
                     className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 active:bg-white/40 transition-colors"
                     aria-label="關閉提示"
@@ -5697,19 +5553,29 @@ const ItineraryApp = () => {
                       <p className="text-sm text-blue-100 leading-relaxed mb-3">
                         將此 App 加入主畫面，享受完整螢幕體驗
                       </p>
-                      
+
                       {/* 步驟說明 */}
                       <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 text-xs text-blue-50 space-y-2 border border-white/20">
                         <div className="flex items-start gap-2">
-                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">1</span>
-                          <span>點擊底部的 <Share2 className="inline w-4 h-4 mx-0.5" /> 分享按鈕</span>
+                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">
+                            1
+                          </span>
+                          <span>
+                            點擊底部的{" "}
+                            <Share2 className="inline w-4 h-4 mx-0.5" />{" "}
+                            分享按鈕
+                          </span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">2</span>
+                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">
+                            2
+                          </span>
                           <span>選擇「加入主畫面」</span>
                         </div>
                         <div className="flex items-start gap-2">
-                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">3</span>
+                          <span className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center font-bold">
+                            3
+                          </span>
                           <span>點擊右上角「新增」完成</span>
                         </div>
                       </div>
@@ -5741,13 +5607,16 @@ const ItineraryApp = () => {
                 <div className="w-20 h-20 mx-auto mb-4 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
                   <Phone className="w-12 h-12 text-white transform rotate-90" />
                 </div>
-                
-                <h3 className="text-2xl font-bold text-white mb-3">請旋轉螢幕</h3>
+
+                <h3 className="text-2xl font-bold text-white mb-3">
+                  請旋轉螢幕
+                </h3>
                 <p className="text-white/90 text-base leading-relaxed mb-6">
-                  為了獲得最佳體驗<br />
+                  為了獲得最佳體驗
+                  <br />
                   請將裝置轉回直向模式
                 </p>
-                
+
                 <button
                   onClick={() => setShowOrientationWarning(false)}
                   className="px-6 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 active:bg-orange-100 transition-colors shadow-lg"
