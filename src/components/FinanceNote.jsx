@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { 
   Camera, Send, DollarSign, MessageSquare, 
   Loader, Trash2, X, LogOut, Wallet, Plus, Check, Search,
-  RefreshCcw, Edit3, Save, ChevronDown, ChevronRight, ChevronsUpDown 
+  RefreshCcw, Edit3, Save, ChevronDown, ChevronRight, ChevronsUpDown,
+  Scan
 } from 'lucide-react';
 import { uploadToGAS, parseReceiptWithGemini, fetchFromGAS } from '../utils/financeHelper';
 
@@ -1058,7 +1059,7 @@ const FinanceScreen = ({
                 {/* Modal Header */}
                 <div className="p-4 border-b flex items-center justify-between shrink-0 bg-opacity-50 backdrop-blur-lg">
                     <h3 className={`text-lg font-bold flex items-center gap-2 ${theme.text}`}>
-                        {isScanning ? <Loader className="w-5 h-5 animate-spin text-sky-500"/> : <ScanLine className="w-5 h-5 text-sky-500"/>}
+                        {isScanning ? <Loader className="w-5 h-5 animate-spin text-sky-500"/> : <Scan className="w-5 h-5 text-sky-500"/>}
                         {isScanning ? '正在分析...' : '確認發票明細'}
                     </h3>
                     {!isScanning && (
