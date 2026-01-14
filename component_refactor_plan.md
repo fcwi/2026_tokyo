@@ -10,7 +10,7 @@
 | 04   | **WeatherCard**      | `src/components/WeatherCard.jsx`          | `userWeather`, `onRefresh`                         | `Sun`, `Cloud`, `getWeatherData` | ✅ [V] 已確認  |
 | 05   | **BottomNav**        | `src/components/Navigation/BottomNav.jsx` | `activeTab`, `onTabChange`, `isDarkMode`, `theme`  | `Home`, `Store`, `MessageSquare` | ✅ [V] 已確認  |
 | 06   | **AIPanel**          | `src/components/AI/AIPanel.jsx`           | `messages`, `aiMode`, `isLoading`, `onSendMessage` | `ChatMessageList`, `ChatInput`   | ✅ [V] 已確認  |
-| 07   | **ItineraryTab**     | `src/components/Tabs/ItineraryTab.jsx`    | `itineraryData`, `activeDay`, `onDayChange`        | `Framer Motion`, `DayMap`        | ✅ 已提取      |
+| 07   | **ItineraryTab**     | `src/components/Tabs/ItineraryTab.jsx`    | `itineraryData`, `activeDay`, `onDayChange`        | `Framer Motion`, `DayMap`        | ✅ [V] 已確認  |
 | 08   | **FinanceTab**       | `src/components/Tabs/FinanceTab.jsx`      | `rateData`, `gasUrl`, `gasToken`                   | `FinanceNote`                    | ✅ 已提取      |
 | 09   | **Hooks Extraction** | `src/hooks/useAppLogic.js`                | 無                                                 | `weatherHelpers`, `crypto`       | ✅ 已提取      |
 
