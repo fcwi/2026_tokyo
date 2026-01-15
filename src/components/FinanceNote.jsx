@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { 
   Camera, Send, DollarSign, MessageSquare, 
   Loader, Trash2, X, LogOut, Wallet, Plus, Check, Search,
-  RefreshCcw, Edit3, Save, ChevronDown, ChevronRight, ChevronsUpDown 
+  RefreshCcw, Edit3, Save, ChevronDown, ChevronRight, ChevronsUpDown,
+  Scan
 } from 'lucide-react';
 import { uploadToGAS, parseReceiptWithGemini, fetchFromGAS } from '../utils/financeHelper';
 
@@ -68,6 +69,7 @@ const FinanceScreen = ({
   const fileInputRef = useRef(null);
   const appendInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const skipAutoScrollRef = useRef(false); // 🆕 用於控制是否跳過自動滾動
 
   // --- 3. 發票批次處理狀態 ---
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -156,10 +158,13 @@ const FinanceScreen = ({
   }, [records]);
 
   useEffect(() => {
-    if (!editingRecord && messagesEndRef.current) {
+    // 只在非 modal 操作時自動滾動
+    if (!editingRecord && !skipAutoScrollRef.current && !showReceiptModal && messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [records, mode, noteImages, editingRecord]);
+    // 重置 flag
+    skipAutoScrollRef.current = false;
+  }, [records, mode, noteImages, editingRecord, showReceiptModal]);
 
   // 🆕 點擊外部關閉使用者選單
   useEffect(() => {
@@ -177,6 +182,16 @@ const FinanceScreen = ({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showUserMenu]);
+
+  // 🆕 控制 Modal 打開時禁用頁面滾動
+  useEffect(() => {
+    if (showReceiptModal) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [showReceiptModal]);
 
   // 🆕 計算並更新選單位置
   const updateMenuPosition = useCallback(() => {
@@ -400,6 +415,9 @@ const FinanceScreen = ({
         })
         .catch(err => console.error("Upload failed", err));
     }
+
+    // 返回 timestamp 以供後續使用（如滾動）
+    return newItem.timestamp;
   };
 
   const handleManualSubmit = () => {
@@ -435,22 +453,42 @@ const FinanceScreen = ({
         return;
     }
 
-    setIsUploading(true);
+    let firstRecordTimestamp = null;
     let count = 0;
     
     itemsToImport.forEach((item, index) => {
         const img = item.sourceImage || null;
         setTimeout(() => {
-            addRecord(item.name, item.amount, img, 'finance');
+            const recordId = addRecord(item.name, item.amount, img, 'finance');
+            // 記住第一條記錄的 timestamp
+            if (index === 0 && recordId) {
+                firstRecordTimestamp = recordId;
+            }
         }, index * 100);
         count++;
     });
 
+    // 所有記錄添加完成後處理
+    setTimeout(() => {
+        setShowReceiptModal(false);
+        setReceiptImages([]);
+        setReceiptItems([]);
+        setIsUploading(false);
+        
+        // 使用 requestAnimationFrame 確保 DOM 已更新，再進行滾動
+        requestAnimationFrame(() => {
+            if (firstRecordTimestamp) {
+                const element = document.getElementById(`record-${firstRecordTimestamp}`);
+                if (element) {
+                    setTimeout(() => {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                }
+            }
+        });
+    }, itemsToImport.length * 100 + 200);
+
     showToast(`已匯入 ${count} 筆消費紀錄`);
-    setShowReceiptModal(false);
-    setReceiptImages([]);
-    setReceiptItems([]);
-    setIsUploading(false);
   };
 
   const handleDelete = async (id, type) => {
@@ -1048,22 +1086,26 @@ const FinanceScreen = ({
 
       </div>
 
-      {/* --- 發票批次確認 Modal (保持不變) --- */}
-      {showReceiptModal && (
+      {/* --- 發票批次確認 Modal - 使用 Portal 確保獨立顯示 --- */}
+      {showReceiptModal && createPortal(
         <div 
-            className="fixed inset-0 z-[9999] flex items-center justify-center px-4 pt-4 pb-28 bg-black/85 backdrop-blur-lg animate-fadeIn transform-gpu"
+            className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/50 backdrop-blur-sm animate-fadeIn transform-gpu"
             style={{ willChange: 'opacity, transform' }}
         >
             <div className={`w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-200/50'}`}>
                 {/* Modal Header */}
                 <div className="p-4 border-b flex items-center justify-between shrink-0 bg-opacity-50 backdrop-blur-lg">
                     <h3 className={`text-lg font-bold flex items-center gap-2 ${theme.text}`}>
-                        {isScanning ? <Loader className="w-5 h-5 animate-spin text-sky-500"/> : <ScanLine className="w-5 h-5 text-sky-500"/>}
+                        {isScanning ? <Loader className="w-5 h-5 animate-spin text-sky-500"/> : <Scan className="w-5 h-5 text-sky-500"/>}
                         {isScanning ? '正在分析...' : '確認發票明細'}
                     </h3>
                     {!isScanning && (
-                        <button onClick={() => {setShowReceiptModal(false); setReceiptImages([]);}} className="p-2 rounded-full hover:bg-black/10 transition-colors">
-                            <X className="w-5 h-5 opacity-50"/>
+                        <button onClick={() => {setShowReceiptModal(false); setReceiptImages([]);}} className={`p-2 rounded-full transition-colors ${
+                            isDarkMode 
+                                ? 'hover:bg-neutral-700 text-neutral-300 hover:text-neutral-100' 
+                                : 'hover:bg-stone-200 text-stone-500 hover:text-stone-700'
+                        }`}>
+                            <X className="w-5 h-5"/>
                         </button>
                     )}
                 </div>
@@ -1124,7 +1166,11 @@ const FinanceScreen = ({
                                         className={`w-full bg-transparent outline-none text-sm font-bold border-b border-transparent focus:border-sky-500 ${theme.text}`}
                                         placeholder="品項名稱"
                                     />
-                                    <div className="flex items-center text-xs opacity-70">
+                                    <div className={`flex items-center text-sm font-semibold ${
+                                        isDarkMode 
+                                            ? 'text-sky-400' 
+                                            : 'text-sky-600'
+                                    }`}>
                                         <span className="mr-1">¥</span>
                                         <input 
                                             type="number" 
@@ -1134,7 +1180,11 @@ const FinanceScreen = ({
                                                 newItems[idx].amount = e.target.value;
                                                 setReceiptItems(newItems);
                                             }}
-                                            className="bg-transparent outline-none w-20 border-b border-transparent focus:border-sky-500"
+                                            className={`bg-transparent outline-none w-20 border-b border-transparent focus:border-sky-500 ${
+                                                isDarkMode
+                                                    ? 'text-sky-400'
+                                                    : 'text-sky-600'
+                                            }`}
                                             placeholder="金額"
                                         />
                                     </div>
@@ -1172,7 +1222,7 @@ const FinanceScreen = ({
                 </div>
             </div>
         </div>
-      )}
+      , document.body)}
 
       {/* --- 編輯紀錄 Modal --- */}
       {editingRecord && (
