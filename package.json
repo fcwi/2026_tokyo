@@ -15,6 +15,7 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@fontsource/noto-sans-tc": "^5.2.8",
     "firebase": "^12.7.0",
     "framer-motion": "^12.23.26",
     "leaflet": "^1.9.4",

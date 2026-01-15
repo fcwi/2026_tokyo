@@ -5,6 +5,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "@fontsource/noto-sans-tc"; // 預設載入 400 字重
+import "@fontsource/noto-sans-tc/700.css"; // 需要粗體再額外引入
 import App from "./App.jsx";
 
 createRoot(document.getElementById("root")).render(
