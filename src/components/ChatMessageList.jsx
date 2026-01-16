@@ -98,14 +98,21 @@ const ChatMessageList = ({
                 }`}
             >
               {/* 圖片附件預覽 */}
-              {msg.image && (
-                <img
-                  src={msg.image}
-                  alt="Sent Image"
-                  onClick={() => setFullPreviewImage(msg.image)}
-                  className="mb-2 max-w-full h-auto rounded-lg border border-white/20 shadow-sm object-cover cursor-zoom-in active:scale-95 transition-transform"
-                />
-              )}
+              {msg.image && (() => {
+                // 處理圖片可能是字串或物件的情況
+                const imageSrc = typeof msg.image === "string" 
+                  ? msg.image 
+                  : (msg.image.data || null);
+                
+                return imageSrc ? (
+                  <img
+                    src={imageSrc}
+                    alt="Sent Image"
+                    onClick={() => setFullPreviewImage(imageSrc)}
+                    className="mb-2 max-w-full h-auto rounded-lg border border-white/20 shadow-sm object-cover cursor-zoom-in active:scale-95 transition-transform"
+                  />
+                ) : null;
+              })()}
               {/* 渲染文字內容 (支援 Markdown 或特殊格式) */}
               {(() => {
                 const textLength = msg.text?.length || 0;

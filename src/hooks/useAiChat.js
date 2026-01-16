@@ -12,13 +12,13 @@ import { aiChatDB } from "../utils/indexedDBManager.js";
  * - 圖片上傳與壓縮
  * - 聊天記錄持久化（使用 IndexedDB）
  */
-export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, testDateTime, autoTimeZone,hasLocationPermission, userWeather, itineraryFlat, guidesFlat, shopsFlat, itineraryData) => {
+export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, testDateTime, autoTimeZone, hasLocationPermission, userWeather, itineraryFlat, guidesFlat, shopsFlat, itineraryData) => {
   const [aiMode, setAiMode] = useState("translate");
   const [isDBReady, setIsDBReady] = useState(false);
+  const isInitialLoadDoneRef = useRef(false); // 追蹤初始載入是否完成
 
-  const [messages, setMessages] = useState(() => {
-    return [getAiWelcomeTemplate("translate", tripConfig)];
-  });
+  // 初始訊息設為空陣列，等待 IndexedDB 載入後再設定
+  const [messages, setMessages] = useState([]);
 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -34,16 +34,18 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
   const prevMessageCount = useRef(0);
 
   // 初始化 IndexedDB 並載入聊天紀錄（包括圖片）
+  // 邏輯：先檢查 IndexedDB 是否有快取，沒有才顯示預設歡迎訊息
   useEffect(() => {
     const initDB = async () => {
       try {
         await aiChatDB.init();
-        
-        // 1. 嘗試從 IndexedDB 加載
+
+        // 1. 先從 IndexedDB 嘗試載入
         const savedMessages = await aiChatDB.loadMessages("translate");
-        
+        console.log("📦 IndexedDB 載入結果:", savedMessages?.length || 0, "則訊息");
+
         if (savedMessages && savedMessages.length > 0) {
-          // IndexedDB 中已有數據，加載圖片
+          // IndexedDB 中有快取資料，載入訊息和圖片
           const messagesWithImages = await Promise.all(
             savedMessages.map(async (msg) => {
               if (msg.image && msg.image.id) {
@@ -66,37 +68,48 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
               return msg;
             })
           );
-          
+
+          console.log("✅ 從 IndexedDB 載入完成，共", messagesWithImages.length, "則訊息");
           setMessages(messagesWithImages);
         } else {
-          // 2. IndexedDB 中沒有數據，嘗試從 localStorage 遷移一次
+          // 2. IndexedDB 沒有資料，嘗試從 localStorage 遷移
           const oldData = localStorage.getItem("trip_chat_history_translate");
           if (oldData) {
             try {
               const oldMessages = JSON.parse(oldData);
               if (Array.isArray(oldMessages) && oldMessages.length > 0) {
-                // 將舊數據保存到 IndexedDB
+                // 遷移至 IndexedDB
                 const messagesToSave = oldMessages.map((msg) => ({
                   ...msg,
                   image: null,
                 }));
                 await aiChatDB.saveMessages("translate", messagesToSave);
-                
-                // 清除 localStorage
                 localStorage.removeItem("trip_chat_history_translate");
-                
+
                 setMessages(oldMessages);
-                console.log("✅ 已將 AI 聊天記錄從 localStorage 遷移至 IndexedDB");
+                console.log("✅ 已將聊天記錄從 localStorage 遷移至 IndexedDB");
+              } else {
+                // localStorage 也沒有有效資料，顯示預設歡迎訊息
+                setMessages([getAiWelcomeTemplate("translate", tripConfig)]);
               }
             } catch (error) {
               console.error("遷移 localStorage 數據失敗:", error);
+              setMessages([getAiWelcomeTemplate("translate", tripConfig)]);
             }
+          } else {
+            // 3. IndexedDB 和 localStorage 都沒有資料，顯示預設歡迎訊息
+            console.log("📭 無快取資料，顯示預設歡迎訊息");
+            setMessages([getAiWelcomeTemplate("translate", tripConfig)]);
           }
         }
-        
+
+        isInitialLoadDoneRef.current = true;
         setIsDBReady(true);
       } catch (error) {
         console.error("IndexedDB 初始化失敗:", error);
+        // 發生錯誤時也要顯示歡迎訊息，讓使用者可以正常使用
+        setMessages([getAiWelcomeTemplate("translate", tripConfig)]);
+        isInitialLoadDoneRef.current = true;
         setIsDBReady(true);
       }
     };
@@ -106,7 +119,8 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
 
   // 儲存聊天紀錄到 IndexedDB（包括圖片）
   useEffect(() => {
-    if (!isDBReady || messages.length === 0) return;
+    // 初始載入完成前不要保存，避免覆蓋已存的資料
+    if (!isDBReady || !isInitialLoadDoneRef.current || messages.length === 0) return;
 
     const debounceTimer = setTimeout(() => {
       const saveMessages = async () => {
@@ -250,10 +264,19 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
     setInputMessage("");
     setSelectedImage(null);
 
+    // 為訊息生成唯一 ID
+    const msgId = `user_${Date.now()}`;
+
     const userMsg = {
+      id: msgId,
       role: "user",
       text: messageText,
-      image: messageImage,
+      // 將圖片轉換為物件格式，包含 id、data 和 filename
+      image: messageImage ? {
+        id: `img_${msgId}`,
+        data: messageImage,
+        filename: `image_${Date.now()}.jpg`
+      } : null,
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -271,14 +294,21 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
         }
 
         if (msg.image) {
-          const [meta, data] = msg.image.split(",");
-          const mimeType = meta.match(/:(.*?);/)?.[1] || "image/jpeg";
-          parts.push({
-            inlineData: {
-              mimeType: mimeType,
-              data: data,
-            },
-          });
+          // 處理圖片可能是字串或物件的情況
+          const imageData = typeof msg.image === "string"
+            ? msg.image
+            : (msg.image.data || msg.image);
+
+          if (imageData && typeof imageData === "string" && imageData.includes(",")) {
+            const [meta, data] = imageData.split(",");
+            const mimeType = meta.match(/:(.*?);/)?.[1] || "image/jpeg";
+            parts.push({
+              inlineData: {
+                mimeType: mimeType,
+                data: data,
+              },
+            });
+          }
         }
 
         return { role: msg.role, parts: parts };
@@ -382,7 +412,7 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
       const aiText =
         data.candidates?.[0]?.content?.parts?.[0]?.text ||
         "抱歉，我沒看清楚，請再試一次。";
-      setMessages((prev) => [...prev, { role: "model", text: aiText }]);
+      setMessages((prev) => [...prev, { id: `model_${Date.now()}`, role: "model", text: aiText }]);
     } catch (error) {
       console.error("AI Error:", error);
       let errMsg = "連線發生錯誤或是系統忙碌中，請稍後再試。";
@@ -391,7 +421,7 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
       if (error.message.includes("413"))
         errMsg = "圖片檔案過大，請試著縮小圖片後再傳送。";
 
-      setMessages((prev) => [...prev, { role: "model", text: errMsg }]);
+      setMessages((prev) => [...prev, { id: `model_${Date.now()}`, role: "model", text: errMsg }]);
     } finally {
       setIsLoading(false);
     }
@@ -405,7 +435,7 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
     try {
       // 1. 嘗試從 IndexedDB 加載
       let saved = await aiChatDB.loadMessages(newMode);
-      
+
       // 2. 如果 IndexedDB 中沒有數據，嘗試從 localStorage 遷移
       if (!saved || saved.length === 0) {
         const oldData = localStorage.getItem(`trip_chat_history_${newMode}`);
@@ -419,10 +449,10 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
                 image: null,
               }));
               await aiChatDB.saveMessages(newMode, messagesToSave);
-              
+
               // 清除 localStorage
               localStorage.removeItem(`trip_chat_history_${newMode}`);
-              
+
               saved = oldMessages;
               console.log(`✅ 已將 ${newMode === "guide" ? "導遊" : "口譯"}模式聊天記錄從 localStorage 遷移至 IndexedDB`);
             }
@@ -431,7 +461,7 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
           }
         }
       }
-      
+
       // 3. 加載消息和圖片
       if (saved && saved.length > 0) {
         const messagesWithImages = await Promise.all(

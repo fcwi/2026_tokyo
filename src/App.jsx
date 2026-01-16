@@ -1085,20 +1085,22 @@ const ItineraryApp = () => {
   const CACHE_EXPIRY_MS = 3600000;
 
   const [aiMode, setAiMode] = useState("translate");
-  const [messages, setMessages] = useState(() => {
-    return [getAiWelcomeTemplate("translate", tripConfig)];
-  });
+  // 初始訊息設為空陣列，等待 IndexedDB 載入後再決定
+  const [messages, setMessages] = useState([]);
+  const isAiChatLoadedRef = useRef(false); // 追蹤初始載入是否完成
 
   // 初始化 IndexedDB 並加載聊天記錄
+  // 邏輯：先檢查 IndexedDB 是否有快取，沒有才顯示預設歡迎訊息
   useEffect(() => {
     const initAndLoad = async () => {
       try {
         const { aiChatDB } = await import("./utils/indexedDBManager.js");
         await aiChatDB.init();
         const savedMessages = await aiChatDB.loadMessages(aiMode);
+        console.log("📦 App.jsx IndexedDB 載入結果:", savedMessages?.length || 0, "則訊息");
         
         if (savedMessages && savedMessages.length > 0) {
-          // 加載每條消息的圖片
+          // IndexedDB 有快取資料，加載每條消息的圖片
           const messagesWithImages = await Promise.all(
             savedMessages.map(async (msg) => {
               if (msg.image && msg.image.id) {
@@ -1121,34 +1123,46 @@ const ItineraryApp = () => {
               return msg;
             })
           );
+          console.log("✅ 從 IndexedDB 載入完成，共", messagesWithImages.length, "則訊息");
           setMessages(messagesWithImages);
         } else {
           // IndexedDB 為空，檢查 localStorage 進行遷移
           const oldData = localStorage.getItem(`trip_chat_history_${aiMode}`);
           if (oldData) {
-            const oldMessages = JSON.parse(oldData);
-            if (Array.isArray(oldMessages) && oldMessages.length > 0) {
-              const messagesToSave = oldMessages.map((msg) => ({
-                ...msg,
-                image: null,
-              }));
-              await aiChatDB.saveMessages(aiMode, messagesToSave);
-              localStorage.removeItem(`trip_chat_history_${aiMode}`);
-              setMessages(oldMessages);
-              console.log(`✅ 已將 ${aiMode === "guide" ? "AI 導遊" : "AI 口譯"}聊天記錄從 localStorage 遷移至 IndexedDB`);
-            } else {
-              // localStorage 也沒有數據，使用默認歡迎消息
+            try {
+              const oldMessages = JSON.parse(oldData);
+              if (Array.isArray(oldMessages) && oldMessages.length > 0) {
+                const messagesToSave = oldMessages.map((msg) => ({
+                  ...msg,
+                  image: null,
+                }));
+                await aiChatDB.saveMessages(aiMode, messagesToSave);
+                localStorage.removeItem(`trip_chat_history_${aiMode}`);
+                setMessages(oldMessages);
+                console.log(`✅ 已將聊天記錄從 localStorage 遷移至 IndexedDB`);
+              } else {
+                // localStorage 也沒有數據，使用默認歡迎消息
+                console.log("📭 無快取資料，顯示預設歡迎訊息");
+                setMessages([getAiWelcomeTemplate(aiMode, tripConfig)]);
+              }
+            } catch (error) {
+              console.error("遷移 localStorage 數據失敗:", error);
               setMessages([getAiWelcomeTemplate(aiMode, tripConfig)]);
             }
           } else {
-            // localStorage 也沒有數據，使用默認歡迎消息
+            // IndexedDB 和 localStorage 都沒有數據，使用默認歡迎消息
+            console.log("📭 無快取資料，顯示預設歡迎訊息");
             setMessages([getAiWelcomeTemplate(aiMode, tripConfig)]);
           }
         }
+        
+        // 標記初始載入完成
+        isAiChatLoadedRef.current = true;
       } catch (error) {
         console.error("初始化 IndexedDB 失敗:", error);
         // 發生錯誤時也顯示默認歡迎消息
         setMessages([getAiWelcomeTemplate(aiMode, tripConfig)]);
+        isAiChatLoadedRef.current = true;
       }
     };
     
@@ -1157,7 +1171,8 @@ const ItineraryApp = () => {
 
   // 保存聊天記錄到 IndexedDB
   useEffect(() => {
-    if (messages.length === 0) return;
+    // 初始載入完成前不要保存，避免覆蓋已存的資料
+    if (!isAiChatLoadedRef.current || messages.length === 0) return;
     
     const debounceTimer = setTimeout(() => {
       const saveMessages = async () => {

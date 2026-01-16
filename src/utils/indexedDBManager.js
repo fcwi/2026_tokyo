@@ -71,15 +71,15 @@ export const aiChatDB = {
 
   async saveMessages(mode, messages) {
     const db = this.dbInstance || (await this.init());
-    const tx = db.transaction("messages", "readwrite");
-    const store = tx.objectStore("messages");
 
-    // 清除該模式的舊消息
-    const modeIndex = store.index("mode");
-    const range = IDBKeyRange.only(mode);
-    const deleteRequest = modeIndex.openCursor(range);
+    // 第一步：先刪除該模式的所有舊訊息
+    await new Promise((resolve, reject) => {
+      const deleteTx = db.transaction("messages", "readwrite");
+      const deleteStore = deleteTx.objectStore("messages");
+      const modeIndex = deleteStore.index("mode");
+      const range = IDBKeyRange.only(mode);
+      const deleteRequest = modeIndex.openCursor(range);
 
-    return new Promise((resolve, reject) => {
       deleteRequest.onsuccess = (event) => {
         const cursor = event.target.result;
         if (cursor) {
@@ -88,7 +88,20 @@ export const aiChatDB = {
         }
       };
 
-      // 插入新消息
+      deleteRequest.onerror = () => reject(deleteRequest.error);
+      deleteTx.oncomplete = () => resolve();
+      deleteTx.onerror = () => reject(deleteTx.error);
+    });
+
+    // 第二步：在刪除完成後，插入新訊息
+    if (messages.length === 0) {
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      const insertTx = db.transaction("messages", "readwrite");
+      const insertStore = insertTx.objectStore("messages");
+
       let inserted = 0;
       messages.forEach((msg, index) => {
         const record = {
@@ -98,19 +111,15 @@ export const aiChatDB = {
           order: index,
         };
         // 使用 put 而非 add，允許覆蓋現有記錄
-        const insertRequest = store.put(record);
+        const insertRequest = insertStore.put(record);
         insertRequest.onsuccess = () => {
           inserted++;
-          if (inserted === messages.length) {
-            tx.oncomplete = () => resolve();
-          }
         };
         insertRequest.onerror = () => reject(insertRequest.error);
       });
 
-      if (messages.length === 0) {
-        tx.oncomplete = () => resolve();
-      }
+      insertTx.oncomplete = () => resolve();
+      insertTx.onerror = () => reject(insertTx.error);
     });
   },
 
@@ -173,7 +182,7 @@ export const aiChatDB = {
 
     // 如果已有 imageId 就使用它，否則生成新的
     const finalImageId = imageId || `img_${messageId}_${Date.now()}`;
-    
+
     const imageRecord = {
       id: finalImageId,
       messageId,
