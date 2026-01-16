@@ -364,7 +364,7 @@ export const useWeather = (tripConfig, isTestMode, isTestModeRef, testLatitude, 
         }
       }
     },
-    [showToast, isAppReady, isTestMode, testLatitude, testLongitude, debugLog],
+    [showToast, isAppReady, isTestMode, isTestModeRef, testLatitude, testLongitude, debugLog],
   );
 
   // 自動更新天氣

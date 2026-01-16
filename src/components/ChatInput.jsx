@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Camera, X, Mic, MicOff, Send } from "lucide-react";
 
@@ -18,17 +18,22 @@ const ChatInput = ({
 }) => {
   const [showActions, setShowActions] = useState(false);
   const [sendAttempts, setSendAttempts] = useState(0);
+  const [popupPosition, setPopupPosition] = useState({
+    bottom: "80px",
+    left: "16px",
+  });
   const micButtonRef = useRef(null);
 
-  // 計算語音按鈕列表位置
-  const getPopupPosition = () => {
-    if (!micButtonRef.current) return { bottom: '80px', left: '16px' };
-    const rect = micButtonRef.current.getBoundingClientRect();
-    return {
-      bottom: `${window.innerHeight - rect.top + 12}px`,
-      left: `${rect.left}px`,
-    };
-  };
+  // 計算語音按鈕列表位置 - 在 effect 中執行，避免 render 期間訪問 ref
+  useEffect(() => {
+    if (showActions && micButtonRef.current) {
+      const rect = micButtonRef.current.getBoundingClientRect();
+      setPopupPosition({
+        bottom: `${window.innerHeight - rect.top + 12}px`,
+        left: `${rect.left}px`,
+      });
+    }
+  }, [showActions]);
 
   // 🚀 智慧重試包裝器：如果發送失敗，可在此層級進行簡單重試或狀態管理
   const onSendMessage = async () => {
@@ -121,22 +126,23 @@ const ChatInput = ({
             </button>
 
             {/* 語音按鈕列表 - 使用 Portal 渲染到 body，避免被任何容器遮擋 */}
-            {showActions && createPortal(
-              <div
-                style={getPopupPosition()}
-                className={`fixed flex gap-1.5 animate-fadeInLeft p-1.5 rounded-2xl border shadow-2xl z-[9999] backdrop-blur-2xl
+            {showActions &&
+              createPortal(
+                <div
+                  style={popupPosition}
+                  className={`fixed flex gap-1.5 animate-fadeInLeft p-1.5 rounded-2xl border shadow-2xl z-[9999] backdrop-blur-2xl
                 ${
                   isDarkMode
                     ? "bg-neutral-800/95 border-white/10"
                     : "bg-white/95 border-stone-200"
                 }`}
-              >
-                <button
-                  onClick={() => {
-                    toggleListening("zh-TW");
-                    setShowActions(false);
-                  }}
-                  className={`px-3 py-2 rounded-xl transition-all border flex-shrink-0 active:scale-95 flex items-center gap-1.5
+                >
+                  <button
+                    onClick={() => {
+                      toggleListening("zh-TW");
+                      setShowActions(false);
+                    }}
+                    className={`px-3 py-2 rounded-xl transition-all border flex-shrink-0 active:scale-95 flex items-center gap-1.5
                     ${
                       listeningLang === "zh-TW"
                         ? "bg-sky-500 text-white border-sky-400"
@@ -144,18 +150,18 @@ const ChatInput = ({
                           ? "bg-neutral-700 border-neutral-600 text-sky-400"
                           : "bg-white border-stone-200 text-sky-600 shadow-sm"
                     }`}
-                >
-                  <Mic className="w-3.5 h-3.5" />
-                  <span className="font-bold text-xs">中</span>
-                </button>
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                    <span className="font-bold text-xs">中</span>
+                  </button>
 
-                {tripConfig?.language?.code && (
-                  <button
-                    onClick={() => {
-                      toggleListening(tripConfig.language.code);
-                      setShowActions(false);
-                    }}
-                    className={`px-3 py-2 rounded-xl transition-all border flex-shrink-0 active:scale-95 flex items-center gap-1.5
+                  {tripConfig?.language?.code && (
+                    <button
+                      onClick={() => {
+                        toggleListening(tripConfig.language.code);
+                        setShowActions(false);
+                      }}
+                      className={`px-3 py-2 rounded-xl transition-all border flex-shrink-0 active:scale-95 flex items-center gap-1.5
                       ${
                         listeningLang === tripConfig.language.code
                           ? "bg-rose-500 text-white border-rose-400"
@@ -163,16 +169,16 @@ const ChatInput = ({
                             ? "bg-neutral-700 border-neutral-600 text-rose-300"
                             : "bg-white border-stone-200 text-rose-500 shadow-sm"
                       }`}
-                  >
-                    <Mic className="w-3.5 h-3.5" />
-                    <span className="font-bold text-xs">
-                      {tripConfig.language.label}
-                    </span>
-                  </button>
-                )}
-              </div>,
-              document.body
-            )}
+                    >
+                      <Mic className="w-3.5 h-3.5" />
+                      <span className="font-bold text-xs">
+                        {tripConfig.language.label}
+                      </span>
+                    </button>
+                  )}
+                </div>,
+                document.body,
+              )}
           </div>
 
           {/* 文字輸入框：對標記帳頁面，移除外邊框改用背景色區分 */}
@@ -196,7 +202,7 @@ const ChatInput = ({
               }}
               rows={1}
               placeholder={listeningLang ? "正在聽取聲音..." : "輸入問題..."}
-              style={{ fontSize: '16px' }}
+              style={{ fontSize: "16px" }}
               className={`w-full bg-transparent px-3 py-2.5 focus:outline-none transition-all placeholder:text-opacity-50 resize-none max-h-[80px] leading-snug
                 ${
                   isDarkMode

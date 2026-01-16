@@ -31,7 +31,7 @@ export const useShare = (
   const CACHE_EXPIRY_MS = 3600000;
 
   // 查詢 Google Places
-  const fetchGooglePlaces = async (lat, lng, initialRadius = 100) => {
+  const fetchGooglePlaces = useCallback(async (lat, lng, initialRadius = 100) => {
     const performSearch = async (radius) => {
       const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)},${radius}`;
       const cached = googlePlacesCacheRef.current[cacheKey];
@@ -120,10 +120,10 @@ export const useShare = (
     }
 
     return placeName || "";
-  };
+  }, [mapsApiKey, debugLog]);
 
   // 獲取最佳 POI
-  const getBestPOI = async (latitude, longitude) => {
+  const getBestPOI = useCallback(async (latitude, longitude) => {
     if (!mapsApiKey) {
       debugLog("🗺️ [Google Maps] 略過：未設定 API Key");
       return null;
@@ -144,10 +144,10 @@ export const useShare = (
       console.warn("getBestPOI 執行失敗:", e);
     }
     return null;
-  };
+  }, [mapsApiKey, fetchGooglePlaces, debugLog]);
 
   // 建立分享文字
-  const buildShareText = async (
+  const buildShareText = useCallback(async (
     latitude,
     longitude,
     currentLandmark,
@@ -176,7 +176,8 @@ export const useShare = (
         debugLog("3. Google Maps 救援成功！更新為:", finalLandmark);
 
         // 同步更新 UI 上的地標資訊
-        setUserWeather((prev) => ({          ...prev,
+        setUserWeather((prev) => ({
+          ...prev,
           landmark: finalLandmark,
           isGeneric: false,
         }));
@@ -202,7 +203,7 @@ export const useShare = (
       finalLandmark,
       tag,
     };
-  };
+  }, [getBestPOI, setUserWeather, debugGroup, debugLog, debugGroupEnd]);
 
   // 分享位置
   const handleShareLocation = useCallback(async () => {
