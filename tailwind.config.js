@@ -2,20 +2,46 @@
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   safelist: [
-    // 動態色系：基底色 (cBase)
-    {
-      pattern:
-        /(bg|text|border|shadow)-(stone|neutral|slate|gray)-(50|200|300|400|500|600|700|800|900)(\/\d+)?/,
-    },
-    // 動態色系：強調色 (cAccent)
-    {
-      pattern:
-        /(bg|text|border|ring|shadow)-(sky|amber|blue|emerald|red|orange|rose)-(50|100|200|300|400|500|600|700|800|900)(\/\d+)?/,
-    },
-    // 漸層起迄色 (AI 按鈕)
-    { pattern: /(from|to)-(stone|sky|amber)-(300|400|500|600)/ },
-    // 其他 blob 用色
-    { pattern: /bg-(blue|purple|emerald)-(300|400|500)(\/\d+)?/ },
+    // === 基於 colorBase="stone" 的動態類別 ===
+    // 背景色
+    'bg-stone-50', 'bg-stone-100', 'bg-stone-200', 'bg-stone-300',
+    'bg-stone-400', 'bg-stone-500', 'bg-stone-600', 'bg-stone-700', 
+    'bg-stone-800', 'bg-stone-900',
+    // 背景色帶透明度
+    'bg-stone-700/30', 'bg-stone-800/50', 'bg-stone-800/60', 'bg-stone-900/60',
+    
+    // 文字色
+    'text-stone-100', 'text-stone-200', 'text-stone-300', 'text-stone-400',
+    'text-stone-500', 'text-stone-600', 'text-stone-700', 'text-stone-800',
+    
+    // 邊框色
+    'border-stone-200', 'border-stone-200/40', 'border-stone-600', 
+    'border-stone-600/20', 'border-stone-600/30',
+    
+    // === 基於 colorAccent="amber" 的動態類別 ===
+    // 文字色
+    'text-amber-300', 'text-amber-400', 'text-amber-500', 'text-amber-600',
+    
+    // 背景色
+    'bg-amber-100', 'bg-amber-500/20',
+    
+    // Ring 色
+    'ring-amber-500/20',
+    
+    // 漸層色（AI 按鈕等）
+    'from-amber-300', 'from-amber-400', 'from-amber-500', 'from-amber-600',
+    'to-amber-300', 'to-amber-400', 'to-amber-500', 'to-amber-600',
+    
+    // === 其他主題可能使用的顏色 (neutral, sky, blue) ===
+    'bg-neutral-800', 'bg-neutral-900', 'text-neutral-300', 'text-neutral-400',
+    'text-sky-300', 'text-sky-400', 'text-sky-500', 'text-sky-600',
+    'bg-sky-500/20', 'ring-sky-500/20',
+    
+    // === Blob 背景動畫顏色 ===
+    'bg-blue-300/30', 'bg-blue-400/30', 'bg-blue-500/30',
+    'bg-purple-300/10', 'bg-purple-400/10', 'bg-purple-500/10',
+    'bg-emerald-300/30', 'bg-emerald-400/30', 'bg-emerald-500/30',
+    'bg-orange-200/30',
   ],
   theme: {
     extend: {

@@ -97,10 +97,10 @@ import CalculatorModal from "./components/CalculatorModal.jsx";
 import TestModePanel from "./components/TestModePanel.jsx";
 import WeatherDetail from "./components/WeatherDetail.jsx";
 
-// 財務管理主畫面
-import FinanceTab from "./components/Tabs/FinanceTab.jsx";
-// 行程分頁主畫面
-import ItineraryTab from "./components/Tabs/ItineraryTab.jsx";
+// 財務管理主畫面 - 使用動態導入減少初始 bundle
+const FinanceTab = lazy(() => import("./components/Tabs/FinanceTab.jsx"));
+// 行程分頁主畫面 - 使用動態導入減少初始 bundle
+const ItineraryTab = lazy(() => import("./components/Tabs/ItineraryTab.jsx"));
 
 const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";

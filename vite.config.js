@@ -108,12 +108,23 @@ export default defineConfig({
   build: {
     // ✅ 保留您的優化設定
     chunkSizeWarningLimit: 1000,
+    // 🆕 啟用 terser 壓縮優化
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // 生產環境移除 console.log
+        drop_debugger: true, // 移除 debugger
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           "react-vendor": ["react", "react-dom"],
           "motion-vendor": ["framer-motion"],
           "icons-vendor": ["lucide-react"],
+          // 🆕 分離地圖相關庫（較大）
+          "map-vendor": ["react-leaflet", "leaflet"],
+          // Firebase 使用模塊化導出，會自動分割，無需手動配置
         },
       },
     },
