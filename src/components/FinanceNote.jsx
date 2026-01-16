@@ -1706,67 +1706,69 @@ const FinanceScreen = ({
           document.body,
         )}
 
-      {/* --- 編輯紀錄 Modal --- */}
-      {editingRecord && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/85 backdrop-blur-lg animate-fadeIn">
-          <div
-            className={`w-full max-w-sm rounded-2xl shadow-2xl p-6 border ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-200/50"}`}
-          >
-            <h3
-              className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
+      {/* --- 編輯紀錄 Modal - 使用 Portal 確保獨立顯示 --- */}
+      {editingRecord &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/85 backdrop-blur-lg animate-fadeIn">
+            <div
+              className={`w-full max-w-sm rounded-2xl shadow-2xl p-6 border ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-200/50"}`}
             >
-              <Edit3 className="w-5 h-5 text-sky-500" />
-              編輯紀錄
-            </h3>
+              <h3
+                className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme.text}`}
+              >
+                <Edit3 className="w-5 h-5 text-sky-500" />
+                編輯紀錄
+              </h3>
 
-            <div className="space-y-4">
-              <div>
-                <label
-                  className={`text-xs font-bold mb-1 block ${theme.textSec}`}
-                >
-                  內容 / 品項
-                </label>
-                <input
-                  type="text"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className={`w-full p-3 rounded-lg border bg-transparent outline-none focus:ring-2 transition-all ${isDarkMode ? "border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20" : "border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
-                />
-              </div>
-              {editingRecord.type === "finance" && (
+              <div className="space-y-4">
                 <div>
                   <label
                     className={`text-xs font-bold mb-1 block ${theme.textSec}`}
                   >
-                    金額 (JPY)
+                    內容 / 品項
                   </label>
                   <input
-                    type="number"
-                    value={editAmount}
-                    onChange={(e) => setEditAmount(e.target.value)}
-                    className={`w-full p-3 rounded-lg border bg-transparent outline-none font-mono focus:ring-2 transition-all ${isDarkMode ? "border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20" : "border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
+                    type="text"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    className={`w-full p-3 rounded-lg border bg-transparent outline-none focus:ring-2 transition-all ${isDarkMode ? "border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20" : "border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
                   />
                 </div>
-              )}
-            </div>
+                {editingRecord.type === "finance" && (
+                  <div>
+                    <label
+                      className={`text-xs font-bold mb-1 block ${theme.textSec}`}
+                    >
+                      金額 (JPY)
+                    </label>
+                    <input
+                      type="number"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className={`w-full p-3 rounded-lg border bg-transparent outline-none font-mono focus:ring-2 transition-all ${isDarkMode ? "border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20" : "border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
+                    />
+                  </div>
+                )}
+              </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={cancelEditing}
-                className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${isDarkMode ? "bg-neutral-800 text-neutral-400 hover:bg-neutral-700" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}
-              >
-                取消
-              </button>
-              <button
-                onClick={saveEdit}
-                className={`flex-1 py-3 rounded-lg font-bold text-sm text-white shadow-lg transition-colors flex items-center justify-center gap-2 ${isDarkMode ? "bg-sky-600 hover:bg-sky-700" : "bg-[#5D737E] hover:bg-[#4A606A]"}`}
-              >
-                <Save className="w-4 h-4" /> 儲存
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={cancelEditing}
+                  className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${isDarkMode ? "bg-neutral-800 text-neutral-400 hover:bg-neutral-700" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={saveEdit}
+                  className={`flex-1 py-3 rounded-lg font-bold text-sm text-white shadow-lg transition-colors flex items-center justify-center gap-2 ${isDarkMode ? "bg-sky-600 hover:bg-sky-700" : "bg-[#5D737E] hover:bg-[#4A606A]"}`}
+                >
+                  <Save className="w-4 h-4" /> 儲存
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
