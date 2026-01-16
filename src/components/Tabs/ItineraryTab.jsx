@@ -1,7 +1,9 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useRef } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   RotateCcw,
   Calendar,
   ExternalLink,
@@ -69,11 +71,60 @@ const ItineraryTab = ({
   currentLocation,
   dayMapEvents,
 }) => {
+  // 滑動方向追蹤狀態
+  const [swipeDirection, setSwipeDirection] = useState(null);
+  const [swipeDistance, setSwipeDistance] = useState(0);
+  const touchStartRef = useRef({ x: 0, y: 0 });
+  const isHorizontalSwipeRef = useRef(null);
+
+  // 包裝 onTouchStart - 同時記錄起始位置
+  const handleTouchStart = (e) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+    isHorizontalSwipeRef.current = null;
+    setSwipeDirection(null);
+    setSwipeDistance(0);
+    // 調用原始的 onTouchStart
+    if (onTouchStart) onTouchStart(e);
+  };
+
+  // 新增 onTouchMove - 追蹤滑動方向
+  const handleTouchMove = (e) => {
+    const touchCurrentX = e.touches[0].clientX;
+    const touchCurrentY = e.touches[0].clientY;
+    const diffX = touchCurrentX - touchStartRef.current.x;
+    const diffY = Math.abs(touchCurrentY - touchStartRef.current.y);
+    const absDiffX = Math.abs(diffX);
+
+    // 判斷是否為水平滑動
+    if (isHorizontalSwipeRef.current === null && (absDiffX > 10 || diffY > 10)) {
+      isHorizontalSwipeRef.current = absDiffX > diffY;
+    }
+
+    // 更新滑動方向和距離
+    if (isHorizontalSwipeRef.current && absDiffX > 20) {
+      setSwipeDirection(diffX < 0 ? "left" : "right");
+      setSwipeDistance(Math.min(absDiffX, 150));
+    }
+  };
+
+  // 包裝 onTouchEnd - 重置狀態
+  const handleTouchEnd = (e) => {
+    setSwipeDirection(null);
+    setSwipeDistance(0);
+    isHorizontalSwipeRef.current = null;
+    // 調用原始的 onTouchEnd
+    if (onTouchEnd) onTouchEnd(e);
+  };
+
   return (
     <div
       className="flex-1 space-y-5 px-4 pb-32 overflow-x-hidden relative"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       ref={scrollContainerRef}
       style={{
         willChange: "scroll-position",
@@ -82,6 +133,37 @@ const ItineraryTab = ({
         perspective: "1000px",
       }}
     >
+      {/* 滑動箭頭指示器 - 往左滑時顯示右側箭頭 */}
+      <div
+        className={`fixed right-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+          swipeDirection === "left" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+        }`}
+        style={{ transform: `translate(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px, -50%)` }}
+      >
+        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+          isDarkMode 
+            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
+            : "bg-sky-500/90 ring-1 ring-sky-400/50"
+        }`}>
+          <ChevronRight className="w-5 h-5 text-white" />
+        </div>
+      </div>
+
+      {/* 滑動箭頭指示器 - 往右滑時顯示左側箭頭 */}
+      <div
+        className={`fixed left-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+          swipeDirection === "right" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+        }`}
+        style={{ transform: `translate(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px, -50%)` }}
+      >
+        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+          isDarkMode 
+            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
+            : "bg-sky-500/90 ring-1 ring-sky-400/50"
+        }`}>
+          <ChevronLeft className="w-5 h-5 text-white" />
+        </div>
+      </div>
       {/* 下拉重新整理指示器 */}
       <div
         className="fixed top-0 left-0 w-full flex justify-center pointer-events-none z-[100] transition-opacity duration-300"

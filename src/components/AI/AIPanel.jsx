@@ -1,4 +1,5 @@
 import React, { Suspense } from "react";
+import useSwipeGesture from "../../hooks/useSwipeGesture.js";
 import {
   Languages,
   Sparkles,
@@ -9,6 +10,8 @@ import {
   User,
   Bot,
   StopCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import ChatInput from "../ChatInput.jsx";
 // ChatMessageList 採用 lazy import 以保持原始 App.jsx 的載入邏輯
@@ -51,8 +54,51 @@ const AIPanel = ({
   clearImage,
   handleSendMessage,
 }) => {
+  // 滑動手勢切換模式
+  const { onTouchStart, onTouchMove, onTouchEnd, swipeDirection, swipeDistance } = useSwipeGesture({
+    onSwipeLeft: () => handleSwitchMode("translate"), // 往左滑（頁面往右）→ 口譯
+    onSwipeRight: () => handleSwitchMode("guide"),    // 往右滑（頁面往左）→ 導遊
+    threshold: 50,
+  });
+
   return (
-    <div className="flex-1 px-4 pb-32 space-y-5 flex flex-col h-[calc(100vh-130px)] animate-fadeIn">
+    <div
+      className="flex-1 px-4 pb-32 space-y-5 flex flex-col h-[calc(100vh-130px)] animate-fadeIn relative"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* 滑動箭頭指示器 - 往左滑時顯示右側箭頭 */}
+      <div
+        className={`fixed right-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+          swipeDirection === "left" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+        }`}
+        style={{ transform: `translate(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px, -50%)` }}
+      >
+        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+          isDarkMode 
+            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
+            : "bg-sky-500/90 ring-1 ring-sky-400/50"
+        }`}>
+          <ChevronRight className="w-5 h-5 text-white" />
+        </div>
+      </div>
+
+      {/* 滑動箭頭指示器 - 往右滑時顯示左側箭頭 */}
+      <div
+        className={`fixed left-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+          swipeDirection === "right" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+        }`}
+        style={{ transform: `translate(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px, -50%)` }}
+      >
+        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+          isDarkMode 
+            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
+            : "bg-sky-500/90 ring-1 ring-sky-400/50"
+        }`}>
+          <ChevronLeft className="w-5 h-5 text-white" />
+        </div>
+      </div>
       <div
         className={`backdrop-blur-2xl border rounded-[2rem] flex-1 flex flex-col overflow-hidden max-w-full transition-all duration-300 ${isDarkMode ? "bg-slate-900/60 border-white/10 ring-1 ring-white/10 shadow-lg shadow-black/5" : "bg-white/70 border-white/40 ring-1 ring-black/5 shadow-lg shadow-black/5"} ${componentStyles.itineraryCard}`}
       >

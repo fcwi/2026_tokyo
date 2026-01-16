@@ -1,6 +1,7 @@
 // components/FinanceNote.jsx
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import useSwipeGesture from "../hooks/useSwipeGesture.js";
 import { createPortal } from "react-dom";
 import {
   Camera,
@@ -20,6 +21,7 @@ import {
   Save,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   ChevronsUpDown,
   Scan,
 } from "lucide-react";
@@ -181,6 +183,13 @@ const FinanceScreen = ({
   // --- 4.6. 搜尋功能狀態 ---
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+
+  // --- 4.8. 滑動手勢切換模式 ---
+  const { onTouchStart, onTouchMove, onTouchEnd, swipeDirection, swipeDistance } = useSwipeGesture({
+    onSwipeLeft: () => setMode("note"),     // 往左滑（頁面往右）→ 記事
+    onSwipeRight: () => setMode("finance"), // 往右滑（頁面往左）→ 記帳
+    threshold: 50,
+  });
 
   // --- 4.7. 計算當前分組狀態 ---
   const currentModeRecords = records.filter((r) => r.type === mode);
@@ -1052,8 +1061,42 @@ const FinanceScreen = ({
   // 3. 內容多時會撐開卡片，捲動行為在外層 window。
   return (
     <div
-      className={`px-4 pb-28 animate-fadeIn flex flex-col min-h-[calc(100vh-130px)]`}
+      className={`px-4 pb-28 animate-fadeIn flex flex-col min-h-[calc(100vh-130px)] relative`}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
+      {/* 🆕 滑動箭頭指示器 - 往左滑時顯示右側箭頭 */}
+      <div
+        className={`fixed right-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+          swipeDirection === "left" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+        }`}
+        style={{ transform: `translate(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px, -50%)` }}
+      >
+        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+          isDarkMode 
+            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
+            : "bg-sky-500/90 ring-1 ring-sky-400/50"
+        }`}>
+          <ChevronRight className="w-5 h-5 text-white" />
+        </div>
+      </div>
+
+      {/* 🆕 滑動箭頭指示器 - 往右滑時顯示左側箭頭 */}
+      <div
+        className={`fixed left-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+          swipeDirection === "right" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+        }`}
+        style={{ transform: `translate(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px, -50%)` }}
+      >
+        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+          isDarkMode 
+            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
+            : "bg-sky-500/90 ring-1 ring-sky-400/50"
+        }`}>
+          <ChevronLeft className="w-5 h-5 text-white" />
+        </div>
+      </div>
       {/* 主卡片容器：內容多時自然撐開 */}
       <div
         className={`flex-1 flex flex-col backdrop-blur-xl border rounded-[2rem] transition-all duration-300 ${isDarkMode ? "bg-slate-900/50 border-white/20 ring-1 ring-white/5 shadow-xl shadow-black/10" : "bg-white/75 border-white/60 ring-1 ring-black/5 shadow-xl shadow-black/10"}`}
