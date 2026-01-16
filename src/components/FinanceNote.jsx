@@ -28,7 +28,7 @@ import {
   parseReceiptWithGemini,
   fetchFromGAS,
 } from "../utils/financeHelper";
-import { saveImage, deleteImage, batchGetImages } from "../utils/imageDB";
+import { financeDB } from "../utils/indexedDBManager.js";
 
 // 預設頭像列表
 const AVATARS = [
@@ -138,16 +138,15 @@ const FinanceScreen = ({
     return `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
   }, []);
 
+  // --- 0.5. IndexedDB 初始化狀態 ---
+  const [isDBReady, setIsDBReady] = useState(false);
+
   // --- 1. 基礎狀態 ---
-  const [user, setUser] = useState(
-    () => JSON.parse(localStorage.getItem("finance_user")) || null,
-  );
+  const [user, setUser] = useState(null);
   const [setupName, setSetupName] = useState("");
   const [setupAvatar, setSetupAvatar] = useState(AVATARS[0]);
   const [mode, setMode] = useState("finance");
-  const [records, setRecords] = useState(
-    () => JSON.parse(localStorage.getItem("finance_records")) || [],
-  );
+  const [records, setRecords] = useState([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false); // 🆕 頭像選單狀態
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 }); // 🆕 選單位置
@@ -204,7 +203,60 @@ const FinanceScreen = ({
     setExpandedDates((prev) => ({ ...prev, ...newState }));
   };
 
-  // --- 5. Effect 與 邏輯 ---
+  // --- 5. IndexedDB 初始化 ---
+  useEffect(() => {
+    const initDB = async () => {
+      try {
+        await financeDB.init();
+
+        // 載入使用者資料
+        const savedUser = await financeDB.loadUser();
+        if (savedUser) {
+          setUser(savedUser);
+        } else {
+          // 回退到 localStorage
+          const localUser = localStorage.getItem("finance_user");
+          if (localUser) {
+            const parsedUser = JSON.parse(localUser);
+            setUser(parsedUser);
+            await financeDB.saveUser(parsedUser); // 同步到 IndexedDB
+          }
+        }
+
+        // 載入記錄
+        let allRecords = await financeDB.loadAllRecords();
+        if (!allRecords || allRecords.length === 0) {
+          // 回退到 localStorage
+          const localRecords = localStorage.getItem("finance_records");
+          if (localRecords) {
+            allRecords = JSON.parse(localRecords);
+            if (allRecords.length > 0) {
+              await financeDB.saveRecords(allRecords); // 同步到 IndexedDB
+            }
+          }
+        }
+
+        setRecords(allRecords || []);
+        setIsDBReady(true);
+      } catch (error) {
+        console.error("IndexedDB 初始化失敗:", error);
+        // 回退到 localStorage
+        try {
+          const localUser = localStorage.getItem("finance_user");
+          const localRecords = localStorage.getItem("finance_records");
+          if (localUser) setUser(JSON.parse(localUser));
+          if (localRecords) setRecords(JSON.parse(localRecords));
+        } catch (e) {
+          console.error("從 localStorage 讀取也失敗:", e);
+        }
+        setIsDBReady(true);
+      }
+    };
+
+    initDB();
+  }, []);
+
+  // --- 6. Effect 與 邏輯 ---
 
   const handleSyncData = useCallback(
     async (isBackground = false) => {
@@ -245,6 +297,14 @@ const FinanceScreen = ({
             (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
           );
           setRecords(formatted);
+
+          // 同時保存到 IndexedDB
+          try {
+            await financeDB.saveRecords(formatted);
+          } catch (error) {
+            console.error("保存到 IndexedDB 失敗:", error);
+          }
+
           if (!isBackground) showToast("資料同步完成");
         }
       } catch (e) {
@@ -257,32 +317,28 @@ const FinanceScreen = ({
     [gasUrl, gasToken, showToast],
   );
 
+  // 保存記錄到 IndexedDB（主要存儲）
   useEffect(() => {
-    try {
-      // ✅ 確保不保存圖片到 localStorage（雙重保險）
-      const recordsWithoutImages = records.map((r) => ({
-        ...r,
-        image: null, // 強制移除圖片欄位
-      }));
+    if (!isDBReady || records.length === 0) return;
 
-      const jsonString = JSON.stringify(recordsWithoutImages);
-      const sizeKB = jsonString.length / 1024;
-
-      if (sizeKB > 4000) {
-        // 超過 4MB 警告
-        console.warn(`⚠️ finance_records 資料過大: ${sizeKB.toFixed(2)} KB`);
+    const debounceTimer = setTimeout(() => {
+      try {
+        // 保存到 IndexedDB（主要存儲）- 記錄不包含圖片 data
+        const recordsToSave = records.map((r) => ({
+          ...r,
+          image: null, // 圖片單獨存儲
+        }));
+        
+        financeDB.saveRecords(recordsToSave).catch((error) => {
+          console.error("保存到 IndexedDB 失敗:", error);
+        });
+      } catch (e) {
+        console.error("保存錯誤:", e);
       }
+    }, 500);
 
-      localStorage.setItem("finance_records", jsonString);
-    } catch (e) {
-      if (e.name === "QuotaExceededError") {
-        console.error("❌ LocalStorage 配額已滿！無法保存記錄");
-        showToast("本地儲存空間不足，請定期同步並清理舊資料", "error");
-      } else {
-        console.error("LocalStorage 錯誤:", e);
-      }
-    }
-  }, [records, showToast]);
+    return () => clearTimeout(debounceTimer);
+  }, [records, isDBReady]);
 
   // 🆕 初始載入時從 IndexedDB 獲取圖片
   useEffect(() => {
@@ -291,9 +347,17 @@ const FinanceScreen = ({
         (r) => r.hasCloudImage && !r.image,
       );
       if (recordsWithImages.length > 0) {
-        const imageIds = recordsWithImages.map((r) => r.id);
+        const recordIds = recordsWithImages.map((r) => r.id);
         try {
-          const imagesMap = await batchGetImages(imageIds);
+          // 使用 financeDB 的圖片查詢方法
+          const imagesMap = {};
+          for (const recordId of recordIds) {
+            const images = await financeDB.getImagesByRecordId(recordId);
+            if (images && images.length > 0) {
+              imagesMap[recordId] = images[0]; // 取第一張圖片
+            }
+          }
+          
           setRecords((prevRecords) =>
             prevRecords.map((r) => {
               if (imagesMap[r.id] && !r.image) {
@@ -416,17 +480,30 @@ const FinanceScreen = ({
       );
   };
 
-  const handleUserSetup = () => {
+  const handleUserSetup = async () => {
     if (!setupName.trim()) return;
     const newUser = { name: setupName, avatar: setupAvatar };
-    localStorage.setItem("finance_user", JSON.stringify(newUser));
+    
+    try {
+      // 保存到 IndexedDB（主要存儲）
+      await financeDB.saveUser(newUser);
+    } catch (error) {
+      console.error("保存使用者資料到 IndexedDB 失敗:", error);
+    }
+
     setUser(newUser);
     showToast(`歡迎, ${setupName}!`);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("確定要登出並重設使用者身分嗎？(紀錄不會被刪除)")) {
-      localStorage.removeItem("finance_user");
+      try {
+        // 從 IndexedDB 刪除
+        await financeDB.deleteUser();
+      } catch (error) {
+        console.error("從 IndexedDB 刪除使用者資料失敗:", error);
+      }
+
       setUser(null);
       setSetupName("");
     }
@@ -585,7 +662,7 @@ const FinanceScreen = ({
     // ✅ 儲存到 IndexedDB
     if (imageBase64) {
       try {
-        await saveImage(newItem.id, imageBase64);
+        await financeDB.saveImage(newItem.id, imageBase64);
       } catch (err) {
         console.error("IndexedDB 儲存失敗:", err);
       }
@@ -714,11 +791,11 @@ const FinanceScreen = ({
   const handleDelete = async (id, type) => {
     if (!window.confirm("確定要刪除這筆紀錄嗎？(連動雲端刪除)")) return;
 
-    // ✅ 刪除 IndexedDB 圖片
+    // ✅ 刪除 IndexedDB 中的記錄和圖片
     try {
-      await deleteImage(id);
+      await financeDB.deleteRecord(id);
     } catch (err) {
-      console.error("IndexedDB 刪除失敗:", err);
+      console.error("從 IndexedDB 刪除失敗:", err);
     }
 
     setRecords((prev) => prev.filter((r) => r.id !== id));

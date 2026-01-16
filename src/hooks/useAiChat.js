@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getAiWelcomeTemplate } from "../utils/itineraryHelpers.js";
+import { aiChatDB } from "../utils/indexedDBManager.js";
 
 /**
  * useAiChat - AI 聊天與語音管理 Hook
@@ -9,19 +10,13 @@ import { getAiWelcomeTemplate } from "../utils/itineraryHelpers.js";
  * - Gemini API 呼叫（含重試機制）
  * - 語音輸入與朗讀
  * - 圖片上傳與壓縮
- * - 聊天記錄持久化
+ * - 聊天記錄持久化（使用 IndexedDB）
  */
 export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, testDateTime, autoTimeZone,hasLocationPermission, userWeather, itineraryFlat, guidesFlat, shopsFlat, itineraryData) => {
   const [aiMode, setAiMode] = useState("translate");
-  const getStorageKey = (mode) => `trip_chat_history_${mode}`;
+  const [isDBReady, setIsDBReady] = useState(false);
 
   const [messages, setMessages] = useState(() => {
-    try {
-      const saved = localStorage.getItem(getStorageKey("translate"));
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("讀取聊天紀錄失敗", e);
-    }
     return [getAiWelcomeTemplate("translate", tripConfig)];
   });
 
@@ -38,21 +33,112 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
   const messageRefs = useRef([]);
   const prevMessageCount = useRef(0);
 
-  // 儲存聊天紀錄
+  // 初始化 IndexedDB 並載入聊天紀錄（包括圖片）
   useEffect(() => {
+    const initDB = async () => {
+      try {
+        await aiChatDB.init();
+        
+        // 1. 嘗試從 IndexedDB 加載
+        const savedMessages = await aiChatDB.loadMessages("translate");
+        
+        if (savedMessages && savedMessages.length > 0) {
+          // IndexedDB 中已有數據，加載圖片
+          const messagesWithImages = await Promise.all(
+            savedMessages.map(async (msg) => {
+              if (msg.image && msg.image.id) {
+                try {
+                  const imageRecord = await aiChatDB.getImage(msg.image.id);
+                  if (imageRecord) {
+                    return {
+                      ...msg,
+                      image: {
+                        id: imageRecord.id,
+                        data: imageRecord.data,
+                        filename: imageRecord.filename,
+                      },
+                    };
+                  }
+                } catch (error) {
+                  console.warn(`無法加載圖片 ${msg.image.id}:`, error);
+                }
+              }
+              return msg;
+            })
+          );
+          
+          setMessages(messagesWithImages);
+        } else {
+          // 2. IndexedDB 中沒有數據，嘗試從 localStorage 遷移一次
+          const oldData = localStorage.getItem("trip_chat_history_translate");
+          if (oldData) {
+            try {
+              const oldMessages = JSON.parse(oldData);
+              if (Array.isArray(oldMessages) && oldMessages.length > 0) {
+                // 將舊數據保存到 IndexedDB
+                const messagesToSave = oldMessages.map((msg) => ({
+                  ...msg,
+                  image: null,
+                }));
+                await aiChatDB.saveMessages("translate", messagesToSave);
+                
+                // 清除 localStorage
+                localStorage.removeItem("trip_chat_history_translate");
+                
+                setMessages(oldMessages);
+                console.log("✅ 已將 AI 聊天記錄從 localStorage 遷移至 IndexedDB");
+              }
+            } catch (error) {
+              console.error("遷移 localStorage 數據失敗:", error);
+            }
+          }
+        }
+        
+        setIsDBReady(true);
+      } catch (error) {
+        console.error("IndexedDB 初始化失敗:", error);
+        setIsDBReady(true);
+      }
+    };
+
+    initDB();
+  }, [tripConfig]);
+
+  // 儲存聊天紀錄到 IndexedDB（包括圖片）
+  useEffect(() => {
+    if (!isDBReady || messages.length === 0) return;
+
     const debounceTimer = setTimeout(() => {
-      const historyToSave = messages.map((msg) => ({
-        ...msg,
-        image: null,
-      }));
-      localStorage.setItem(
-        getStorageKey(aiMode),
-        JSON.stringify(historyToSave),
-      );
+      const saveMessages = async () => {
+        try {
+          // 1. 先保存消息（不包含圖片的 data，只保留圖片 ID）
+          const historyToSave = messages.map((msg) => ({
+            ...msg,
+            image: msg.image ? { id: msg.image.id, filename: msg.image.filename } : null,
+          }));
+
+          await aiChatDB.saveMessages(aiMode, historyToSave);
+
+          // 2. 然後分別保存圖片到 images store
+          for (const msg of messages) {
+            if (msg.image && msg.image.data && msg.id) {
+              try {
+                await aiChatDB.saveImage(msg.id, msg.image.data, msg.image.filename);
+              } catch (error) {
+                console.error(`保存圖片失敗 (msg: ${msg.id}):`, error);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("保存聊天紀錄到 IndexedDB 失敗:", error);
+        }
+      };
+
+      saveMessages();
     }, 500);
 
     return () => clearTimeout(debounceTimer);
-  }, [messages, aiMode]);
+  }, [messages, aiMode, isDBReady]);
 
   // 載入語音列表
   useEffect(() => {
@@ -312,20 +398,76 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
   };
 
   // 切換模式
-  const handleSwitchMode = (newMode) => {
+  const handleSwitchMode = async (newMode) => {
     if (aiMode === newMode) return;
     setAiMode(newMode);
 
-    const saved = localStorage.getItem(getStorageKey(newMode));
-    if (saved) {
-      setMessages(JSON.parse(saved));
-    } else {
+    try {
+      // 1. 嘗試從 IndexedDB 加載
+      let saved = await aiChatDB.loadMessages(newMode);
+      
+      // 2. 如果 IndexedDB 中沒有數據，嘗試從 localStorage 遷移
+      if (!saved || saved.length === 0) {
+        const oldData = localStorage.getItem(`trip_chat_history_${newMode}`);
+        if (oldData) {
+          try {
+            const oldMessages = JSON.parse(oldData);
+            if (Array.isArray(oldMessages) && oldMessages.length > 0) {
+              // 將舊數據保存到 IndexedDB
+              const messagesToSave = oldMessages.map((msg) => ({
+                ...msg,
+                image: null,
+              }));
+              await aiChatDB.saveMessages(newMode, messagesToSave);
+              
+              // 清除 localStorage
+              localStorage.removeItem(`trip_chat_history_${newMode}`);
+              
+              saved = oldMessages;
+              console.log(`✅ 已將 ${newMode === "guide" ? "導遊" : "口譯"}模式聊天記錄從 localStorage 遷移至 IndexedDB`);
+            }
+          } catch (error) {
+            console.error(`遷移 ${newMode} 模式數據失敗:`, error);
+          }
+        }
+      }
+      
+      // 3. 加載消息和圖片
+      if (saved && saved.length > 0) {
+        const messagesWithImages = await Promise.all(
+          saved.map(async (msg) => {
+            if (msg.image && msg.image.id) {
+              try {
+                const imageRecord = await aiChatDB.getImage(msg.image.id);
+                if (imageRecord) {
+                  return {
+                    ...msg,
+                    image: {
+                      id: imageRecord.id,
+                      data: imageRecord.data,
+                      filename: imageRecord.filename,
+                    },
+                  };
+                }
+              } catch (error) {
+                console.warn(`無法加載圖片 ${msg.image.id}:`, error);
+              }
+            }
+            return msg;
+          })
+        );
+        setMessages(messagesWithImages);
+      } else {
+        setMessages([getAiWelcomeTemplate(newMode, tripConfig)]);
+      }
+    } catch (error) {
+      console.error("從 IndexedDB 載入失敗:", error);
       setMessages([getAiWelcomeTemplate(newMode, tripConfig)]);
     }
   };
 
   // 清除聊天紀錄
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
     if (
       window.confirm(
         `確定要清除「${aiMode === "translate" ? "口譯" : "導遊"}」的所有紀錄嗎？`,
@@ -333,7 +475,16 @@ export const useAiChat = (apiKey, tripConfig, showToast, sleep, isTestMode, test
     ) {
       const resetMsg = getAiWelcomeTemplate(aiMode, tripConfig);
       setMessages([resetMsg]);
-      localStorage.removeItem(getStorageKey(aiMode));
+
+      try {
+        // 從 IndexedDB 刪除
+        await aiChatDB.deleteMessages(aiMode);
+      } catch (error) {
+        console.error("從 IndexedDB 刪除失敗，嘗試 localStorage:", error);
+      }
+
+      // 同時從 localStorage 刪除（以防萬一）
+      localStorage.removeItem(`trip_chat_history_${aiMode}`);
     }
   };
 

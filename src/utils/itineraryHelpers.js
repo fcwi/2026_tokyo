@@ -71,11 +71,13 @@ export const getAiWelcomeTemplate = (mode, tripConfig) => {
   const { name, label } = tripConfig.language;
   if (mode === "translate") {
     return {
+      id: `welcome_translate_${Date.now()}`,
       role: "model",
       text: `您好！我是您的隨身 AI 口譯員 🌍\n\n💡 口譯模式功能：\n🎤 點「中」說話：我會將中文翻成${name} (附拼音)。\n🎤 點「${label}」說話：錄下對方說的${name}，我會直接翻成中文！`,
     };
   }
   return {
+    id: `welcome_guide_${Date.now()}`,
     role: "model",
     text: `您好！我是您的專屬 AI 導遊 ✨\n我已經熟讀了您的行程。\n\n💡 導遊模式功能：\n🎤 點「中」說話：您可以詢問行程細節、交通方式或周邊推薦。`,
   };
