@@ -258,6 +258,37 @@ const FinanceScreen = ({
 
   // --- 6. Effect 與 邏輯 ---
 
+  // 🆕 將圖片 URL 下載並轉換為 base64（使用 Canvas 繞過 CORS）
+  const fetchImageAsBase64 = useCallback(async (imageUrl) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous"; // 嘗試使用 CORS
+      
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const base64 = canvas.toDataURL("image/jpeg", 0.8);
+          resolve(base64);
+        } catch (error) {
+          console.warn("Canvas 轉換失敗 (可能是 CORS):", error);
+          resolve(null);
+        }
+      };
+      
+      img.onerror = () => {
+        console.warn("圖片載入失敗:", imageUrl);
+        resolve(null);
+      };
+      
+      // 添加時間戳避免快取問題
+      img.src = imageUrl + (imageUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+    });
+  }, []);
+
   const handleSyncData = useCallback(
     async (isBackground = false) => {
       if (!gasUrl || !gasToken) return;
@@ -301,6 +332,57 @@ const FinanceScreen = ({
           // 同時保存到 IndexedDB
           try {
             await financeDB.saveRecords(formatted);
+            
+            // 🆕 快取圖片到 IndexedDB（背景執行，快取完成後立即更新 UI）
+            const recordsWithImages = formatted.filter(
+              (r) => r.image && typeof r.image === "string" && r.image.startsWith("http")
+            );
+            
+            if (recordsWithImages.length > 0) {
+              console.log(`🖼️ 開始快取 ${recordsWithImages.length} 張圖片...`);
+              // 背景快取圖片
+              (async () => {
+                for (const record of recordsWithImages) {
+                  try {
+                    console.log(`📦 檢查圖片快取: ${record.id}, URL: ${record.image?.substring(0, 50)}...`);
+                    
+                    // 先檢查 IndexedDB 是否已有此圖片
+                    const existingImages = await financeDB.getImagesByRecordId(record.id);
+                    if (existingImages && existingImages.length > 0 && existingImages[0].data) {
+                      // 已有快取，直接更新 UI
+                      console.log(`✅ 已有快取，直接使用: ${record.id}`);
+                      const cachedBase64 = existingImages[0].data;
+                      setRecords((prev) =>
+                        prev.map((r) =>
+                          r.id === record.id ? { ...r, image: cachedBase64 } : r
+                        )
+                      );
+                      continue;
+                    }
+                    
+                    // 下載並快取圖片
+                    console.log(`⬇️ 下載圖片中: ${record.id}`);
+                    const base64 = await fetchImageAsBase64(record.image);
+                    if (base64) {
+                      console.log(`💾 儲存圖片到 IndexedDB: ${record.id}`);
+                      await financeDB.saveImage(record.id, base64);
+                      // 🆕 立即更新 UI，使用快取的 base64
+                      setRecords((prev) =>
+                        prev.map((r) =>
+                          r.id === record.id ? { ...r, image: base64 } : r
+                        )
+                      );
+                      console.log(`✅ 已快取圖片: record ${record.id}`);
+                    } else {
+                      console.warn(`❌ 下載圖片失敗 (返回 null): ${record.id}`);
+                    }
+                  } catch (err) {
+                    console.warn(`❌ 快取圖片失敗 (record ${record.id}):`, err);
+                  }
+                }
+                console.log(`🖼️ 圖片快取完成`);
+              })();
+            }
           } catch (error) {
             console.error("保存到 IndexedDB 失敗:", error);
           }
@@ -314,7 +396,7 @@ const FinanceScreen = ({
         if (!isBackground) setIsSyncing(false);
       }
     },
-    [gasUrl, gasToken, showToast],
+    [gasUrl, gasToken, showToast, fetchImageAsBase64],
   );
 
   // 保存記錄到 IndexedDB（主要存儲）
@@ -323,11 +405,20 @@ const FinanceScreen = ({
 
     const debounceTimer = setTimeout(() => {
       try {
-        // 保存到 IndexedDB（主要存儲）- 記錄不包含圖片 data
-        const recordsToSave = records.map((r) => ({
-          ...r,
-          image: null, // 圖片單獨存儲
-        }));
+        // 保存到 IndexedDB（主要存儲）
+        // 只清除 base64 圖片數據，保留 URL 引用以便重新下載
+        const recordsToSave = records.map((r) => {
+          // 如果圖片是 URL（http 開頭），保留它
+          // 如果是 base64 數據，清除它（因為已單獨存儲）
+          const imageValue = r.image && typeof r.image === "string" && r.image.startsWith("http")
+            ? r.image  // 保留 URL
+            : null;    // 清除 base64 數據
+          
+          return {
+            ...r,
+            image: imageValue,
+          };
+        });
         
         financeDB.saveRecords(recordsToSave).catch((error) => {
           console.error("保存到 IndexedDB 失敗:", error);
@@ -340,40 +431,59 @@ const FinanceScreen = ({
     return () => clearTimeout(debounceTimer);
   }, [records, isDBReady]);
 
-  // 🆕 初始載入時從 IndexedDB 獲取圖片
+  // 🆕 初始載入時從 IndexedDB 獲取快取的圖片（僅初始化時執行一次）
+  const hasLoadedImagesRef = useRef(false);
+  
   useEffect(() => {
+    if (!isDBReady || hasLoadedImagesRef.current || records.length === 0) return;
+    
     const loadImagesFromIndexedDB = async () => {
-      const recordsWithImages = records.filter(
-        (r) => r.hasCloudImage && !r.image,
+      // 找出有圖片 URL 但可能有 IndexedDB 快取的記錄
+      const recordsToCheck = records.filter(
+        (r) => (r.hasCloudImage || (r.image && typeof r.image === "string" && r.image.startsWith("http")))
       );
-      if (recordsWithImages.length > 0) {
-        const recordIds = recordsWithImages.map((r) => r.id);
-        try {
-          // 使用 financeDB 的圖片查詢方法
-          const imagesMap = {};
-          for (const recordId of recordIds) {
-            const images = await financeDB.getImagesByRecordId(recordId);
-            if (images && images.length > 0) {
-              imagesMap[recordId] = images[0]; // 取第一張圖片
-            }
+      
+      if (recordsToCheck.length === 0) {
+        hasLoadedImagesRef.current = true;
+        return;
+      }
+      
+      try {
+        const updatedRecords = [];
+        
+        for (const record of recordsToCheck) {
+          const cachedImages = await financeDB.getImagesByRecordId(record.id);
+          if (cachedImages && cachedImages.length > 0 && cachedImages[0].data) {
+            // 有快取的 base64 圖片，使用它
+            updatedRecords.push({
+              id: record.id,
+              image: cachedImages[0].data,
+            });
           }
-          
+        }
+        
+        if (updatedRecords.length > 0) {
           setRecords((prevRecords) =>
             prevRecords.map((r) => {
-              if (imagesMap[r.id] && !r.image) {
-                return { ...r, image: imagesMap[r.id] };
+              const cached = updatedRecords.find((u) => u.id === r.id);
+              if (cached) {
+                return { ...r, image: cached.image };
               }
               return r;
             }),
           );
-        } catch (error) {
-          console.error("Failed to load images from IndexedDB:", error);
+          console.log(`✅ 從 IndexedDB 載入了 ${updatedRecords.length} 張快取圖片`);
         }
+        
+        hasLoadedImagesRef.current = true;
+      } catch (error) {
+        console.error("Failed to load images from IndexedDB:", error);
+        hasLoadedImagesRef.current = true;
       }
     };
 
     loadImagesFromIndexedDB();
-  }, [records]); // Dependency on records to load images for newly added/synced records
+  }, [isDBReady, records.length]); // 只在初始化完成且有記錄時執行
 
   useEffect(() => {
     // 只在非 modal 操作時自動滾動
