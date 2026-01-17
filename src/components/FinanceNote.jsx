@@ -34,24 +34,17 @@ import { financeDB } from "../utils/indexedDBManager.js";
 
 // 預設頭像列表
 const AVATARS = [
-  "🐶",
-  "🐱",
-  "🐰",
-  "🦊",
-  "🐼",
-  "🐨",
-  "🐯",
-  "🦁",
-  "🐮",
-  "🐷",
-  "🐸",
-  "🐵",
-  "🦄",
-  "🦖",
-  "🐧",
-  "🦉",
-  "🐤",
-  "🦋",
+  // 動物
+  "🐶", "🐱", "🐰", "🦊", "🐼", "🐨",
+  "🐯", "🦁", "🐮", "🐷", "🐸", "🐵",
+  "🦄", "🦖", "🐧", "🦉", "🐤", "🦋",
+  // 更多動物
+  "🐻", "🐺", "🦝", "🦔", "🦚", "🦜",
+  "🐦", "🐬", "🐳", "🦈", "🐙", "🦀",
+  // 人物
+  "👻", "👽", "🤖", "👾", "🧑‍🚀", "🧑‍🍳",
+  // 其他
+  "🌸", "🌻", "🌿", "🌟", "🌞", "🌙",
 ];
 
 // 時間格式化小工具（年/月/日 + 時:分:秒，24小時制）
@@ -1021,7 +1014,7 @@ const FinanceScreen = ({
               請設定您的暱稱與頭像以識別紀錄
             </p>
           </div>
-          <div className="grid grid-cols-6 gap-2 max-h-[30vh] overflow-y-auto p-2 scrollbar-hide">
+          <div className="flex flex-wrap justify-center gap-2 max-h-[30vh] overflow-y-auto p-2 scrollbar-hide">
             {AVATARS.map((av) => (
               <button
                 key={av}
