@@ -1068,10 +1068,10 @@ const FinanceScreen = ({
     >
       {/* 🆕 滑動箭頭指示器 - 往左滑時顯示右側箭頭 */}
       <div
-        className={`fixed right-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+        className={`fixed right-2 top-1/2 z-50 pointer-events-none transition-all duration-200 ${
           swipeDirection === "left" ? "opacity-100 scale-100" : "opacity-0 scale-75"
         }`}
-        style={{ transform: `translate(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px, -50%)` }}
+        style={{ transform: `translateY(-50%) translateX(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px)` }}
       >
         <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
           isDarkMode 
@@ -1084,10 +1084,10 @@ const FinanceScreen = ({
 
       {/* 🆕 滑動箭頭指示器 - 往右滑時顯示左側箭頭 */}
       <div
-        className={`fixed left-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none transition-all duration-200 ${
+        className={`fixed left-2 top-1/2 z-50 pointer-events-none transition-all duration-200 ${
           swipeDirection === "right" ? "opacity-100 scale-100" : "opacity-0 scale-75"
         }`}
-        style={{ transform: `translate(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px, -50%)` }}
+        style={{ transform: `translateY(-50%) translateX(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px)` }}
       >
         <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
           isDarkMode 

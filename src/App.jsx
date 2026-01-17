@@ -2566,7 +2566,7 @@ const ItineraryApp = () => {
     }
   };
 
-  const handleLockButtonClick = () => {
+  const handleLockButtonClick = async () => {
     // 若已達成彩蛋條件，則進入測試模式；否則執行正常的登出/鎖定
     if (testModeClickCount === 10) {
       setTestDateTime(new Date());
@@ -2577,8 +2577,41 @@ const ItineraryApp = () => {
       setTestModeClickCount(0);
       showToast("🩷 進入測試模式！", "success");
     } else {
-      setIsVerified(false);
-      localStorage.removeItem("trip_password");
+      // 確認是否要清除所有資料
+      if (window.confirm("確定要鎖定頁面並清除所有本地資料嗎？\n\n這將會清除：\n• 所有 LocalStorage 資料\n• 所有 IndexedDB 資料庫\n• 密碼驗證狀態\n\n此操作無法復原！")) {
+        try {
+          // 1. 清除所有 localStorage
+          localStorage.clear();
+          
+          // 2. 清除所有 IndexedDB 資料庫
+          const databases = await indexedDB.databases?.() || [];
+          const deletePromises = databases.map((db) => {
+            return new Promise((resolve, reject) => {
+              const request = indexedDB.deleteDatabase(db.name);
+              request.onsuccess = () => resolve();
+              request.onerror = () => reject(request.error);
+              request.onblocked = () => {
+                console.warn(`IndexedDB ${db.name} 被阻擋，嘗試關閉連接...`);
+                resolve(); // 繼續執行
+              };
+            });
+          });
+          await Promise.all(deletePromises);
+          
+          // 3. 設置驗證狀態
+          setIsVerified(false);
+          
+          showToast("✅ 所有本地資料已清除完畢", "success");
+          
+          // 4. 延遲後重新載入頁面以確保清除生效
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } catch (error) {
+          console.error("清除資料時發生錯誤:", error);
+          showToast("清除資料時發生錯誤", "error");
+        }
+      }
     }
   };
 
