@@ -82,3 +82,57 @@ export const getAiWelcomeTemplate = (mode, tripConfig) => {
     text: `您好！我是您的專屬 AI 導遊 ✨\n我已經熟讀了您的行程。\n\n💡 導遊模式功能：\n🎤 點「中」說話：您可以詢問行程細節、交通方式或周邊推薦。`,
   };
 };
+
+/**
+ * [新增] 計算天氣預報索引
+ * 
+ * 根據行程狀態動態計算應該使用的天氣預報陣列索引
+ * 
+ * @param {number} activeDay - 當前查看的行程天數（-1 為總覽頁，0-N 為各天行程）
+ * @param {string} tripStatus - 行程狀態（'before' | 'during' | 'after'）
+ * @param {number} currentTripDayIndex - 當前行程天數索引（行程中第幾天，從 0 開始）
+ * @returns {number} 預報陣列的索引（0=今天，1=明天，2=後天...）
+ * 
+ * @example
+ * // 行程前：Day 3 顯示行程第 3 天的預報
+ * getWeatherForecastIndex(2, 'before', -1) // => 2
+ * 
+ * // 行程中第 3 天查看 Day 1：顯示當天天氣
+ * getWeatherForecastIndex(0, 'during', 2) // => 0
+ * 
+ * // 行程中第 3 天查看 Day 4：顯示明天預報
+ * getWeatherForecastIndex(3, 'during', 2) // => 1
+ * 
+ * // 行程後查看任何 Day：顯示當天天氣
+ * getWeatherForecastIndex(3, 'after', -1) // => 0
+ */
+export const getWeatherForecastIndex = (activeDay, tripStatus, currentTripDayIndex) => {
+  // 總覽頁不使用此函式（由其他邏輯處理）
+  if (activeDay === -1) {
+    return 0;
+  }
+  
+  // 行程前：直接使用 activeDay 作為索引
+  // 例如：Day 1 顯示索引 [0]，Day 2 顯示索引 [1]
+  if (tripStatus === 'before') {
+    return activeDay;
+  }
+  
+  // 行程中：計算相對於今天的偏移
+  // 例如：今天是行程第 3 天（currentTripDayIndex = 2）
+  //   - 查看 Day 1: offset = 0 - 2 = -2 => Math.max(0, -2) = 0（當天）
+  //   - 查看 Day 3: offset = 2 - 2 = 0 => Math.max(0, 0) = 0（今天）
+  //   - 查看 Day 4: offset = 3 - 2 = 1 => Math.max(0, 1) = 1（明天）
+  if (tripStatus === 'during') {
+    const offset = activeDay - currentTripDayIndex;
+    return Math.max(0, offset);
+  }
+  
+  // 行程後：所有天數都顯示當天天氣
+  if (tripStatus === 'after') {
+    return 0;
+  }
+  
+  // 預設回傳 0（保險起見）
+  return 0;
+};

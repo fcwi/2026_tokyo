@@ -85,6 +85,7 @@ import {
   getDailyLocationKey, // 新增
   getAiWelcomeTemplate, // 新增
   buildShareTextLogic, // 新增
+  getWeatherForecastIndex, // 新增
 } from "./utils/itineraryHelpers.js";
 
 // 抑制 ESLint 對於 JSX 中 motion 未使用的誤判
@@ -2876,8 +2877,13 @@ const ItineraryApp = () => {
       frozenTestWeatherOverride || testWeatherOverride;
 
     if (!weatherForecast.loading && weatherData && weatherData.time) {
-      const dayIndex = activeDay === -1 ? 0 : activeDay;
-      const forecastIndex = dayIndex < weatherData.time.length ? dayIndex : 0;
+      // 使用新的索引計算函式，根據行程狀態動態計算預報索引
+      const forecastIndex = getWeatherForecastIndex(
+        activeDay,
+        tripStatus,
+        currentTripDayIndex,
+      );
+
       const maxTemp = Math.round(weatherData.temperature_2m_max[forecastIndex]);
       const minTemp = Math.round(weatherData.temperature_2m_min[forecastIndex]);
 
@@ -2922,6 +2928,8 @@ const ItineraryApp = () => {
     isTestMode,
     testWeatherOverride,
     frozenTestWeatherOverride,
+    tripStatus,
+    currentTripDayIndex,
   ]);
 
   // 統一主題風格，根據天氣狀況動態調整環境色
