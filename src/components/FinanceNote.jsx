@@ -1,12 +1,6 @@
 // components/FinanceNote.jsx
 
-import React, {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import useSwipeGesture from "../hooks/useSwipeGesture.js";
 import { createPortal } from "react-dom";
 import {
@@ -554,7 +548,7 @@ const FinanceScreen = ({
     };
 
     loadImagesFromIndexedDB();
-  }, [isDBReady, records.length]); // 只在初始化完成且有記錄時執行
+  }, [isDBReady, records]); // 只在初始化完成且有記錄時執行
 
   useEffect(() => {
     // 只在非 modal 操作時自動滾動
