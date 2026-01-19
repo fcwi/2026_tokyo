@@ -13,11 +13,11 @@ import {
 import MapPicker from "./MapPicker.jsx";
 
 // 🆕 讀取構建版本號
-const BUILD_VERSION = import.meta.env.VITE_BUILD_VERSION || '開發模式';
+const BUILD_VERSION = import.meta.env.VITE_BUILD_VERSION || "開發模式";
 
 /**
  * TestModePanel Component
- * 
+ *
  * A developer-only panel for simulating different scenarios:
  * 1. Time/Date: Test itinerary logic for different days/times.
  * 2. Location: Test weather and landmark detection for different coordinates.
@@ -42,13 +42,15 @@ const TestModePanel = ({
   onFreeze = () => {},
   onUnfreeze = () => {},
 }) => {
-  const [expandedWeatherSection, setExpandedWeatherSection] = useState("overview");
-  
+  const [expandedWeatherSection, setExpandedWeatherSection] =
+    useState("overview");
+
   // 🆕 臨時狀態（只有點擊儲存才提交）
   const [tempDateTime, setTempDateTime] = useState(testDateTime);
   const [tempLatitude, setTempLatitude] = useState(testLatitude);
   const [tempLongitude, setTempLongitude] = useState(testLongitude);
-  const [tempWeatherOverride, setTempWeatherOverride] = useState(testWeatherOverride);
+  const [tempWeatherOverride, setTempWeatherOverride] =
+    useState(testWeatherOverride);
 
   // 🆕 Memoize location change handler to prevent MapPicker re-renders
   const handleMapLocationChange = useCallback((loc) => {
@@ -89,7 +91,10 @@ const TestModePanel = ({
     if (section === "overview") {
       newOverride.overview = code === null ? null : parseInt(code);
     } else {
-      newOverride.days = { ...newOverride.days, [dayIndex]: code === null ? null : parseInt(code) };
+      newOverride.days = {
+        ...newOverride.days,
+        [dayIndex]: code === null ? null : parseInt(code),
+      };
     }
     setTempWeatherOverride(newOverride);
   };
@@ -124,7 +129,12 @@ const TestModePanel = ({
         <div
           className={`sticky top-0 flex items-center justify-between p-4 border-b ${isDarkMode ? "border-neutral-700/50 bg-neutral-900/40" : "border-stone-200/50 bg-white/30"} backdrop-blur-sm`}
         >
-          <h2 className={`text-lg font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}><span>🧪</span><span>測試模式</span></h2>
+          <h2
+            className={`text-lg font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}
+          >
+            <span>🧪</span>
+            <span>測試模式</span>
+          </h2>
           <button
             onClick={onClose}
             className={`p-2 rounded-lg transition-colors ${isDarkMode ? "hover:bg-neutral-700" : "hover:bg-stone-200"}`}
@@ -138,7 +148,9 @@ const TestModePanel = ({
           <div
             className={`px-4 py-3 border-b ${isDarkMode ? "bg-blue-900/30 border-blue-700/50" : "bg-blue-100/50 border-blue-300"}`}
           >
-            <p className={`text-sm font-semibold flex items-center gap-2 ${isDarkMode ? "text-blue-300" : "text-blue-700"}`}>
+            <p
+              className={`text-sm font-semibold flex items-center gap-2 ${isDarkMode ? "text-blue-300" : "text-blue-700"}`}
+            >
               🔒 <span>測試設定已凍結 - 修改不會被其他操作覆蓋</span>
             </p>
           </div>
@@ -147,51 +159,74 @@ const TestModePanel = ({
         <div className="p-4 space-y-6">
           {/* 1. 日期時間調整 */}
           <div className="space-y-3">
-            <h3 className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}>
+            <h3
+              className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}
+            >
               <Calendar className="w-4 h-4" /> 日期與時間
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={`text-xs font-medium block mb-1 ${theme.textSec}`}>
+                <label
+                  htmlFor="testModeDate"
+                  className={`text-xs font-medium block mb-1 ${theme.textSec}`}
+                >
                   日期
                 </label>
                 <input
                   type="date"
+                  id="testModeDate"
+                  name="testModeDate"
                   value={dateStr}
                   onChange={handleDateChange}
                   className={`w-full px-3 py-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
                 />
               </div>
               <div>
-                <label className={`text-xs font-medium block mb-1 ${theme.textSec}`}>
+                <label
+                  htmlFor="testModeTime"
+                  className={`text-xs font-medium block mb-1 ${theme.textSec}`}
+                >
                   時間
                 </label>
                 <input
                   type="time"
+                  id="testModeTime"
+                  name="testModeTime"
                   value={timeStr}
                   onChange={handleTimeChange}
                   className={`w-full px-3 py-2 rounded-lg border text-base ${isDarkMode ? "bg-neutral-900 border-neutral-700" : "bg-white border-stone-300"}`}
                 />
               </div>
             </div>
-            <div className={`text-xs p-2 rounded-lg border ${isDarkMode ? "bg-neutral-900/50 border-neutral-700" : "bg-stone-100 border-stone-300"}`}>
+            <div
+              className={`text-xs p-2 rounded-lg border ${isDarkMode ? "bg-neutral-900/50 border-neutral-700" : "bg-stone-100 border-stone-300"}`}
+            >
               <div className={`font-bold mb-1 ${theme.text}`}>當前時間</div>
-              <div className={theme.textSec}>{tempDateTime.toLocaleString("zh-TW")}</div>
+              <div className={theme.textSec}>
+                {tempDateTime.toLocaleString("zh-TW")}
+              </div>
             </div>
           </div>
 
           {/* 2. 經緯度調整 */}
           <div className="space-y-3">
-            <h3 className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}>
+            <h3
+              className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}
+            >
               <MapPin className="w-4 h-4" /> 位置座標
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={`text-xs font-medium block mb-1 ${theme.textSec}`}>
+                <label
+                  htmlFor="testModeLatitude"
+                  className={`text-xs font-medium block mb-1 ${theme.textSec}`}
+                >
                   緯度
                 </label>
                 <input
                   type="number"
+                  id="testModeLatitude"
+                  name="testModeLatitude"
                   step="0.0001"
                   value={tempLatitude}
                   onChange={handleLatChange}
@@ -199,11 +234,16 @@ const TestModePanel = ({
                 />
               </div>
               <div>
-                <label className={`text-xs font-medium block mb-1 ${theme.textSec}`}>
+                <label
+                  htmlFor="testModeLongitude"
+                  className={`text-xs font-medium block mb-1 ${theme.textSec}`}
+                >
                   經度
                 </label>
                 <input
                   type="number"
+                  id="testModeLongitude"
+                  name="testModeLongitude"
                   step="0.0001"
                   value={tempLongitude}
                   onChange={handleLonChange}
@@ -212,12 +252,19 @@ const TestModePanel = ({
               </div>
             </div>
             {/* 🆕 顯示當前位置資訊 */}
-            <div className={`text-xs p-2 rounded-lg border ${isDarkMode ? "bg-neutral-900/50 border-neutral-700" : "bg-stone-100 border-stone-300"}`}>
-              <div className={`font-bold mb-1 ${theme.text}`}>當前位置 (Raw Data)</div>
+            <div
+              className={`text-xs p-2 rounded-lg border ${isDarkMode ? "bg-neutral-900/50 border-neutral-700" : "bg-stone-100 border-stone-300"}`}
+            >
+              <div className={`font-bold mb-1 ${theme.text}`}>
+                當前位置 (Raw Data)
+              </div>
               <div className={theme.textSec}>
                 <div>📍 {currentUserWeather?.locationName || "未知"}</div>
                 <div>🏷️ {currentUserWeather?.landmark || "無地標"}</div>
-                <div>🧭 {currentUserWeather?.lat?.toFixed(4) || "--"}, {currentUserWeather?.lon?.toFixed(4) || "--"}</div>
+                <div>
+                  🧭 {currentUserWeather?.lat?.toFixed(4) || "--"},{" "}
+                  {currentUserWeather?.lon?.toFixed(4) || "--"}
+                </div>
               </div>
             </div>
 
@@ -233,17 +280,33 @@ const TestModePanel = ({
 
           {/* 3. 天氣覆蓋 */}
           <div className="space-y-3">
-            <h3 className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}>
+            <h3
+              className={`text-sm font-bold flex items-center gap-2 px-3 py-1.5 rounded-lg w-fit ${isDarkMode ? "bg-neutral-800/60" : "bg-white/40"} backdrop-blur-md ${theme.text}`}
+            >
               <Cloud className="w-4 h-4" /> 天氣覆蓋
             </h3>
-            
+
             {/* 🆕 顯示當前天氣資訊 */}
-            <div className={`text-xs p-2 rounded-lg border ${isDarkMode ? "bg-neutral-900/50 border-neutral-700" : "bg-stone-100 border-stone-300"}`}>
-              <div className={`font-bold mb-1 ${theme.text}`}>當前天氣 (Raw Data)</div>
+            <div
+              className={`text-xs p-2 rounded-lg border ${isDarkMode ? "bg-neutral-900/50 border-neutral-700" : "bg-stone-100 border-stone-300"}`}
+            >
+              <div className={`font-bold mb-1 ${theme.text}`}>
+                當前天氣 (Raw Data)
+              </div>
               <div className={theme.textSec}>
-                <div>🌡️ {currentUserWeather?.temp !== null ? `${currentUserWeather.temp}°C` : "--"}</div>
+                <div>
+                  🌡️{" "}
+                  {currentUserWeather?.temp !== null
+                    ? `${currentUserWeather.temp}°C`
+                    : "--"}
+                </div>
                 <div>☁️ {currentUserWeather?.desc || "未知"}</div>
-                <div>📊 代碼: {currentUserWeather?.weatherCode !== null ? currentUserWeather.weatherCode : "N/A"}</div>
+                <div>
+                  📊 代碼:{" "}
+                  {currentUserWeather?.weatherCode !== null
+                    ? currentUserWeather.weatherCode
+                    : "N/A"}
+                </div>
               </div>
             </div>
 
@@ -260,7 +323,7 @@ const TestModePanel = ({
               }`}
               onClick={() =>
                 setExpandedWeatherSection(
-                  expandedWeatherSection === "overview" ? null : "overview"
+                  expandedWeatherSection === "overview" ? null : "overview",
                 )
               }
             >
@@ -269,7 +332,9 @@ const TestModePanel = ({
                   總覽天氣
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}>
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
+                  >
                     {getWeatherName(tempWeatherOverride.overview)}
                   </span>
                   {expandedWeatherSection === "overview" ? (
@@ -339,7 +404,7 @@ const TestModePanel = ({
                   setExpandedWeatherSection(
                     expandedWeatherSection === `day-${dayIndex}`
                       ? null
-                      : `day-${dayIndex}`
+                      : `day-${dayIndex}`,
                   )
                 }
               >
@@ -348,9 +413,11 @@ const TestModePanel = ({
                     {day.day}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}>
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${isDarkMode ? "bg-neutral-700" : "bg-stone-200"}`}
+                    >
                       {getWeatherName(
-                      tempWeatherOverride.days[dayIndex] || null
+                        tempWeatherOverride.days[dayIndex] || null,
                       )}
                     </span>
                     {expandedWeatherSection === `day-${dayIndex}` ? (
@@ -406,7 +473,9 @@ const TestModePanel = ({
           </div>
 
           {/* 🆕 版本資訊 */}
-          <div className={`px-3 py-2 rounded-lg text-xs flex items-center gap-2 ${isDarkMode ? "bg-neutral-800/40 text-neutral-400" : "bg-white/40 text-stone-500"}`}>
+          <div
+            className={`px-3 py-2 rounded-lg text-xs flex items-center gap-2 ${isDarkMode ? "bg-neutral-800/40 text-neutral-400" : "bg-white/40 text-stone-500"}`}
+          >
             <Info className="w-3.5 h-3.5" />
             <span>構建版本：{BUILD_VERSION}</span>
           </div>

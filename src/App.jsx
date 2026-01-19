@@ -1097,8 +1097,12 @@ const ItineraryApp = () => {
         const { aiChatDB } = await import("./utils/indexedDBManager.js");
         await aiChatDB.init();
         const savedMessages = await aiChatDB.loadMessages(aiMode);
-        console.log("📦 App.jsx IndexedDB 載入結果:", savedMessages?.length || 0, "則訊息");
-        
+        console.log(
+          "📦 App.jsx IndexedDB 載入結果:",
+          savedMessages?.length || 0,
+          "則訊息",
+        );
+
         if (savedMessages && savedMessages.length > 0) {
           // IndexedDB 有快取資料，加載每條消息的圖片
           const messagesWithImages = await Promise.all(
@@ -1121,9 +1125,13 @@ const ItineraryApp = () => {
                 }
               }
               return msg;
-            })
+            }),
           );
-          console.log("✅ 從 IndexedDB 載入完成，共", messagesWithImages.length, "則訊息");
+          console.log(
+            "✅ 從 IndexedDB 載入完成，共",
+            messagesWithImages.length,
+            "則訊息",
+          );
           setMessages(messagesWithImages);
         } else {
           // IndexedDB 為空，檢查 localStorage 進行遷移
@@ -1155,7 +1163,7 @@ const ItineraryApp = () => {
             setMessages([getAiWelcomeTemplate(aiMode, tripConfig)]);
           }
         }
-        
+
         // 標記初始載入完成
         isAiChatLoadedRef.current = true;
       } catch (error) {
@@ -1165,7 +1173,7 @@ const ItineraryApp = () => {
         isAiChatLoadedRef.current = true;
       }
     };
-    
+
     initAndLoad();
   }, [aiMode]);
 
@@ -1173,26 +1181,28 @@ const ItineraryApp = () => {
   useEffect(() => {
     // 初始載入完成前不要保存，避免覆蓋已存的資料
     if (!isAiChatLoadedRef.current || messages.length === 0) return;
-    
+
     const debounceTimer = setTimeout(() => {
       const saveMessages = async () => {
         try {
           const { aiChatDB } = await import("./utils/indexedDBManager.js");
-          
+
           // 先保存圖片並獲取 imageId
           const messagesWithImageIds = await Promise.all(
             messages.map(async (msg) => {
               if (msg.image && msg.image.data && msg.id) {
                 try {
                   // 如果已有 imageId 就重用，否則生成新的
-                  const imageId = msg.image.id || await aiChatDB.saveImage(
-                    msg.id, 
-                    msg.image.data, 
-                    msg.image.filename
-                  );
+                  const imageId =
+                    msg.image.id ||
+                    (await aiChatDB.saveImage(
+                      msg.id,
+                      msg.image.data,
+                      msg.image.filename,
+                    ));
                   return {
                     ...msg,
-                    image: { id: imageId, filename: msg.image.filename }
+                    image: { id: imageId, filename: msg.image.filename },
                   };
                 } catch (error) {
                   console.error(`保存圖片失敗 (msg: ${msg.id}):`, error);
@@ -1202,11 +1212,13 @@ const ItineraryApp = () => {
               }
               return {
                 ...msg,
-                image: msg.image ? { id: msg.image.id, filename: msg.image.filename } : null
+                image: msg.image
+                  ? { id: msg.image.id, filename: msg.image.filename }
+                  : null,
               };
-            })
+            }),
           );
-          
+
           // 初始化 IndexedDB 後再保存
           await aiChatDB.init();
           await aiChatDB.saveMessages(aiMode, messagesWithImageIds);
@@ -1214,10 +1226,10 @@ const ItineraryApp = () => {
           console.error("保存到 IndexedDB 失敗:", error);
         }
       };
-      
+
       saveMessages();
     }, 500);
-    
+
     return () => clearTimeout(debounceTimer);
   }, [messages, aiMode]);
 
@@ -2578,13 +2590,17 @@ const ItineraryApp = () => {
       showToast("🩷 進入測試模式！", "success");
     } else {
       // 確認是否要清除所有資料
-      if (window.confirm("確定要鎖定頁面並清除所有本地資料嗎？\n\n這將會清除：\n• 所有 LocalStorage 資料\n• 所有 IndexedDB 資料庫\n• 密碼驗證狀態\n\n此操作無法復原！")) {
+      if (
+        window.confirm(
+          "確定要鎖定頁面並清除所有本地資料嗎？\n\n這將會清除：\n• 所有 LocalStorage 資料\n• 所有 IndexedDB 資料庫\n• 密碼驗證狀態\n\n此操作無法復原！",
+        )
+      ) {
         try {
           // 1. 清除所有 localStorage
           localStorage.clear();
-          
+
           // 2. 清除所有 IndexedDB 資料庫
-          const databases = await indexedDB.databases?.() || [];
+          const databases = (await indexedDB.databases?.()) || [];
           const deletePromises = databases.map((db) => {
             return new Promise((resolve, reject) => {
               const request = indexedDB.deleteDatabase(db.name);
@@ -2597,12 +2613,12 @@ const ItineraryApp = () => {
             });
           });
           await Promise.all(deletePromises);
-          
+
           // 3. 設置驗證狀態
           setIsVerified(false);
-          
+
           showToast("✅ 所有本地資料已清除完畢", "success");
-          
+
           // 4. 延遲後重新載入頁面以確保清除生效
           setTimeout(() => {
             window.location.reload();
@@ -2623,7 +2639,7 @@ const ItineraryApp = () => {
     ) {
       const resetMsg = getAiWelcomeTemplate(aiMode, tripConfig);
       setMessages([resetMsg]);
-      
+
       // 從 IndexedDB 清除
       try {
         const { aiChatDB } = await import("./utils/indexedDBManager.js");
@@ -2663,10 +2679,12 @@ const ItineraryApp = () => {
 
     // 🔧 【重要】先清空輸入框，避免語音識別的異步更新覆蓋
     const messageText = inputMessage;
-    const messageImage = selectedImage ? {
-      data: selectedImage,
-      filename: `image_${Date.now()}.jpg`
-    } : null;
+    const messageImage = selectedImage
+      ? {
+          data: selectedImage,
+          filename: `image_${Date.now()}.jpg`,
+        }
+      : null;
     setInputMessage("");
     setSelectedImage(null);
 
@@ -2804,11 +2822,14 @@ const ItineraryApp = () => {
       const aiText =
         data.candidates?.[0]?.content?.parts?.[0]?.text ||
         "抱歉，我沒看清楚，請再試一次。";
-      setMessages((prev) => [...prev, { 
-        id: `model_${Date.now()}`,
-        role: "model", 
-        text: aiText 
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `model_${Date.now()}`,
+          role: "model",
+          text: aiText,
+        },
+      ]);
     } catch (error) {
       console.error("AI Error:", error);
       let errMsg = "連線發生錯誤或是系統忙碌中，請稍後再試。";
@@ -2817,11 +2838,14 @@ const ItineraryApp = () => {
       if (error.message.includes("413"))
         errMsg = "圖片檔案過大，請試著縮小圖片後再傳送。";
 
-      setMessages((prev) => [...prev, { 
-        id: `model_error_${Date.now()}`,
-        role: "model", 
-        text: errMsg 
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `model_error_${Date.now()}`,
+          role: "model",
+          text: errMsg,
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -3083,8 +3107,13 @@ const ItineraryApp = () => {
 
           <form onSubmit={handleAuthSubmit} className="space-y-4">
             <div>
+              <label htmlFor="lockScreenPassword" className="sr-only">
+                通關密碼
+              </label>
               <input
                 type="password"
+                id="lockScreenPassword"
+                name="lockScreenPassword"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="輸入密碼..."
@@ -3170,8 +3199,13 @@ const ItineraryApp = () => {
                     : "輸入 Google Maps Places API Key (AIza...):"}
                 </p>
 
+                <label htmlFor="encryptApiKey" className="sr-only">
+                  {keyType === "gemini" ? "Gemini API Key" : "Maps API Key"}
+                </label>
                 <input
                   type="text"
+                  id="encryptApiKey"
+                  name="encryptApiKey"
                   placeholder={
                     keyType === "gemini"
                       ? "貼上 Gemini Key..."
@@ -3181,8 +3215,13 @@ const ItineraryApp = () => {
                   onChange={(e) => setToolKey(e.target.value)}
                   className={`w-full p-2 rounded-xl border text-base ${isDarkMode ? "bg-neutral-800 border-neutral-600" : "bg-white border-slate-300"}`}
                 />
+                <label htmlFor="encryptPassword" className="sr-only">
+                  設定通關密碼
+                </label>
                 <input
                   type="text"
+                  id="encryptPassword"
+                  name="encryptPassword"
                   placeholder="設定您的通關密碼"
                   value={toolPwd}
                   onChange={(e) => setToolPwd(e.target.value)}

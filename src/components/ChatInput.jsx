@@ -83,6 +83,8 @@ const ChatInput = ({
         {/* 隱藏的檔案選擇器 */}
         <input
           type="file"
+          id="chatImageUpload"
+          name="chatImageUpload"
           ref={fileInputRef}
           onChange={handleImageSelect}
           accept="image/*"
@@ -187,6 +189,8 @@ const ChatInput = ({
             ${isDarkMode ? "bg-neutral-900/80 border border-neutral-700" : "bg-stone-100"}`}
           >
             <textarea
+              id="chatMessageInput"
+              name="chatMessageInput"
               value={inputMessage}
               onChange={(e) => {
                 setInputMessage(e.target.value);

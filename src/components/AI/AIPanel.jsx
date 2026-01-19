@@ -55,9 +55,15 @@ const AIPanel = ({
   handleSendMessage,
 }) => {
   // 滑動手勢切換模式
-  const { onTouchStart, onTouchMove, onTouchEnd, swipeDirection, swipeDistance } = useSwipeGesture({
+  const {
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    swipeDirection,
+    swipeDistance,
+  } = useSwipeGesture({
     onSwipeLeft: () => handleSwitchMode("translate"), // 往左滑（頁面往右）→ 口譯
-    onSwipeRight: () => handleSwitchMode("guide"),    // 往右滑（頁面往左）→ 導遊
+    onSwipeRight: () => handleSwitchMode("guide"), // 往右滑（頁面往左）→ 導遊
     threshold: 50,
   });
 
@@ -71,15 +77,21 @@ const AIPanel = ({
       {/* 滑動箭頭指示器 - 往左滑時顯示右側箭頭 */}
       <div
         className={`fixed right-2 top-1/2 z-50 pointer-events-none transition-all duration-200 ${
-          swipeDirection === "left" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+          swipeDirection === "left"
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-75"
         }`}
-        style={{ transform: `translateY(-50%) translateX(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px)` }}
+        style={{
+          transform: `translateY(-50%) translateX(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px)`,
+        }}
       >
-        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
-          isDarkMode 
-            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
-            : "bg-sky-500/90 ring-1 ring-sky-400/50"
-        }`}>
+        <div
+          className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+            isDarkMode
+              ? "bg-sky-500/90 ring-1 ring-sky-400/30"
+              : "bg-sky-500/90 ring-1 ring-sky-400/50"
+          }`}
+        >
           <ChevronRight className="w-5 h-5 text-white" />
         </div>
       </div>
@@ -87,15 +99,21 @@ const AIPanel = ({
       {/* 滑動箭頭指示器 - 往右滑時顯示左側箭頭 */}
       <div
         className={`fixed left-2 top-1/2 z-50 pointer-events-none transition-all duration-200 ${
-          swipeDirection === "right" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+          swipeDirection === "right"
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-75"
         }`}
-        style={{ transform: `translateY(-50%) translateX(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px)` }}
+        style={{
+          transform: `translateY(-50%) translateX(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px)`,
+        }}
       >
-        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
-          isDarkMode 
-            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
-            : "bg-sky-500/90 ring-1 ring-sky-400/50"
-        }`}>
+        <div
+          className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+            isDarkMode
+              ? "bg-sky-500/90 ring-1 ring-sky-400/30"
+              : "bg-sky-500/90 ring-1 ring-sky-400/50"
+          }`}
+        >
           <ChevronLeft className="w-5 h-5 text-white" />
         </div>
       </div>
@@ -229,6 +247,8 @@ const AIPanel = ({
                 />
                 <input
                   type="text"
+                  id="aiSearchQuery"
+                  name="aiSearchQuery"
                   value={aiSearchQuery}
                   onChange={(e) => setAiSearchQuery(e.target.value)}
                   placeholder="搜尋對話內容..."

@@ -1,6 +1,12 @@
 // components/FinanceNote.jsx
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import useSwipeGesture from "../hooks/useSwipeGesture.js";
 import { createPortal } from "react-dom";
 import {
@@ -35,16 +41,51 @@ import { financeDB } from "../utils/indexedDBManager.js";
 // 預設頭像列表
 const AVATARS = [
   // 動物
-  "🐶", "🐱", "🐰", "🦊", "🐼", "🐨",
-  "🐯", "🦁", "🐮", "🐷", "🐸", "🐵",
-  "🦄", "🦖", "🐧", "🦉", "🐤", "🦋",
+  "🐶",
+  "🐱",
+  "🐰",
+  "🦊",
+  "🐼",
+  "🐨",
+  "🐯",
+  "🦁",
+  "🐮",
+  "🐷",
+  "🐸",
+  "🐵",
+  "🦄",
+  "🦖",
+  "🐧",
+  "🦉",
+  "🐤",
+  "🦋",
   // 更多動物
-  "🐻", "🐺", "🦝", "🦔", "🦚", "🦜",
-  "🐦", "🐬", "🐳", "🦈", "🐙", "🦀",
+  "🐻",
+  "🐺",
+  "🦝",
+  "🦔",
+  "🦚",
+  "🦜",
+  "🐦",
+  "🐬",
+  "🐳",
+  "🦈",
+  "🐙",
+  "🦀",
   // 人物
-  "👻", "👽", "🤖", "👾", "🧑‍🚀", "🧑‍🍳",
+  "👻",
+  "👽",
+  "🤖",
+  "👾",
+  "🧑‍🚀",
+  "🧑‍🍳",
   // 其他
-  "🌸", "🌻", "🌿", "🌟", "🌞", "🌙",
+  "🌸",
+  "🌻",
+  "🌿",
+  "🌟",
+  "🌞",
+  "🌙",
 ];
 
 // 時間格式化小工具（年/月/日 + 時:分:秒，24小時制）
@@ -178,8 +219,14 @@ const FinanceScreen = ({
   const [showSearch, setShowSearch] = useState(false);
 
   // --- 4.8. 滑動手勢切換模式 ---
-  const { onTouchStart, onTouchMove, onTouchEnd, swipeDirection, swipeDistance } = useSwipeGesture({
-    onSwipeLeft: () => setMode("note"),     // 往左滑（頁面往右）→ 記事
+  const {
+    onTouchStart,
+    onTouchMove,
+    onTouchEnd,
+    swipeDirection,
+    swipeDistance,
+  } = useSwipeGesture({
+    onSwipeLeft: () => setMode("note"), // 往左滑（頁面往右）→ 記事
     onSwipeRight: () => setMode("finance"), // 往右滑（頁面往左）→ 記帳
     threshold: 50,
   });
@@ -265,7 +312,7 @@ const FinanceScreen = ({
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = "anonymous"; // 嘗試使用 CORS
-      
+
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
@@ -280,14 +327,15 @@ const FinanceScreen = ({
           resolve(null);
         }
       };
-      
+
       img.onerror = () => {
         console.warn("圖片載入失敗:", imageUrl);
         resolve(null);
       };
-      
+
       // 添加時間戳避免快取問題
-      img.src = imageUrl + (imageUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+      img.src =
+        imageUrl + (imageUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
     });
   }, []);
 
@@ -334,34 +382,47 @@ const FinanceScreen = ({
           // 同時保存到 IndexedDB
           try {
             await financeDB.saveRecords(formatted);
-            
+
             // 🆕 快取圖片到 IndexedDB（背景執行，快取完成後立即更新 UI）
             const recordsWithImages = formatted.filter(
-              (r) => r.image && typeof r.image === "string" && r.image.startsWith("http")
+              (r) =>
+                r.image &&
+                typeof r.image === "string" &&
+                r.image.startsWith("http"),
             );
-            
+
             if (recordsWithImages.length > 0) {
               console.log(`🖼️ 開始快取 ${recordsWithImages.length} 張圖片...`);
               // 背景快取圖片
               (async () => {
                 for (const record of recordsWithImages) {
                   try {
-                    console.log(`📦 檢查圖片快取: ${record.id}, URL: ${record.image?.substring(0, 50)}...`);
-                    
+                    console.log(
+                      `📦 檢查圖片快取: ${record.id}, URL: ${record.image?.substring(0, 50)}...`,
+                    );
+
                     // 先檢查 IndexedDB 是否已有此圖片
-                    const existingImages = await financeDB.getImagesByRecordId(record.id);
-                    if (existingImages && existingImages.length > 0 && existingImages[0].data) {
+                    const existingImages = await financeDB.getImagesByRecordId(
+                      record.id,
+                    );
+                    if (
+                      existingImages &&
+                      existingImages.length > 0 &&
+                      existingImages[0].data
+                    ) {
                       // 已有快取，直接更新 UI
                       console.log(`✅ 已有快取，直接使用: ${record.id}`);
                       const cachedBase64 = existingImages[0].data;
                       setRecords((prev) =>
                         prev.map((r) =>
-                          r.id === record.id ? { ...r, image: cachedBase64 } : r
-                        )
+                          r.id === record.id
+                            ? { ...r, image: cachedBase64 }
+                            : r,
+                        ),
                       );
                       continue;
                     }
-                    
+
                     // 下載並快取圖片
                     console.log(`⬇️ 下載圖片中: ${record.id}`);
                     const base64 = await fetchImageAsBase64(record.image);
@@ -371,8 +432,8 @@ const FinanceScreen = ({
                       // 🆕 立即更新 UI，使用快取的 base64
                       setRecords((prev) =>
                         prev.map((r) =>
-                          r.id === record.id ? { ...r, image: base64 } : r
-                        )
+                          r.id === record.id ? { ...r, image: base64 } : r,
+                        ),
                       );
                       console.log(`✅ 已快取圖片: record ${record.id}`);
                     } else {
@@ -412,16 +473,17 @@ const FinanceScreen = ({
         const recordsToSave = records.map((r) => {
           // 如果圖片是 URL（http 開頭），保留它
           // 如果是 base64 數據，清除它（因為已單獨存儲）
-          const imageValue = r.image && typeof r.image === "string" && r.image.startsWith("http")
-            ? r.image  // 保留 URL
-            : null;    // 清除 base64 數據
-          
+          const imageValue =
+            r.image && typeof r.image === "string" && r.image.startsWith("http")
+              ? r.image // 保留 URL
+              : null; // 清除 base64 數據
+
           return {
             ...r,
             image: imageValue,
           };
         });
-        
+
         financeDB.saveRecords(recordsToSave).catch((error) => {
           console.error("保存到 IndexedDB 失敗:", error);
         });
@@ -435,24 +497,29 @@ const FinanceScreen = ({
 
   // 🆕 初始載入時從 IndexedDB 獲取快取的圖片（僅初始化時執行一次）
   const hasLoadedImagesRef = useRef(false);
-  
+
   useEffect(() => {
-    if (!isDBReady || hasLoadedImagesRef.current || records.length === 0) return;
-    
+    if (!isDBReady || hasLoadedImagesRef.current || records.length === 0)
+      return;
+
     const loadImagesFromIndexedDB = async () => {
       // 找出有圖片 URL 但可能有 IndexedDB 快取的記錄
       const recordsToCheck = records.filter(
-        (r) => (r.hasCloudImage || (r.image && typeof r.image === "string" && r.image.startsWith("http")))
+        (r) =>
+          r.hasCloudImage ||
+          (r.image &&
+            typeof r.image === "string" &&
+            r.image.startsWith("http")),
       );
-      
+
       if (recordsToCheck.length === 0) {
         hasLoadedImagesRef.current = true;
         return;
       }
-      
+
       try {
         const updatedRecords = [];
-        
+
         for (const record of recordsToCheck) {
           const cachedImages = await financeDB.getImagesByRecordId(record.id);
           if (cachedImages && cachedImages.length > 0 && cachedImages[0].data) {
@@ -463,7 +530,7 @@ const FinanceScreen = ({
             });
           }
         }
-        
+
         if (updatedRecords.length > 0) {
           setRecords((prevRecords) =>
             prevRecords.map((r) => {
@@ -474,9 +541,11 @@ const FinanceScreen = ({
               return r;
             }),
           );
-          console.log(`✅ 從 IndexedDB 載入了 ${updatedRecords.length} 張快取圖片`);
+          console.log(
+            `✅ 從 IndexedDB 載入了 ${updatedRecords.length} 張快取圖片`,
+          );
         }
-        
+
         hasLoadedImagesRef.current = true;
       } catch (error) {
         console.error("Failed to load images from IndexedDB:", error);
@@ -595,7 +664,7 @@ const FinanceScreen = ({
   const handleUserSetup = async () => {
     if (!setupName.trim()) return;
     const newUser = { name: setupName, avatar: setupAvatar };
-    
+
     try {
       // 保存到 IndexedDB（主要存儲）
       await financeDB.saveUser(newUser);
@@ -1028,6 +1097,8 @@ const FinanceScreen = ({
           <div className="space-y-4">
             <input
               type="text"
+              id="userSetupName"
+              name="userSetupName"
               placeholder="輸入您的暱稱"
               value={setupName}
               onChange={(e) => setSetupName(e.target.value)}
@@ -1062,15 +1133,21 @@ const FinanceScreen = ({
       {/* 🆕 滑動箭頭指示器 - 往左滑時顯示右側箭頭 */}
       <div
         className={`fixed right-2 top-1/2 z-50 pointer-events-none transition-all duration-200 ${
-          swipeDirection === "left" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+          swipeDirection === "left"
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-75"
         }`}
-        style={{ transform: `translateY(-50%) translateX(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px)` }}
+        style={{
+          transform: `translateY(-50%) translateX(${swipeDirection === "left" ? -swipeDistance * 0.3 : 0}px)`,
+        }}
       >
-        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
-          isDarkMode 
-            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
-            : "bg-sky-500/90 ring-1 ring-sky-400/50"
-        }`}>
+        <div
+          className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+            isDarkMode
+              ? "bg-sky-500/90 ring-1 ring-sky-400/30"
+              : "bg-sky-500/90 ring-1 ring-sky-400/50"
+          }`}
+        >
           <ChevronRight className="w-5 h-5 text-white" />
         </div>
       </div>
@@ -1078,15 +1155,21 @@ const FinanceScreen = ({
       {/* 🆕 滑動箭頭指示器 - 往右滑時顯示左側箭頭 */}
       <div
         className={`fixed left-2 top-1/2 z-50 pointer-events-none transition-all duration-200 ${
-          swipeDirection === "right" ? "opacity-100 scale-100" : "opacity-0 scale-75"
+          swipeDirection === "right"
+            ? "opacity-100 scale-100"
+            : "opacity-0 scale-75"
         }`}
-        style={{ transform: `translateY(-50%) translateX(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px)` }}
+        style={{
+          transform: `translateY(-50%) translateX(${swipeDirection === "right" ? swipeDistance * 0.3 : 0}px)`,
+        }}
       >
-        <div className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
-          isDarkMode 
-            ? "bg-sky-500/90 ring-1 ring-sky-400/30" 
-            : "bg-sky-500/90 ring-1 ring-sky-400/50"
-        }`}>
+        <div
+          className={`p-2.5 rounded-full shadow-lg backdrop-blur-md ${
+            isDarkMode
+              ? "bg-sky-500/90 ring-1 ring-sky-400/30"
+              : "bg-sky-500/90 ring-1 ring-sky-400/50"
+          }`}
+        >
           <ChevronLeft className="w-5 h-5 text-white" />
         </div>
       </div>
@@ -1251,6 +1334,8 @@ const FinanceScreen = ({
                 />
                 <input
                   type="text"
+                  id="financeSearch"
+                  name="financeSearch"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={`搜尋${mode === "finance" ? "消費" : "記事"}內容...`}
@@ -1635,6 +1720,8 @@ const FinanceScreen = ({
             {/* 隱藏的檔案選擇器 */}
             <input
               type="file"
+              id="financeImageUpload"
+              name="financeImageUpload"
               ref={fileInputRef}
               onChange={handleImageSelect}
               accept="image/*"
@@ -1660,6 +1747,8 @@ const FinanceScreen = ({
                 {mode === "finance" && (
                   <input
                     type="number"
+                    id="financeAmount"
+                    name="financeAmount"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="金額"
@@ -1674,6 +1763,8 @@ const FinanceScreen = ({
                   ></div>
                 )}
                 <textarea
+                  id="financeTextInput"
+                  name="financeTextInput"
                   value={inputText}
                   onChange={(e) => {
                     setInputText(e.target.value);
@@ -1809,6 +1900,8 @@ const FinanceScreen = ({
                   )}
                   <input
                     type="file"
+                    id="appendReceiptImage"
+                    name="appendReceiptImage"
                     ref={appendInputRef}
                     onChange={handleAppendImage}
                     accept="image/*"
@@ -1843,6 +1936,8 @@ const FinanceScreen = ({
                       <div className="flex-1 space-y-1">
                         <input
                           type="text"
+                          id={`receiptItemName-${idx}`}
+                          name={`receiptItemName-${idx}`}
                           value={item.name}
                           onChange={(e) => {
                             const newItems = [...receiptItems];
@@ -1860,6 +1955,8 @@ const FinanceScreen = ({
                           <span className="mr-1">¥</span>
                           <input
                             type="number"
+                            id={`receiptItemAmount-${idx}`}
+                            name={`receiptItemAmount-${idx}`}
                             value={item.amount}
                             onChange={(e) => {
                               const newItems = [...receiptItems];
@@ -1867,7 +1964,7 @@ const FinanceScreen = ({
                               setReceiptItems(newItems);
                             }}
                             className={`bg-transparent outline-none w-20 border-b border-transparent focus:border-sky-500 ${
-                              isDarkMode ? "text-sky-400" : "text-sky-600"
+                              isDarkMode ? "text-white" : "text-stone-700"
                             }`}
                             placeholder="金額"
                           />
@@ -1952,6 +2049,8 @@ const FinanceScreen = ({
                   </label>
                   <input
                     type="text"
+                    id="editContent"
+                    name="editContent"
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                     className={`w-full p-3 rounded-lg border bg-transparent outline-none focus:ring-2 transition-all ${isDarkMode ? "border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20" : "border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
@@ -1966,6 +2065,8 @@ const FinanceScreen = ({
                     </label>
                     <input
                       type="number"
+                      id="editAmount"
+                      name="editAmount"
                       value={editAmount}
                       onChange={(e) => setEditAmount(e.target.value)}
                       className={`w-full p-3 rounded-lg border bg-transparent outline-none font-mono focus:ring-2 transition-all ${isDarkMode ? "border-neutral-700 text-white focus:border-sky-500 focus:ring-sky-500/20" : "border-stone-300 text-stone-800 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
