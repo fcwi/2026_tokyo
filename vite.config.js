@@ -36,12 +36,12 @@ export default defineConfig({
         display: "standalone", // 讓它看起來像原生 App (沒有瀏覽器網址列)
         icons: [
           {
-            src: "pwa-192x192.png", // 注意：需要在 public 資料夾放入這些圖片，否則 Console 會報錯，但不影響運作
+            src: "icon-192.png", // 注意：需要在 public 資料夾放入這些圖片，否則 Console 會報錯，但不影響運作
             sizes: "192x192",
             type: "image/png",
           },
           {
-            src: "pwa-512x512.png",
+            src: "icon-512.png",
             sizes: "512x512",
             type: "image/png",
           },
@@ -112,7 +112,7 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false, // 保留 console.log 以便除錯
+        drop_console: true, // 如果要保留 console.log以便除錯，請設為 false
         drop_debugger: true, // 移除 debugger
       },
     },
