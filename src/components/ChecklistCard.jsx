@@ -41,13 +41,17 @@ const ChecklistCard = memo(({ isDarkMode, theme, colors, initialData }) => {
           return { ...item, checked: newChecked };
         }
         return item;
-      })
+      }),
     );
   };
 
   const handleAddItem = () => {
     if (!newItemText.trim()) return;
-    const newItem = { id: Date.now(), text: newItemText.trim(), checked: false };
+    const newItem = {
+      id: Date.now(),
+      text: newItemText.trim(),
+      checked: false,
+    };
     setChecklist((prev) => [...prev, newItem]);
     setNewItemText("");
   };
@@ -65,12 +69,19 @@ const ChecklistCard = memo(({ isDarkMode, theme, colors, initialData }) => {
   };
 
   return (
-    <div className={`rounded-2xl p-4 border transition-colors backdrop-blur-md ${isDarkMode ? "bg-neutral-800/30 border-neutral-700/60 ring-1 ring-white/5" : "bg-white/60 border-stone-200/60 ring-1 ring-black/5"}`}>
+    <div
+      className={`rounded-2xl p-4 border transition-colors backdrop-blur-md ${isDarkMode ? "bg-neutral-800/30 border-neutral-700/60 ring-1 ring-white/5" : "bg-white/60 border-stone-200/60 ring-1 ring-black/5"}`}
+    >
       <div className="flex justify-between items-center mb-3">
-        <h3 className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}>
+        <h3
+          className={`text-sm font-bold flex items-center gap-2 ${theme.text}`}
+        >
           <ListTodo className={`w-4 h-4 ${colors.pink}`} /> 出發前檢查清單
         </h3>
-        <button onClick={handleResetChecklist} className={`p-1.5 rounded-xl transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}>
+        <button
+          onClick={handleResetChecklist}
+          className={`p-1.5 rounded-xl transition-colors flex items-center gap-1 text-xs font-medium opacity-60 hover:opacity-100 ${isDarkMode ? "text-neutral-400 hover:bg-neutral-700 hover:text-white" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"}`}
+        >
           <RotateCcw className="w-3.5 h-3.5" /> 重置
         </button>
       </div>
@@ -78,29 +89,48 @@ const ChecklistCard = memo(({ isDarkMode, theme, colors, initialData }) => {
       <div className="flex gap-2 mb-4">
         <input
           type="text"
+          id="newChecklistItem"
+          name="newChecklistItem"
           value={newItemText}
           onChange={(e) => setNewItemText(e.target.value)}
           placeholder="新增檢查項目..."
           className={`flex-1 px-3 py-2 rounded-xl text-base border focus:outline-none focus:ring-2 transition-all ${isDarkMode ? "bg-neutral-900 border-neutral-600 focus:border-sky-500 focus:ring-sky-500/20" : "bg-white border-stone-200 focus:border-[#5D737E] focus:ring-[#5D737E]/20"}`}
           onKeyPress={(e) => e.key === "Enter" && handleAddItem()}
         />
-        <button onClick={handleAddItem} disabled={!newItemText.trim()} className={`p-2 rounded-xl border transition-all ${!newItemText.trim() ? "opacity-50 cursor-not-allowed" : "active:scale-95"} ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300" : "bg-white border-stone-200 text-[#5D737E]"}`}>
+        <button
+          onClick={handleAddItem}
+          disabled={!newItemText.trim()}
+          className={`p-2 rounded-xl border transition-all ${!newItemText.trim() ? "opacity-50 cursor-not-allowed" : "active:scale-95"} ${isDarkMode ? "bg-neutral-700 border-neutral-600 text-sky-300" : "bg-white border-stone-200 text-[#5D737E]"}`}
+        >
           <Plus className="w-5 h-5" />
         </button>
       </div>
 
       <div className="space-y-1">
         {checklist.map((item) => (
-          <div key={item.id} className={`flex items-center gap-3 px-2 py-1.5 rounded-xl transition-all group/item ${item.checked ? (isDarkMode ? "bg-green-900/10" : "bg-green-50/50") : (isDarkMode ? "hover:bg-neutral-700/30" : "hover:bg-black/5")} ${glowId === item.id ? "animate-success-glow ring-2 ring-emerald-500/50" : ""}`}>
-            <div onClick={() => toggleCheckItem(item.id)} className="flex items-center gap-3 flex-1 cursor-pointer select-none">
-              <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all duration-300 flex-shrink-0 ${item.checked ? "bg-emerald-500 border-emerald-500 text-white scale-110" : `bg-transparent ${isDarkMode ? "border-neutral-500" : "border-stone-400"} group-hover/item:border-emerald-500`}`}>
+          <div
+            key={item.id}
+            className={`flex items-center gap-3 px-2 py-1.5 rounded-xl transition-all group/item ${item.checked ? (isDarkMode ? "bg-green-900/10" : "bg-green-50/50") : isDarkMode ? "hover:bg-neutral-700/30" : "hover:bg-black/5"} ${glowId === item.id ? "animate-success-glow ring-2 ring-emerald-500/50" : ""}`}
+          >
+            <div
+              onClick={() => toggleCheckItem(item.id)}
+              className="flex items-center gap-3 flex-1 cursor-pointer select-none"
+            >
+              <div
+                className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all duration-300 flex-shrink-0 ${item.checked ? "bg-emerald-500 border-emerald-500 text-white scale-110" : `bg-transparent ${isDarkMode ? "border-neutral-500" : "border-stone-400"} group-hover/item:border-emerald-500`}`}
+              >
                 <Check className="w-3 h-3" />
               </div>
-              <span className={`text-sm font-medium transition-colors leading-normal tracking-wide ${item.checked ? "text-emerald-600/70 line-through decoration-emerald-600/30" : theme.textSec}`}>
+              <span
+                className={`text-sm font-medium transition-colors leading-normal tracking-wide ${item.checked ? "text-emerald-600/70 line-through decoration-emerald-600/30" : theme.textSec}`}
+              >
                 {item.text}
               </span>
             </div>
-            <button onClick={() => handleDeleteItem(item.id)} className={`p-1.5 rounded-xl transition-opacity ${isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"}`}>
+            <button
+              onClick={() => handleDeleteItem(item.id)}
+              className={`p-1.5 rounded-xl transition-opacity ${isDarkMode ? "text-red-400 hover:bg-red-900/20" : "text-red-400 hover:bg-red-50"}`}
+            >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
