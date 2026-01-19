@@ -809,7 +809,7 @@ const FinanceScreen = ({
 
   const addRecord = async (content, val, imageBase64, customType = null) => {
     const targetMode = customType || mode;
-    const currentRate = rateData?.Exrate || 0.22;
+    const currentRate = rateData?.current || 0.22;
 
     // 使用本地時間格式化日期 (YYYY/M/D)
     const now = new Date();
@@ -1003,7 +1003,7 @@ const FinanceScreen = ({
       return;
     }
 
-    const currentRate = rateData?.Exrate || 0.22;
+    const currentRate = rateData?.current || 0.22;
     const newAmount =
       editingRecord.type === "finance" ? parseFloat(editAmount) : 0;
     const newTwdAmount =
