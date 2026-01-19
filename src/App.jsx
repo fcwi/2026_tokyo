@@ -2267,7 +2267,9 @@ const ItineraryApp = () => {
         normalizeLang(v.lang).includes(normalizeLang(configLangCode)),
       );
 
-    const shouldTryForeign = configLangCode !== "zh-TW";
+    // 🆕 導遊模式固定使用中文朗讀
+    const shouldTryForeign =
+      aiMode === "translate" && configLangCode !== "zh-TW";
 
     const spec = LANGUAGE_SPECS[configLangCode] || {
       checkRegex: /.*/,
