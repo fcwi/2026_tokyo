@@ -549,6 +549,23 @@ const ItineraryApp = () => {
     }
   }, []);
 
+  // 🆕 動態更新 PWA 狀態列顏色 (解決 Android 狀態列黑色問題)
+  useEffect(() => {
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    // 使用 ThemeConfig 中的背景色基調 (#FDFBF7) 而非純白，讓狀態列與背景融合更自然
+    const color = isDarkMode ? "#020617" : "#FDFBF7";
+
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute("content", color);
+    } else {
+      // 如果找不到，動態創建一個
+      const meta = document.createElement("meta");
+      meta.name = "theme-color";
+      meta.content = color;
+      document.head.appendChild(meta);
+    }
+  }, [isDarkMode]);
+
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const { currentTheme, componentStyles } = useThemeConfig(isDarkMode);

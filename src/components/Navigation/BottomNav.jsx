@@ -25,7 +25,7 @@ const BottomNav = ({
   const cAccent = theme.colorAccent;
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto">
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto pb-[env(safe-area-inset-bottom)]">
       <div
         className={`flex items-center gap-1.5 px-3 py-2 rounded-full backdrop-blur-2xl border transition-all duration-300
         ${

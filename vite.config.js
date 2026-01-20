@@ -32,19 +32,41 @@ export default defineConfig({
         name: "2026 東京輕井澤六日遊",
         short_name: "日本旅遊",
         description: "東京輕井澤家庭旅遊行程助手",
-        theme_color: "#ffffff",
-        display: "standalone", // 讓它看起來像原生 App (沒有瀏覽器網址列)
+        id: "/2026_tokyo/", // 唯一識別碼，確保安裝後不會被視為新 App
+        start_url: "/2026_tokyo/", // 確保啟動時從正確路徑開始
+        background_color: "#FDFBF7", // 啟動畫面背景色（與 APP 背景一致）
+        theme_color: "#FDFBF7", // 狀態列顏色（這是 PWA 模式的關鍵設定）
+        display: "standalone",
+        display_override: ["window-controls-overlay", "minimal-ui"],
+        orientation: "portrait", // 鎖定直向 (避免意外旋轉)
+        categories: ["travel", "productivity", "utilities"],
         icons: [
           {
-            src: "icon-192.png", // 注意：需要在 public 資料夾放入這些圖片，否則 Console 會報錯，但不影響運作
+            src: "icon-192.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any maskable", // 支援 Android 圓形/適應性圖示
           },
           {
             src: "icon-512.png",
             sizes: "512x512",
             type: "image/png",
+            purpose: "any maskable",
           },
+        ],
+        screenshots: [
+           // 如果有截圖可以放這裡，增加安裝提示出現的機率
+           // {
+           //   src: "screenshot-desktop.png",
+           //   sizes: "1280x800",
+           //   type: "image/png",
+           //   form_factor: "wide",
+           // },
+           // {
+           //   src: "screenshot-mobile.png",
+           //   sizes: "390x844",
+           //   type: "image/png",
+           // },
         ],
       },
 

@@ -4,16 +4,16 @@
 
 @layer base {
   body {
-    font-family: 
-      system-ui, 
-      -apple-system, 
-      "PingFang TC",        /* Mac/iOS 原生 */
-      "Microsoft JhengHei", /* Windows 原生 */
-      "Noto Sans TC",       /* 這是網路字型，沒找到才會下載 */
-      sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      "PingFang TC",
+      /* Mac/iOS 原生 */ "Microsoft JhengHei",
+      /* Windows 原生 */ "Noto Sans TC",
+      /* 這是網路字型，沒找到才會下載 */ sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    
+
     @apply text-slate-900 bg-white dark:text-slate-50 dark:bg-slate-950;
   }
 }
@@ -31,19 +31,23 @@
 @supports (-webkit-touch-callout: none) {
   /* 僅針對 iOS Safari */
   body {
-    /* 防止橡皮筋效果（過度滾動彈跳） */
-    overflow: hidden;
+    /* 防止橡皮筋效果，但允許內容擴充 */
     position: fixed;
     width: 100%;
     height: 100%;
+    /* 讓背景色延伸到狀態列 (瀏海) */
+    background-attachment: fixed;
   }
-  
+
   #root {
-    /* 允許內部滾動，但防止整個頁面彈跳 */
+    /* 使用 100dvh 確保填滿實際可視高度 */
+    height: 100dvh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    height: 100vh;
-    height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+
+    /* 關鍵：使用 Padding 避開瀏海與底部橫條，但保留背景色延伸 */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
@@ -58,7 +62,9 @@
 }
 
 /* 允許特定元素的文字選擇 */
-input, textarea, [contenteditable="true"] {
+input,
+textarea,
+[contenteditable="true"] {
   -webkit-touch-callout: default;
   -webkit-user-select: text;
   user-select: text;
@@ -83,9 +89,10 @@ input, textarea, [contenteditable="true"] {
 [class*="backdrop-blur-xl"],
 [class*="backdrop-blur-2xl"] {
   /* 減少重繪：使用 transition 而不是複雜的 animation */
-  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   /* 確保 GPU 層穩定 */
   contain: layout style paint;
 }
@@ -130,14 +137,17 @@ input, textarea, [contenteditable="true"] {
 
 /* 防止 iOS Safari 在輸入時自動縮放 (字體小於 16px 會觸發) */
 @media screen and (max-width: 768px) {
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-size: 16px;
   }
 }
 
 /* 🆕 滑動提示箭頭動畫 - 左右水平彈跳 */
 @keyframes bounceHorizontalLeft {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   50% {
@@ -146,7 +156,8 @@ input, textarea, [contenteditable="true"] {
 }
 
 @keyframes bounceHorizontalRight {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   50% {
