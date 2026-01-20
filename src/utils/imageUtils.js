@@ -1,12 +1,13 @@
 
-import heic2any from "heic2any";
+
 
 /**
  * 檢查並處理檔案，如果是 HEIC 格式則轉換為 JPEG Blob
  * @param {File} file - 原始檔案物件
+ * @param {Function} [onConversionStart] - 開始轉換時的回呼函式（用於顯示通知）
  * @returns {Promise<File|Blob>} - 如果是 HEIC 則回傳轉換後的 Blob (附帶 name 屬性)，否則回傳原檔案
  */
-export const processFileForHeic = async (file) => {
+export const processFileForHeic = async (file, onConversionStart) => {
     if (!file) return file;
 
     const isHeic =
@@ -16,7 +17,16 @@ export const processFileForHeic = async (file) => {
 
     if (isHeic) {
         console.log(`HEIC format detected: ${file.name}, converting...`);
+
+        // 如果有傳入 callback，則通知開始轉換
+        if (onConversionStart && typeof onConversionStart === "function") {
+            onConversionStart();
+        }
+
         try {
+            // 動態載入 heic2any，減少初始 bundle 大小
+            const heic2any = (await import("heic2any")).default;
+
             const convertedBlob = await heic2any({
                 blob: file,
                 toType: "image/jpeg",

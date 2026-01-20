@@ -741,7 +741,9 @@ const FinanceScreen = ({
     if (mode === "note") {
       const base64Promises = files.map(
         async (file) => {
-          const processedFile = await processFileForHeic(file);
+          const processedFile = await processFileForHeic(file, () =>
+            showToast("正在轉換 HEIC 圖片，請稍候...", "info")
+          );
           return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (event) => resolve(event.target.result);
@@ -768,7 +770,9 @@ const FinanceScreen = ({
       await processImagesForScanning(files, true);
     } else {
       const file = files[0];
-      const processedFile = await processFileForHeic(file);
+      const processedFile = await processFileForHeic(file, () =>
+        showToast("正在轉換 HEIC 圖片...", "info")
+      );
       const reader = new FileReader();
       reader.onload = (e) => {
         setNoteImages([e.target.result]);
@@ -794,7 +798,9 @@ const FinanceScreen = ({
     try {
       const base64Promises = files.map(
         async (file) => {
-          const processedFile = await processFileForHeic(file);
+          const processedFile = await processFileForHeic(file, () =>
+            showToast("正在轉換 HEIC 圖片，請稍候...", "info")
+          );
           return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (evt) => resolve(evt.target.result);

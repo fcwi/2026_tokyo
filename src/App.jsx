@@ -450,7 +450,9 @@ const ItineraryApp = () => {
     // 因此如果是 HEIC 先轉換，轉換後的 Blob 大小我們再來檢查
 
     // 處理 HEIC 轉換
-    const processedFile = await processFileForHeic(file);
+    const processedFile = await processFileForHeic(file, () => {
+      showToast("正在轉換 HEIC 圖片，請稍候...", "info");
+    });
     file = processedFile;
 
     if (file.size > maxFileSize) {
