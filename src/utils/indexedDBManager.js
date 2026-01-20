@@ -318,13 +318,13 @@ export const financeDB = {
   // 記錄操作
   async saveRecords(records) {
     const db = this.dbInstance || (await this.init());
-    
+
     // 第一步：先清除所有舊記錄
     await new Promise((resolve, reject) => {
       const clearTx = db.transaction("records", "readwrite");
       const clearStore = clearTx.objectStore("records");
       const clearRequest = clearStore.clear();
-      
+
       clearRequest.onsuccess = () => resolve();
       clearRequest.onerror = () => reject(clearRequest.error);
     });
@@ -341,9 +341,8 @@ export const financeDB = {
       const total = records.length;
 
       records.forEach((record) => {
-        // 不存儲圖片到記錄中
-        const recordToSave = { ...record, image: null };
-        const request = store.put(recordToSave);
+        // 圖片處理邏輯已在調用端處理 (FinanceNote.jsx 會只保留 URL)，這裡直接儲存
+        const request = store.put(record);
 
         request.onsuccess = () => {
           completed++;
@@ -415,10 +414,11 @@ export const financeDB = {
     const db = this.dbInstance || (await this.init());
     const tx = db.transaction("images", "readwrite");
     const store = tx.objectStore("images");
+    const strRecordId = String(recordId); // 強制轉為字串
 
     const imageRecord = {
-      id: `${recordId}_${Date.now()}`,
-      recordId,
+      id: `${strRecordId}_${Date.now()}`,
+      recordId: strRecordId,
       data: imageData,
       filename,
       timestamp: Date.now(),
@@ -437,9 +437,10 @@ export const financeDB = {
     const tx = db.transaction("images", "readonly");
     const store = tx.objectStore("images");
     const index = store.index("recordId");
+    const strRecordId = String(recordId); // 強制轉為字串
 
     return new Promise((resolve, reject) => {
-      const request = index.getAll(recordId);
+      const request = index.getAll(strRecordId);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -474,7 +475,8 @@ export const financeDB = {
     const db = this.dbInstance || (await this.init());
     const tx = db.transaction("images", "readwrite");
     const store = tx.objectStore("images");
-    const validIdsSet = new Set(validRecordIds);
+    // 確保所有 validRecordIds 都是字串
+    const validIdsSet = new Set(validRecordIds.map(id => String(id)));
 
     return new Promise((resolve, reject) => {
       const request = store.openCursor();
@@ -485,7 +487,8 @@ export const financeDB = {
         if (cursor) {
           const image = cursor.value;
           // 如果圖片對應的記錄不存在，刪除該圖片
-          if (!validIdsSet.has(image.recordId)) {
+          // 比較時也將 image.recordId 轉為字串
+          if (!validIdsSet.has(String(image.recordId))) {
             cursor.delete();
             deletedCount++;
           }

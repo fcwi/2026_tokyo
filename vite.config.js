@@ -134,8 +134,8 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false, // 如果要保留 console.log以便除錯，請設為 false
-        drop_debugger: false, // 移除 debugger
+        drop_console: true, // 如果要保留 console.log以便除錯，請設為 false
+        drop_debugger: true, // 移除 debugger
       },
     },
     rollupOptions: {

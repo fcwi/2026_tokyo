@@ -301,36 +301,45 @@ const FinanceScreen = ({
 
   // --- 6. Effect 與 邏輯 ---
 
-  // 🆕 將圖片 URL 下載並轉換為 base64（使用 Canvas 繞過 CORS）
+  // 🆕 將圖片 URL 下載並轉換為 base64（改用 fetch 以獲得更穩定的結果與正確的 MIME type）
   const fetchImageAsBase64 = useCallback(async (imageUrl) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous"; // 嘗試使用 CORS
-
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          const base64 = canvas.toDataURL("image/jpeg", 0.8);
-          resolve(base64);
-        } catch (error) {
-          console.warn("Canvas 轉換失敗 (可能是 CORS):", error);
-          resolve(null);
-        }
-      };
-
-      img.onerror = () => {
-        console.warn("圖片載入失敗:", imageUrl);
-        resolve(null);
-      };
-
+    if (!imageUrl) return null;
+    try {
       // 添加時間戳避免快取問題
-      img.src =
-        imageUrl + (imageUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
-    });
+      const fetchUrl = imageUrl + (imageUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+      
+      const response = await fetch(fetchUrl, { mode: "cors" });
+      if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+      
+      const blob = await response.blob();
+      
+      // 轉換 Blob 為 Base64
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result;
+          // 基本驗證，確保回傳的是圖片 Data URL
+          if (typeof base64 === "string" && base64.startsWith("data:image")) {
+             // 附加檔案類型資訊給外部使用 (選擇性)
+             resolve({ 
+               base64, 
+               mimeType: blob.type 
+             });
+          } else {
+            console.warn("Invalid base64 result");
+            resolve(null);
+          }
+        };
+        reader.onerror = () => {
+          console.warn("FileReader error");
+          resolve(null);
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.warn("Fetch image failed:", error);
+      return null;
+    }
   }, []);
 
   const handleSyncData = useCallback(
@@ -362,10 +371,12 @@ const FinanceScreen = ({
 
           const formatted = cloudRecords.map((r) => ({
             ...r,
+            id: String(r.id), // 強制轉為字串，確保 IndexedDB ID 類型一致
             date: normalizeToLocalDate(r.date, r.timestamp),
             amount: Number(r.amount) || 0,
             twdAmount: Number(r.twdAmount) || 0,
             synced: true,
+            hasCloudImage: !!r.image, // 🆕 標記此記錄有雲端圖片，供離線讀取使用
           }));
           // 舊 -> 新
           formatted.sort(
@@ -423,17 +434,48 @@ const FinanceScreen = ({
 
                     // 下載並快取圖片
                     console.log(`⬇️ 下載圖片中: ${record.id}`);
-                    const base64 = await fetchImageAsBase64(record.image);
-                    if (base64) {
-                      console.log(`💾 儲存圖片到 IndexedDB: ${record.id}`);
-                      await financeDB.saveImage(record.id, base64);
+                    const result = await fetchImageAsBase64(record.image);
+                    
+                    if (result && result.base64) {
+                      const { base64, mimeType } = result;
+                      console.log(`💾 儲存圖片到 IndexedDB: ${record.id}, type: ${mimeType}`);
+                      
+                      // 嘗試從 URL 提取檔名
+                      let filename = "image";
+                      try {
+                        const urlObj = new URL(record.image);
+                        const pathname = urlObj.pathname;
+                        const extracted = pathname.substring(pathname.lastIndexOf('/') + 1);
+                        if (extracted && extracted.length < 50) {
+                          filename = extracted;
+                        }
+                      } catch (e) {
+                         // ignore
+                      }
+
+                      // 根據 MIME type 強制附加或修正副檔名
+                      let ext = ".jpg";
+                      if (mimeType === "image/png") ext = ".png";
+                      else if (mimeType === "image/webp") ext = ".webp";
+                      else if (mimeType === "image/gif") ext = ".gif";
+                      
+                      // 如果檔名沒有副檔名，或是副檔名不匹配，則附加
+                      if (!filename.toLowerCase().endsWith(ext)) {
+                         // 簡單檢查是否已有任何圖片副檔名
+                         if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(filename)) {
+                           filename += ext;
+                         }
+                      }
+
+                      await financeDB.saveImage(record.id, base64, filename);
+                      
                       // 🆕 立即更新 UI，使用快取的 base64
                       setRecords((prev) =>
                         prev.map((r) =>
-                          r.id === record.id ? { ...r, image: base64 } : r,
+                          String(r.id) === String(record.id) ? { ...r, image: base64 } : r,
                         ),
                       );
-                      console.log(`✅ 已快取圖片: record ${record.id}`);
+                      console.log(`✅ 已快取圖片: record ${record.id} (${filename})`);
                     } else {
                       console.warn(`❌ 下載圖片失敗 (返回 null): ${record.id}`);
                     }
@@ -479,6 +521,8 @@ const FinanceScreen = ({
           return {
             ...r,
             image: imageValue,
+            // 🆕 確保保留 hasCloudImage 標記，若原始資料有圖片（base64或URL）也視為有圖片
+            hasCloudImage: r.hasCloudImage || !!r.image, 
           };
         });
 
@@ -532,7 +576,8 @@ const FinanceScreen = ({
         if (updatedRecords.length > 0) {
           setRecords((prevRecords) =>
             prevRecords.map((r) => {
-              const cached = updatedRecords.find((u) => u.id === r.id);
+              // 強制使用 String 比較 ID，確保安全性
+              const cached = updatedRecords.find((u) => String(u.id) === String(r.id));
               if (cached) {
                 return { ...r, image: cached.image };
               }
