@@ -102,7 +102,6 @@ export const aiChatDB = {
       const insertTx = db.transaction("messages", "readwrite");
       const insertStore = insertTx.objectStore("messages");
 
-      let inserted = 0;
       messages.forEach((msg, index) => {
         const record = {
           ...msg,
@@ -112,9 +111,6 @@ export const aiChatDB = {
         };
         // 使用 put 而非 add，允許覆蓋現有記錄
         const insertRequest = insertStore.put(record);
-        insertRequest.onsuccess = () => {
-          inserted++;
-        };
         insertRequest.onerror = () => reject(insertRequest.error);
       });
 
@@ -322,10 +318,25 @@ export const financeDB = {
   // 記錄操作
   async saveRecords(records) {
     const db = this.dbInstance || (await this.init());
-    const tx = db.transaction("records", "readwrite");
-    const store = tx.objectStore("records");
+    
+    // 第一步：先清除所有舊記錄
+    await new Promise((resolve, reject) => {
+      const clearTx = db.transaction("records", "readwrite");
+      const clearStore = clearTx.objectStore("records");
+      const clearRequest = clearStore.clear();
+      
+      clearRequest.onsuccess = () => resolve();
+      clearRequest.onerror = () => reject(clearRequest.error);
+    });
+
+    // 第二步：保存新記錄
+    if (records.length === 0) {
+      return Promise.resolve();
+    }
 
     return new Promise((resolve, reject) => {
+      const tx = db.transaction("records", "readwrite");
+      const store = tx.objectStore("records");
       let completed = 0;
       const total = records.length;
 
@@ -343,10 +354,6 @@ export const financeDB = {
 
         request.onerror = () => reject(request.error);
       });
-
-      if (total === 0) {
-        tx.oncomplete = () => resolve();
-      }
     });
   },
 
@@ -459,6 +466,37 @@ export const financeDB = {
       const request = store.delete(imageId);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
+    });
+  },
+
+  // 🆕 清理孤立的圖片（沒有對應記錄的圖片）
+  async cleanOrphanedImages(validRecordIds) {
+    const db = this.dbInstance || (await this.init());
+    const tx = db.transaction("images", "readwrite");
+    const store = tx.objectStore("images");
+    const validIdsSet = new Set(validRecordIds);
+
+    return new Promise((resolve, reject) => {
+      const request = store.openCursor();
+      let deletedCount = 0;
+
+      request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          const image = cursor.value;
+          // 如果圖片對應的記錄不存在，刪除該圖片
+          if (!validIdsSet.has(image.recordId)) {
+            cursor.delete();
+            deletedCount++;
+          }
+          cursor.continue();
+        } else {
+          console.log(`🧹 清理了 ${deletedCount} 張孤立圖片`);
+        }
+      };
+
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => resolve(deletedCount);
     });
   },
 

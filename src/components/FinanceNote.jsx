@@ -377,6 +377,10 @@ const FinanceScreen = ({
           try {
             await financeDB.saveRecords(formatted);
 
+            // 🆕 清理孤立的圖片快取（被刪除記錄的圖片）
+            const validRecordIds = formatted.map((r) => r.id);
+            await financeDB.cleanOrphanedImages(validRecordIds);
+
             // 🆕 快取圖片到 IndexedDB（背景執行，快取完成後立即更新 UI）
             const recordsWithImages = formatted.filter(
               (r) =>
