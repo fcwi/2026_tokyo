@@ -103,7 +103,7 @@ const FinanceTab = lazy(() => import("./components/Tabs/FinanceTab.jsx"));
 // 行程分頁主畫面 - 使用動態導入減少初始 bundle
 const ItineraryTab = lazy(() => import("./components/Tabs/ItineraryTab.jsx"));
 
-const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
+// const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
 import DayMap from "./components/DayMap.jsx";
 
 import WeatherParticles from "./components/Background/WeatherParticles.jsx";
