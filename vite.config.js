@@ -19,7 +19,7 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_BUILD_VERSION': JSON.stringify(generateBuildVersion()),
   },
-  
+
   // 🆕 在 plugins 陣列中加入 VitePWA
   plugins: [
     react(),
@@ -55,18 +55,18 @@ export default defineConfig({
           },
         ],
         screenshots: [
-           // 如果有截圖可以放這裡，增加安裝提示出現的機率
-           // {
-           //   src: "screenshot-desktop.png",
-           //   sizes: "1280x800",
-           //   type: "image/png",
-           //   form_factor: "wide",
-           // },
-           // {
-           //   src: "screenshot-mobile.png",
-           //   sizes: "390x844",
-           //   type: "image/png",
-           // },
+          // 如果有截圖可以放這裡，增加安裝提示出現的機率
+          // {
+          //   src: "screenshot-desktop.png",
+          //   sizes: "1280x800",
+          //   type: "image/png",
+          //   form_factor: "wide",
+          // },
+          // {
+          //   src: "screenshot-mobile.png",
+          //   sizes: "390x844",
+          //   type: "image/png",
+          // },
         ],
       },
 
@@ -134,8 +134,8 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // 如果要保留 console.log以便除錯，請設為 false
-        drop_debugger: true, // 移除 debugger
+        drop_console: false, // 如果要保留 console.log以便除錯，請設為 false
+        drop_debugger: false, // 移除 debugger
       },
     },
     rollupOptions: {
