@@ -66,9 +66,12 @@ const WeatherCard = memo(
                   {userWeather.desc || "載入中"}
                 </span>
                 <span className={`text-xs font-medium mt-0.5 ${theme.textSec}`}>
-                  {userWeather.temp !== null
-                    ? `高溫:${userWeather.temp + 4}°  低溫:${userWeather.temp - 2}°`
-                    : ""}
+                  {userWeather.daily?.temperature_2m_max?.[0] !== undefined &&
+                  userWeather.daily?.temperature_2m_min?.[0] !== undefined
+                    ? `高溫:${Math.round(userWeather.daily.temperature_2m_max[0])}°  低溫:${Math.round(userWeather.daily.temperature_2m_min[0])}°`
+                    : userWeather.temp !== null
+                      ? `高溫:${userWeather.temp + 4}°  低溫:${userWeather.temp - 2}°`
+                      : ""}
                 </span>
               </div>
             </div>
