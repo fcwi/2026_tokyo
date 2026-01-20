@@ -30,6 +30,7 @@ import {
   parseReceiptWithGemini,
   fetchFromGAS,
 } from "../utils/financeHelper";
+import { processFileForHeic } from "../utils/imageUtils";
 import { financeDB } from "../utils/indexedDBManager.js";
 
 // 預設頭像列表
@@ -739,12 +740,14 @@ const FinanceScreen = ({
 
     if (mode === "note") {
       const base64Promises = files.map(
-        (file) =>
-          new Promise((resolve) => {
+        async (file) => {
+          const processedFile = await processFileForHeic(file);
+          return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (event) => resolve(event.target.result);
-            reader.readAsDataURL(file);
-          }),
+            reader.readAsDataURL(processedFile);
+          });
+        }
       );
       try {
         const newImages = await Promise.all(base64Promises);
@@ -765,11 +768,12 @@ const FinanceScreen = ({
       await processImagesForScanning(files, true);
     } else {
       const file = files[0];
+      const processedFile = await processFileForHeic(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setNoteImages([e.target.result]);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processedFile);
     }
     e.target.value = "";
   };
@@ -789,12 +793,14 @@ const FinanceScreen = ({
   const processImagesForScanning = async (files, isReset = false) => {
     try {
       const base64Promises = files.map(
-        (file) =>
-          new Promise((resolve) => {
+        async (file) => {
+          const processedFile = await processFileForHeic(file);
+          return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = (evt) => resolve(evt.target.result);
-            reader.readAsDataURL(file);
-          }),
+            reader.readAsDataURL(processedFile);
+          });
+        }
       );
       const newImages = await Promise.all(base64Promises);
       setReceiptImages((prev) =>

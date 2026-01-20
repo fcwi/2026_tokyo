@@ -87,6 +87,7 @@ import {
   buildShareTextLogic, // 新增
   getWeatherForecastIndex, // 新增
 } from "./utils/itineraryHelpers.js";
+import { processFileForHeic } from "./utils/imageUtils";
 
 // 抑制 ESLint 對於 JSX 中 motion 未使用的誤判
 // eslint-disable-next-line no-unused-vars
@@ -439,11 +440,19 @@ const ItineraryApp = () => {
     });
   };
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files[0];
+  const handleImageSelect = async (e) => {
+    let file = e.target.files[0];
     if (!file) return;
 
+    // 先做基本的檔案大小檢查 (針對非HEIC，因為HEIC轉換後大小會變)
     const maxFileSize = 5 * 1024 * 1024;
+    // 注意: processFileForHeic 可能會回傳 Blob，沒有 size 屬性限制檢查
+    // 因此如果是 HEIC 先轉換，轉換後的 Blob 大小我們再來檢查
+
+    // 處理 HEIC 轉換
+    const processedFile = await processFileForHeic(file);
+    file = processedFile;
+
     if (file.size > maxFileSize) {
       showToast("圖片檔案過大（超過 5MB），請選擇較小的圖片", "error");
       return;
