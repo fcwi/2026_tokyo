@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  Polyline,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Lock, Unlock, Loader2 } from "lucide-react";
@@ -23,7 +30,7 @@ const createNumberedIcon = (index, isDarkMode) => {
         <div style="
           position: absolute;
           inset: 0;
-          background: ${isDarkMode ? 'linear-gradient(135deg, #60a5fa 0%, #0ea5e9 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'};
+          background: ${isDarkMode ? "linear-gradient(135deg, #60a5fa 0%, #0ea5e9 100%)" : "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)"};
           border-radius: 50%;
           opacity: 0.2;
           transform: scale(1.5);
@@ -32,10 +39,10 @@ const createNumberedIcon = (index, isDarkMode) => {
           position: relative;
           width: 100%;
           height: 100%;
-          background: ${isDarkMode ? 'linear-gradient(135deg, #60a5fa 0%, #0ea5e9 100%)' : 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'};
+          background: ${isDarkMode ? "linear-gradient(135deg, #60a5fa 0%, #0ea5e9 100%)" : "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)"};
           border: 3px solid white;
           border-radius: 50%;
-          box-shadow: ${isDarkMode ? '0 0 16px rgba(96, 165, 250, 0.5), 0 3px 10px rgba(0, 0, 0, 0.4)' : '0 3px 10px rgba(0, 0, 0, 0.2)'};
+          box-shadow: ${isDarkMode ? "0 0 16px rgba(96, 165, 250, 0.5), 0 3px 10px rgba(0, 0, 0, 0.4)" : "0 3px 10px rgba(0, 0, 0, 0.2)"};
           display: flex;
           align-items: center;
           justify-content: center;
@@ -69,18 +76,20 @@ const userLocationIcon = new L.DivIcon({
 // --- 2. 控制器組件 ---
 const MapController = ({ events, userLocation, routeCoords }) => {
   const map = useMap();
-  
+
   useEffect(() => {
     // 收集所有需要顯示的點：活動點 + 路線點 + 使用者位置
     const points = [];
     events.forEach((e) => {
       if (e.lat && e.lon) points.push([e.lat, e.lon]);
     });
-    
+
     // 如果有路線，路線的轉折點也納入計算，確保整條路都在視野內
     if (routeCoords && routeCoords.length > 0) {
       // 為了效能，只取部分路線點來計算邊界 (例如每 10 個取 1 個)
-      routeCoords.filter((_, i) => i % 10 === 0).forEach(pt => points.push(pt));
+      routeCoords
+        .filter((_, i) => i % 10 === 0)
+        .forEach((pt) => points.push(pt));
     }
 
     if (userLocation && userLocation.lat && userLocation.lon) {
@@ -110,11 +119,15 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
   // 過濾出有效座標的事件
-  const validEvents = useMemo(() => events.filter((e) => e.lat && e.lon), [events]);
+  const validEvents = useMemo(
+    () => events.filter((e) => e.lat && e.lon),
+    [events],
+  );
   const defaultCenter = [35.6895, 139.6917];
 
   // 始終使用日間模式地圖磚層，夜間模式僅調暗亮度
-  const tileLayerUrl = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
+  const tileLayerUrl =
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
   // 🔥 核心邏輯：從 OSRM 獲取路線資料
   useEffect(() => {
@@ -127,19 +140,19 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
       setIsRouteLoading(true);
       try {
         // 1. 組合座標字串 (OSRM 格式: lon,lat;lon,lat)
-        const waypoints = validEvents
-          .map(e => `${e.lon},${e.lat}`)
-          .join(';');
+        const waypoints = validEvents.map((e) => `${e.lon},${e.lat}`).join(";");
 
         // 2. 呼叫 API (使用 public OSRM server, 僅供開發測試)
         const url = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
-        
+
         const response = await fetch(url);
         const data = await response.json();
 
         if (data.routes && data.routes[0]) {
           // 3. 轉換座標：GeoJSON 是 [lon, lat]，Leaflet 需要 [lat, lon]
-          const coordinates = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+          const coordinates = data.routes[0].geometry.coordinates.map(
+            (coord) => [coord[1], coord[0]],
+          );
           setRouteCoords(coordinates);
         }
       } catch (error) {
@@ -153,10 +166,12 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
   }, [validEvents]);
 
   return (
-    <div className={`relative w-full h-64 rounded-[2rem] overflow-hidden border z-0 group transition-all duration-300
-      ${isDarkMode 
-        ? "border-neutral-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.3)] bg-[#1a1a1a]" 
-        : "border-stone-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-[#fdfdfd]"
+    <div
+      className={`relative w-full h-64 rounded-[2rem] overflow-hidden border z-0 group transition-all duration-300
+      ${
+        isDarkMode
+          ? "border-neutral-700/50 shadow-[0_8px_30px_rgb(0,0,0,0.3)] bg-[#1a1a1a]"
+          : "border-stone-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-[#fdfdfd]"
       }`}
     >
       {/* 鎖定按鈕 (改為啟動互動模式) */}
@@ -168,14 +183,16 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
         }}
         className={`absolute top-4 right-4 z-[1001] flex items-center gap-1.5 px-4 py-2 rounded-full backdrop-blur-md shadow-lg border transition-all duration-300 active:scale-95
           ${
-            isDarkMode 
+            isDarkMode
               ? "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
               : "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
           }
         `}
       >
         <Unlock className="w-3.5 h-3.5" />
-        <span className="text-[11px] font-black tracking-wider uppercase">開啟互動地圖</span>
+        <span className="text-[11px] font-black tracking-wider uppercase">
+          開啟互動地圖
+        </span>
       </button>
 
       {/* 載入中動畫 (位於左上角) */}
@@ -187,7 +204,7 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
       )}
 
       {/* 點擊遮罩 (點擊地圖任何地方皆可開啟彈窗) */}
-      <div 
+      <div
         className="absolute inset-0 z-[1000] flex items-center justify-center bg-transparent cursor-pointer"
         onClick={() => setIsModalOpen(true)}
         onMouseEnter={() => setShowHint(true)}
@@ -212,45 +229,49 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
         boxZoom={false}
       >
         <TileLayer
-          attribution='&copy; CARTO, &copy; OpenStreetMap'
+          attribution="&copy; CARTO, &copy; OpenStreetMap"
           url={tileLayerUrl}
         />
 
-        <MapController events={validEvents} userLocation={userLocation} routeCoords={routeCoords} />
+        <MapController
+          events={validEvents}
+          userLocation={userLocation}
+          routeCoords={routeCoords}
+        />
 
         {/* 1. 繪製路線 (Polyline) */}
         {routeCoords.length > 0 && (
           <>
             {/* 外框線 (製造邊框效果) */}
-            <Polyline 
-              positions={routeCoords} 
-              pathOptions={{ 
-                color: isDarkMode ? 'rgba(0,0,0,0.4)' : 'white', 
-                weight: 8, 
-                opacity: 0.6 
-              }} 
+            <Polyline
+              positions={routeCoords}
+              pathOptions={{
+                color: isDarkMode ? "rgba(0,0,0,0.4)" : "white",
+                weight: 8,
+                opacity: 0.6,
+              }}
             />
             {/* 主路線 */}
-            <Polyline 
-              positions={routeCoords} 
-              pathOptions={{ 
-                color: isDarkMode ? '#00d4ff' : '#3b82f6',
-                weight: isDarkMode ? 5 : 4, 
+            <Polyline
+              positions={routeCoords}
+              pathOptions={{
+                color: isDarkMode ? "#00d4ff" : "#3b82f6",
+                weight: isDarkMode ? 5 : 4,
                 opacity: isDarkMode ? 1 : 0.9,
-                lineCap: 'round',
-                lineJoin: 'round'
-              }} 
+                lineCap: "round",
+                lineJoin: "round",
+              }}
             />
             {isDarkMode && (
-              <Polyline 
-                positions={routeCoords} 
-                pathOptions={{ 
-                  color: '#00d4ff', 
-                  weight: 5, 
+              <Polyline
+                positions={routeCoords}
+                pathOptions={{
+                  color: "#00d4ff",
+                  weight: 5,
                   opacity: 0.3,
-                  lineCap: 'round',
-                  lineJoin: 'round'
-                }} 
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
               />
             )}
           </>
@@ -258,20 +279,28 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
 
         {/* 2. 繪製編號標記 */}
         {validEvents.map((event, idx) => (
-          <Marker 
-            key={idx} 
-            position={[event.lat, event.lon]} 
+          <Marker
+            key={idx}
+            position={[event.lat, event.lon]}
             icon={createNumberedIcon(idx, isDarkMode)}
           >
-            <Popup className="custom-popup" closeButton={false} autoPanPadding={[50, 50]}>
-              <div className={`p-3 rounded-xl shadow-lg border backdrop-blur-md -m-[13px] -mb-[14px] ${isDarkMode ? 'bg-[#1a1a1a]/90 border-neutral-700 text-neutral-200' : 'bg-white/90 border-stone-100 text-stone-800'}`}>
+            <Popup
+              className="custom-popup"
+              closeButton={false}
+              autoPanPadding={[50, 50]}
+            >
+              <div
+                className={`p-3 rounded-xl shadow-lg border backdrop-blur-md -m-[13px] -mb-[14px] ${isDarkMode ? "bg-[#1a1a1a]/90 border-neutral-700 text-neutral-200" : "bg-white/90 border-stone-100 text-stone-800"}`}
+              >
                 <div className="font-bold text-sm mb-1 flex items-center gap-2">
                   <span className="flex items-center justify-center w-4 h-4 rounded-full bg-blue-500 text-white text-[9px] font-bold">
                     {idx + 1}
                   </span>
                   {event.time} {event.title}
                 </div>
-                <div className={`text-xs leading-snug ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
+                <div
+                  className={`text-xs leading-snug ${isDarkMode ? "text-neutral-400" : "text-stone-500"}`}
+                >
                   {event.desc}
                 </div>
               </div>
@@ -287,14 +316,16 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
             zIndexOffset={1000}
           >
             <Popup closeButton={false} className="custom-popup">
-               <div className="p-2 px-3 rounded-full bg-emerald-500 shadow-lg -m-[13px] -mb-[14px]">
-                <div className="font-bold text-xs text-white text-center whitespace-nowrap">您的位置</div>
+              <div className="p-2 px-3 rounded-full bg-emerald-500 shadow-lg -m-[13px] -mb-[14px]">
+                <div className="font-bold text-xs text-white text-center whitespace-nowrap">
+                  您的位置
+                </div>
               </div>
             </Popup>
           </Marker>
         )}
       </MapContainer>
-      
+
       {/* 樣式覆蓋 */}
       <style jsx global>{`
         .custom-popup .leaflet-popup-content-wrapper {
@@ -315,16 +346,22 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
         }
 
         @keyframes modal-in {
-          from { opacity: 0; transform: scale(0.95) translateY(10px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
+          from {
+            opacity: 0;
+            transform: scale(0.95) translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
         }
         .animate-modal-in {
           animation: modal-in 0.3s ease-out forwards;
         }
       `}</style>
 
-      {/* 互動式地圖彈窗 (使用 Portal 確保在最上層) */}
-      {isModalOpen && createPortal(
+      {/* 互動式地圖彈窗 (使用 Portal 確保在最上層) - 🚀 優化：始終渲染，內部用 CSS 控制顯示/隱藏 */}
+      {createPortal(
         <MapModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -334,7 +371,7 @@ const DayMap = ({ events, userLocation, isDarkMode, theme, onModalToggle }) => {
           routeCoords={routeCoords}
           theme={theme}
         />,
-        document.body
+        document.body,
       )}
     </div>
   );

@@ -189,6 +189,8 @@ const ItineraryApp = () => {
     type: "success",
   });
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
+  // 🚀 優化標記：閒置預載是否完成 (用於控制 Tab 預渲染)
+  const [isIdlePreloadDone, setIsIdlePreloadDone] = useState(false);
 
   // 圖片下載：處理 data URL 及一般 URL，避免另開分頁
   const handleDownloadPreview = async (e) => {
@@ -285,6 +287,48 @@ const ItineraryApp = () => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // 🚀 閒置預載 (Idle Preloading)：解決 Lazy Loading 點擊延遲問題
+  // 在首屏渲染完成後，利用瀏覽器空閒時間預先下載重型組件
+  useEffect(() => {
+    const preloadLazyComponents = async () => {
+      // 延遲 2.5 秒，確保不會影響首屏關鍵資源載入
+      await new Promise((r) => setTimeout(r, 2500));
+
+      if (isDev) console.log("🚀 [Idle Preload] 開始背景預載重型組件...");
+
+      try {
+        // 主動觸發 import，瀏覽器會下載並快取 JS
+        // 當用戶稍後點擊按鈕時，React.lazy 會直接命中快取，達到「秒開」體驗
+        const componentsToLoad = [
+          import("./components/DayMap.jsx"),
+          import("./components/MapModal.jsx"),
+          import("./components/CalculatorModal.jsx"),
+          import("./components/WeatherDetail.jsx"),
+          import("./components/AI/AIPanel.jsx"),
+          import("./components/ChatInput.jsx"),
+          import("./components/TestModePanel.jsx"),
+        ];
+
+        await Promise.all(componentsToLoad);
+        if (isDev) console.log("✅ [Idle Preload] 背景預載完成");
+
+        // 標記預載完成，開始預渲染 Tab
+        setIsIdlePreloadDone(true);
+      } catch (e) {
+        console.warn("⚠️ [Idle Preload] 預載失敗 (非致命):", e);
+        // 即使失敗也設為 true，確保至少有機會渲染
+        setIsIdlePreloadDone(true);
+      }
+    };
+
+    // 優先使用 requestIdleCallback 在瀏覽器完全空閒時執行
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(() => preloadLazyComponents(), { timeout: 5000 });
+    } else {
+      setTimeout(preloadLazyComponents, 3000);
+    }
   }, []);
 
   // 偵測 iOS Safari（iPadOS 也涵蓋）以提供友善提示
@@ -3530,52 +3574,54 @@ const ItineraryApp = () => {
 
         {/* --- 分頁內容 --- */}
 
-        {/* 1. 行程分頁 (Itinerary Tab) */}
-        {activeTab === "itinerary" && (
-          <ItineraryTab
-            activeDay={activeDay}
-            changeDay={changeDay}
-            direction={direction}
-            slideVariants={slideVariants}
-            navContainerRef={navContainerRef}
-            navItemsRef={navItemsRef}
-            itineraryData={itineraryData}
-            isDarkMode={isDarkMode}
-            theme={theme}
-            componentStyles={componentStyles}
-            tripConfig={tripConfig}
-            tripStatus={tripStatus}
-            daysUntilTrip={daysUntilTrip}
-            checklistData={checklistData}
-            currentTripDayIndex={currentTripDayIndex}
-            weatherForecast={weatherForecast}
-            userWeather={userWeather}
-            displayWeather={displayWeather}
-            isFlightInfoExpanded={isFlightInfoExpanded}
-            setIsFlightInfoExpanded={setIsFlightInfoExpanded}
-            handleCopy={handleCopy}
-            expandedItems={expandedItems}
-            toggleExpand={toggleExpand}
-            getMapLink={getMapLink}
-            colors={colors}
-            currentTheme={currentTheme}
-            handleWeatherDetailOpen={handleWeatherDetailOpen}
-            isUpdatingLocation={isUpdatingLocation}
-            isTestMode={isTestMode}
-            testDateTime={testDateTime}
-            getWeatherInfo={getWeatherInfo}
-            getUserLocationWeather={getUserLocationWeather}
-            handleMapModalToggle={handleMapModalToggle}
-            scrollContainerRef={scrollContainerRef}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            pullDistance={pullDistance}
-            isRefreshing={isRefreshing}
-            current={current}
-            currentLocation={currentLocation}
-            dayMapEvents={dayMapEvents}
-          />
-        )}
+        {/* 1. 行程分頁 (Itinerary Tab) - 🚀 優化：Keep Alive */}
+        <div style={{ display: activeTab === "itinerary" ? "block" : "none" }}>
+          {(activeTab === "itinerary" || isIdlePreloadDone) && (
+            <ItineraryTab
+              activeDay={activeDay}
+              changeDay={changeDay}
+              direction={direction}
+              slideVariants={slideVariants}
+              navContainerRef={navContainerRef}
+              navItemsRef={navItemsRef}
+              itineraryData={itineraryData}
+              isDarkMode={isDarkMode}
+              theme={theme}
+              componentStyles={componentStyles}
+              tripConfig={tripConfig}
+              tripStatus={tripStatus}
+              daysUntilTrip={daysUntilTrip}
+              checklistData={checklistData}
+              currentTripDayIndex={currentTripDayIndex}
+              weatherForecast={weatherForecast}
+              userWeather={userWeather}
+              displayWeather={displayWeather}
+              isFlightInfoExpanded={isFlightInfoExpanded}
+              setIsFlightInfoExpanded={setIsFlightInfoExpanded}
+              handleCopy={handleCopy}
+              expandedItems={expandedItems}
+              toggleExpand={toggleExpand}
+              getMapLink={getMapLink}
+              colors={colors}
+              currentTheme={currentTheme}
+              handleWeatherDetailOpen={handleWeatherDetailOpen}
+              isUpdatingLocation={isUpdatingLocation}
+              isTestMode={isTestMode}
+              testDateTime={testDateTime}
+              getWeatherInfo={getWeatherInfo}
+              getUserLocationWeather={getUserLocationWeather}
+              handleMapModalToggle={handleMapModalToggle}
+              scrollContainerRef={scrollContainerRef}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+              pullDistance={pullDistance}
+              isRefreshing={isRefreshing}
+              current={current}
+              currentLocation={currentLocation}
+              dayMapEvents={dayMapEvents}
+            />
+          )}
+        </div>
 
         {/* --- 頁籤：實用指南 (Guides Tab) --- */}
         {activeTab === "guides" && (
@@ -4076,60 +4122,64 @@ const ItineraryApp = () => {
           </div>
         )}
 
-        {/* --- 頁籤：AI 導遊 (AI Tab) --- */}
-        {activeTab === "ai" && (
-          <AIPanel
-            isDarkMode={isDarkMode}
-            theme={theme}
-            currentTheme={currentTheme}
-            componentStyles={componentStyles}
-            aiMode={aiMode}
-            handleSwitchMode={handleSwitchMode}
-            isSpeaking={isSpeaking}
-            setIsSpeaking={setIsSpeaking}
-            showAiSearch={showAiSearch}
-            setShowAiSearch={setShowAiSearch}
-            aiSearchQuery={aiSearchQuery}
-            setAiSearchQuery={setAiSearchQuery}
-            getSearchResults={getSearchResults}
-            scrollToMessage={scrollToMessage}
-            handleClearChat={handleClearChat}
-            messages={messages}
-            renderMessage={renderMessage}
-            handleSpeak={handleSpeak}
-            isLoading={isLoading}
-            loadingText={loadingText}
-            chatEndRef={chatEndRef}
-            setFullPreviewImage={setFullPreviewImage}
-            expandedMessages={expandedMessages}
-            toggleMessageExpand={toggleMessageExpand}
-            messageRefs={messageRefs}
-            tripConfig={tripConfig}
-            inputMessage={inputMessage}
-            setInputMessage={setInputMessage}
-            listeningLang={listeningLang}
-            toggleListening={toggleListening}
-            fileInputRef={fileInputRef}
-            handleImageSelect={handleImageSelect}
-            selectedImage={selectedImage}
-            clearImage={clearImage}
-            handleSendMessage={handleSendMessage}
-          />
-        )}
+        {/* --- 頁籤：AI 導遊 (AI Tab) - 🚀 優化：Keep Alive */}
+        <div style={{ display: activeTab === "ai" ? "block" : "none" }}>
+          {(activeTab === "ai" || isIdlePreloadDone) && (
+            <AIPanel
+              isDarkMode={isDarkMode}
+              theme={theme}
+              currentTheme={currentTheme}
+              componentStyles={componentStyles}
+              aiMode={aiMode}
+              handleSwitchMode={handleSwitchMode}
+              isSpeaking={isSpeaking}
+              setIsSpeaking={setIsSpeaking}
+              showAiSearch={showAiSearch}
+              setShowAiSearch={setShowAiSearch}
+              aiSearchQuery={aiSearchQuery}
+              setAiSearchQuery={setAiSearchQuery}
+              getSearchResults={getSearchResults}
+              scrollToMessage={scrollToMessage}
+              handleClearChat={handleClearChat}
+              messages={messages}
+              renderMessage={renderMessage}
+              handleSpeak={handleSpeak}
+              isLoading={isLoading}
+              loadingText={loadingText}
+              chatEndRef={chatEndRef}
+              setFullPreviewImage={setFullPreviewImage}
+              expandedMessages={expandedMessages}
+              toggleMessageExpand={toggleMessageExpand}
+              messageRefs={messageRefs}
+              tripConfig={tripConfig}
+              inputMessage={inputMessage}
+              setInputMessage={setInputMessage}
+              listeningLang={listeningLang}
+              toggleListening={toggleListening}
+              fileInputRef={fileInputRef}
+              handleImageSelect={handleImageSelect}
+              selectedImage={selectedImage}
+              clearImage={clearImage}
+              handleSendMessage={handleSendMessage}
+            />
+          )}
+        </div>
 
-        {/* --- 頁籤：記帳/記事 (Finance Tab) --- */}
-        {activeTab === "finance" && (
-          <FinanceTab
-            isDarkMode={isDarkMode}
-            theme={theme}
-            rateData={rateData} // 傳遞匯率資料
-            gasUrl={gasUrl} // 傳遞 GAS URL
-            gasToken={gasToken} // 傳遞 Token
-            apiKey={apiKey} // 傳遞 Gemini API Key
-            setFullPreviewImage={setFullPreviewImage} // 複用 App.jsx 的圖片預覽遮罩
-            showToast={showToast} // 複用 Toast 提示
-          />
-        )}
+        {/* --- 頁籤：記帳/記事 (Finance Tab) - 🚀 優化：Keep Alive */}
+        <div style={{ display: activeTab === "finance" ? "block" : "none" }}>
+          {(activeTab === "finance" || isIdlePreloadDone) && (
+            <FinanceTab
+              isDarkMode={isDarkMode}
+              theme={theme}
+              rateData={rateData} // 傳遞匯率資料
+              gasUrl={gasUrl} // 傳遞 GAS URL
+              gasToken={gasToken} // 傳遞 Token
+              apiKey={apiKey} // 傳遞 Gemini API Key
+              setFullPreviewImage={setFullPreviewImage} // 複用 App.jsx 的圖片預覽遮罩
+              showToast={showToast} // 複用 Toast 提示
+            />
+          )}
+        </div>
 
         {/* --- 底部導覽列 (Bottom Navigation) --- */}
         <BottomNav
@@ -4474,68 +4524,85 @@ const ItineraryApp = () => {
           )}
         </AnimatePresence>
 
-        {/* 天氣詳情彈窗 (Weather Detail Modal) */}
-        {showWeatherDetail && detailWeatherData && (
-          <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-            <div
-              className="absolute inset-0"
-              onClick={handleWeatherDetailClose}
-            />
-
-            <div className="relative z-10 w-full max-w-[400px]">
-              <WeatherDetail
-                weather={detailWeatherData}
-                activeDay={activeDay}
-                simulatedDate={
-                  frozenTestDateTime || (isTestMode ? testDateTime : new Date())
-                }
-                loading={weatherDetailLoading}
-                isDarkMode={isDarkMode}
-                theme={currentTheme}
-                onClose={handleWeatherDetailClose}
-                onRefresh={() => {
-                  if (activeDay === -1) {
-                    getUserLocationWeather({ isSilent: false });
-                  } else {
-                    showToast("已更新預報資訊");
-                  }
-                }}
-                advice={(() => {
-                  if (!userWeather?.temp || !detailWeatherData.temp)
-                    return null;
-                  const targetTemp =
-                    detailWeatherData.daily?.temperature_2m_max?.[0] ||
-                    detailWeatherData.temp;
-                  const diff = targetTemp - userWeather.temp;
-                  const absDiff = Math.abs(diff).toFixed(0);
-                  const isColder = diff < 0;
-                  const code = detailWeatherData.weatherCode;
-
-                  const isRainy = [
-                    51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99,
-                  ].includes(code);
-                  const isSnowy = [71, 73, 75, 77, 85, 86].includes(code);
-
-                  let extraAdvice = "建議穿著輕便";
-                  if (isColder && absDiff > 3) extraAdvice = "請加強保暖";
-                  if (isRainy) extraAdvice += "並攜帶雨具";
-                  if (isSnowy) extraAdvice += "並穿著防滑鞋";
-
-                  return (
-                    <>
-                      天氣為 <b>{detailWeatherData.desc}</b>， 氣溫比目前
-                      {isColder ? "低" : "高"}{" "}
-                      <b style={{ color: isColder ? "#007aff" : "#ff9500" }}>
-                        {absDiff}°C
-                      </b>
-                      ，{extraAdvice}。
-                    </>
-                  );
-                })()}
+        {/* 天氣詳情彈窗 (Weather Detail Modal) - 🚀 優化：Keep Alive */}
+        <div
+          className={`fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-all duration-300 ${
+            showWeatherDetail && detailWeatherData
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none delay-100"
+          }`}
+        >
+          {detailWeatherData && (
+            <>
+              {/* Backdrop Click */}
+              <div
+                className="absolute inset-0"
+                onClick={handleWeatherDetailClose}
               />
-            </div>
-          </div>
-        )}
+
+              {/* Modal Content */}
+              <div
+                className={`relative z-10 w-full max-w-[400px] transition-all duration-300 ${
+                  showWeatherDetail && detailWeatherData
+                    ? "opacity-100 scale-100 translate-y-0"
+                    : "opacity-0 scale-95 translate-y-4"
+                }`}
+              >
+                <WeatherDetail
+                  weather={detailWeatherData}
+                  activeDay={activeDay}
+                  simulatedDate={
+                    frozenTestDateTime ||
+                    (isTestMode ? testDateTime : new Date())
+                  }
+                  loading={weatherDetailLoading}
+                  isDarkMode={isDarkMode}
+                  theme={currentTheme}
+                  onClose={handleWeatherDetailClose}
+                  onRefresh={() => {
+                    if (activeDay === -1) {
+                      getUserLocationWeather({ isSilent: false });
+                    } else {
+                      showToast("已更新預報資訊");
+                    }
+                  }}
+                  advice={(() => {
+                    if (!userWeather?.temp || !detailWeatherData.temp)
+                      return null;
+                    const targetTemp =
+                      detailWeatherData.daily?.temperature_2m_max?.[0] ||
+                      detailWeatherData.temp;
+                    const diff = targetTemp - userWeather.temp;
+                    const absDiff = Math.abs(diff).toFixed(0);
+                    const isColder = diff < 0;
+                    const code = detailWeatherData.weatherCode;
+
+                    const isRainy = [
+                      51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99,
+                    ].includes(code);
+                    const isSnowy = [71, 73, 75, 77, 85, 86].includes(code);
+
+                    let extraAdvice = "建議穿著輕便";
+                    if (isColder && absDiff > 3) extraAdvice = "請加強保暖";
+                    if (isRainy) extraAdvice += "並攜帶雨具";
+                    if (isSnowy) extraAdvice += "並穿著防滑鞋";
+
+                    return (
+                      <>
+                        天氣為 <b>{detailWeatherData.desc}</b>， 氣溫比目前
+                        {isColder ? "低" : "高"}{" "}
+                        <b style={{ color: isColder ? "#007aff" : "#ff9500" }}>
+                          {absDiff}°C
+                        </b>
+                        ，{extraAdvice}。
+                      </>
+                    );
+                  })()}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
