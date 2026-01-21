@@ -106,11 +106,56 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24, // 延長到 24 小時，確保隔天沒網路也能看昨天的預報
               },
               cacheableResponse: {
-                statuses: [0, 200], // 👈 關鍵：強制快取，避免因為 CORS 問題不存
+                statuses: [0, 200],
               },
             },
           },
-          // (C) 外部圖片或地圖圖磚 (如果有用到)
+          // (C) 地圖圖磚 (CartoDB)：快取地圖圖片，提升拖曳順暢度
+          {
+            urlPattern: /^https:\/\/\w+\.basemaps\.cartocdn\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "map-tiles-cache",
+              expiration: {
+                maxEntries: 500, // 增加數量，地圖圖磚很多
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 天
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          // (D) 路線規劃 (OSRM) 與 地址反查 (Nominatim)：固定座標的結果是固定的
+          {
+            urlPattern: /^https:\/\/(router\.project-osrm\.org|nominatim\.openstreetmap\.org)\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "geo-api-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 天
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          // (E) 本地字體檔案 (Runtime Cache)：不預先下載，而是用到時才快取
+          {
+             urlPattern: /\.(?:woff|woff2)$/i,
+             handler: "CacheFirst",
+             options: {
+               cacheName: "local-fonts-cache",
+               expiration: {
+                 maxEntries: 50,
+                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 年
+               },
+               cacheableResponse: {
+                 statuses: [0, 200],
+               },
+             },
+          },
+          // (F) 外部圖片或地圖圖磚 (如果有用到)
           {
             urlPattern: ({ request }) => request.destination === "image",
             handler: "CacheFirst",
