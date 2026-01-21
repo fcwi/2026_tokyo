@@ -74,6 +74,8 @@ export default defineConfig({
       workbox: {
         // 1. 靜態資源預先快取：讓 HTML, JS, CSS, 圖片在離線時也能載入
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg}"],
+        // 自動清除舊版本快取
+        cleanupOutdatedCaches: true,
 
         // 2. 執行時快取 (Runtime Caching)
         runtimeCaching: [
@@ -146,8 +148,7 @@ export default defineConfig({
           "icons-vendor": ["lucide-react"],
           // 🆕 分離地圖相關庫（較大）
           "map-vendor": ["react-leaflet", "leaflet"],
-          // 🆕 分離圖片處理庫
-          "heic-vendor": ["heic2any"],
+          // 🆕 分離圖片處理庫 - heic2any 已使用動態導入，無需手動分割
           // 🆕 分離特效庫
           "particles-vendor": ["react-tsparticles", "tsparticles-slim"],
           // Firebase 使用模塊化導出，會自動分割，無需手動配置

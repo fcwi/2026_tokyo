@@ -92,12 +92,12 @@ import { processFileForHeic } from "./utils/imageUtils";
 // 抑制 ESLint 對於 JSX 中 motion 未使用的誤判
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
-import ChatInput from "./components/ChatInput.jsx";
-import AIPanel from "./components/AI/AIPanel.jsx";
-import CurrencyWidget from "./components/CurrencyWidget.jsx";
-import CalculatorModal from "./components/CalculatorModal.jsx";
-import TestModePanel from "./components/TestModePanel.jsx";
-import WeatherDetail from "./components/WeatherDetail.jsx";
+const ChatInput = lazy(() => import("./components/ChatInput.jsx"));
+const AIPanel = lazy(() => import("./components/AI/AIPanel.jsx"));
+const CurrencyWidget = lazy(() => import("./components/CurrencyWidget.jsx"));
+const CalculatorModal = lazy(() => import("./components/CalculatorModal.jsx"));
+const TestModePanel = lazy(() => import("./components/TestModePanel.jsx"));
+const WeatherDetail = lazy(() => import("./components/WeatherDetail.jsx"));
 
 // 財務管理主畫面 - 使用動態導入減少初始 bundle
 const FinanceTab = lazy(() => import("./components/Tabs/FinanceTab.jsx"));
@@ -105,7 +105,8 @@ const FinanceTab = lazy(() => import("./components/Tabs/FinanceTab.jsx"));
 const ItineraryTab = lazy(() => import("./components/Tabs/ItineraryTab.jsx"));
 
 // const ChatMessageList = lazy(() => import("./components/ChatMessageList.jsx"));
-import DayMap from "./components/DayMap.jsx";
+// Map Modal - 使用動態導入
+const DayMap = lazy(() => import("./components/DayMap.jsx"));
 
 import WeatherParticles from "./components/Background/WeatherParticles.jsx";
 import { getParticleType, getSkyCondition } from "./utils/weatherHelpers.js";
