@@ -211,7 +211,6 @@ export default defineConfig({
           // 🆕 分離圖片處理庫 - heic2any 已使用動態導入，無需手動分割
           // 🆕 分離特效庫
           "particles-vendor": ["react-tsparticles", "tsparticles-slim"],
-          // Firebase 使用模塊化導出，會自動分割，無需手動配置
         },
       },
     },
