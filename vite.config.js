@@ -110,6 +110,21 @@ export default defineConfig({
               },
             },
           },
+          // (B-2) 匯率 API (Currency-API)：資料變動不頻繁，但需要離線存取
+          {
+            urlPattern: /^https:\/\/.*\.currency-api\.pages\.dev\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "currency-api-cache",
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 天
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           // (C) 地圖圖磚 (CartoDB)：快取地圖圖片，提升拖曳順暢度
           {
             urlPattern: /^https:\/\/\w+\.basemaps\.cartocdn\.com\/.*/i,

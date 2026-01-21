@@ -307,13 +307,14 @@ const FinanceScreen = ({
     if (!imageUrl) return null;
     try {
       // 添加時間戳避免快取問題
-      const fetchUrl = imageUrl + (imageUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
-      
+      const fetchUrl =
+        imageUrl + (imageUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+
       const response = await fetch(fetchUrl, { mode: "cors" });
       if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-      
+
       const blob = await response.blob();
-      
+
       // 轉換 Blob 為 Base64
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -321,11 +322,11 @@ const FinanceScreen = ({
           const base64 = reader.result;
           // 基本驗證，確保回傳的是圖片 Data URL
           if (typeof base64 === "string" && base64.startsWith("data:image")) {
-             // 附加檔案類型資訊給外部使用 (選擇性)
-             resolve({ 
-               base64, 
-               mimeType: blob.type 
-             });
+            // 附加檔案類型資訊給外部使用 (選擇性)
+            resolve({
+              base64,
+              mimeType: blob.type,
+            });
           } else {
             console.warn("Invalid base64 result");
             resolve(null);
@@ -436,22 +437,26 @@ const FinanceScreen = ({
                     // 下載並快取圖片
                     console.log(`⬇️ 下載圖片中: ${record.id}`);
                     const result = await fetchImageAsBase64(record.image);
-                    
+
                     if (result && result.base64) {
                       const { base64, mimeType } = result;
-                      console.log(`💾 儲存圖片到 IndexedDB: ${record.id}, type: ${mimeType}`);
-                      
+                      console.log(
+                        `💾 儲存圖片到 IndexedDB: ${record.id}, type: ${mimeType}`,
+                      );
+
                       // 嘗試從 URL 提取檔名
                       let filename = "image";
                       try {
                         const urlObj = new URL(record.image);
                         const pathname = urlObj.pathname;
-                        const extracted = pathname.substring(pathname.lastIndexOf('/') + 1);
+                        const extracted = pathname.substring(
+                          pathname.lastIndexOf("/") + 1,
+                        );
                         if (extracted && extracted.length < 50) {
                           filename = extracted;
                         }
-                      } catch (e) {
-                         // ignore
+                      } catch {
+                        // ignore
                       }
 
                       // 根據 MIME type 強制附加或修正副檔名
@@ -459,24 +464,28 @@ const FinanceScreen = ({
                       if (mimeType === "image/png") ext = ".png";
                       else if (mimeType === "image/webp") ext = ".webp";
                       else if (mimeType === "image/gif") ext = ".gif";
-                      
+
                       // 如果檔名沒有副檔名，或是副檔名不匹配，則附加
                       if (!filename.toLowerCase().endsWith(ext)) {
-                         // 簡單檢查是否已有任何圖片副檔名
-                         if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(filename)) {
-                           filename += ext;
-                         }
+                        // 簡單檢查是否已有任何圖片副檔名
+                        if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(filename)) {
+                          filename += ext;
+                        }
                       }
 
                       await financeDB.saveImage(record.id, base64, filename);
-                      
+
                       // 🆕 立即更新 UI，使用快取的 base64
                       setRecords((prev) =>
                         prev.map((r) =>
-                          String(r.id) === String(record.id) ? { ...r, image: base64 } : r,
+                          String(r.id) === String(record.id)
+                            ? { ...r, image: base64 }
+                            : r,
                         ),
                       );
-                      console.log(`✅ 已快取圖片: record ${record.id} (${filename})`);
+                      console.log(
+                        `✅ 已快取圖片: record ${record.id} (${filename})`,
+                      );
                     } else {
                       console.warn(`❌ 下載圖片失敗 (返回 null): ${record.id}`);
                     }
@@ -523,7 +532,7 @@ const FinanceScreen = ({
             ...r,
             image: imageValue,
             // 🆕 確保保留 hasCloudImage 標記，若原始資料有圖片（base64或URL）也視為有圖片
-            hasCloudImage: r.hasCloudImage || !!r.image, 
+            hasCloudImage: r.hasCloudImage || !!r.image,
           };
         });
 
@@ -578,7 +587,9 @@ const FinanceScreen = ({
           setRecords((prevRecords) =>
             prevRecords.map((r) => {
               // 強制使用 String 比較 ID，確保安全性
-              const cached = updatedRecords.find((u) => String(u.id) === String(r.id));
+              const cached = updatedRecords.find(
+                (u) => String(u.id) === String(r.id),
+              );
               if (cached) {
                 return { ...r, image: cached.image };
               }
@@ -739,18 +750,16 @@ const FinanceScreen = ({
     if (files.length === 0) return;
 
     if (mode === "note") {
-      const base64Promises = files.map(
-        async (file) => {
-          const processedFile = await processFileForHeic(file, () =>
-            showToast("正在轉換 HEIC 圖片，請稍候...", "info")
-          );
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (event) => resolve(event.target.result);
-            reader.readAsDataURL(processedFile);
-          });
-        }
-      );
+      const base64Promises = files.map(async (file) => {
+        const processedFile = await processFileForHeic(file, () =>
+          showToast("正在轉換 HEIC 圖片，請稍候...", "info"),
+        );
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => resolve(event.target.result);
+          reader.readAsDataURL(processedFile);
+        });
+      });
       try {
         const newImages = await Promise.all(base64Promises);
         setNoteImages((prev) => [...prev, ...newImages]);
@@ -771,7 +780,7 @@ const FinanceScreen = ({
     } else {
       const file = files[0];
       const processedFile = await processFileForHeic(file, () =>
-        showToast("正在轉換 HEIC 圖片...", "info")
+        showToast("正在轉換 HEIC 圖片...", "info"),
       );
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -796,18 +805,16 @@ const FinanceScreen = ({
 
   const processImagesForScanning = async (files, isReset = false) => {
     try {
-      const base64Promises = files.map(
-        async (file) => {
-          const processedFile = await processFileForHeic(file, () =>
-            showToast("正在轉換 HEIC 圖片，請稍候...", "info")
-          );
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (evt) => resolve(evt.target.result);
-            reader.readAsDataURL(processedFile);
-          });
-        }
-      );
+      const base64Promises = files.map(async (file) => {
+        const processedFile = await processFileForHeic(file, () =>
+          showToast("正在轉換 HEIC 圖片，請稍候...", "info"),
+        );
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => resolve(evt.target.result);
+          reader.readAsDataURL(processedFile);
+        });
+      });
       const newImages = await Promise.all(base64Promises);
       setReceiptImages((prev) =>
         isReset ? newImages : [...prev, ...newImages],
@@ -866,6 +873,17 @@ const FinanceScreen = ({
     } finally {
       setIsScanning(false);
     }
+  };
+
+  const handleRemoveReceiptImage = (indexToRemove) => {
+    // 1. 移除圖片
+    const imgToRemove = receiptImages[indexToRemove];
+    setReceiptImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+
+    // 2. 移除該圖片關聯的項目
+    setReceiptItems((prev) =>
+      prev.filter((item) => item.sourceImage !== imgToRemove),
+    );
   };
 
   const addRecord = async (content, val, imageBase64, customType = null) => {
@@ -1941,6 +1959,17 @@ const FinanceScreen = ({
                       <div className="absolute top-1 right-1 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded-full backdrop-blur-lg ring-1 ring-white/10">
                         {idx + 1}
                       </div>
+                      {/* 🆕 刪除按鈕 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveReceiptImage(idx);
+                        }}
+                        className="absolute top-1 left-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-sm"
+                        title="移除此圖片"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </div>
                   ))}
 

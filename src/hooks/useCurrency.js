@@ -6,15 +6,15 @@ export const useCurrency = (code, target, isOnline) => {
     current: null,
     trend: "neutral",
     diff: 0,
-    loading: isOnline, 
+    loading: true, 
     error: false,
   });
 
   useEffect(() => {
-    // 如果離線，不需要進行資料請求
-    if (!isOnline) {
-      return;
-    }
+    // 即使離線也嘗試 fetch，讓 Service Worker 攔截並返回快取資料
+    // if (!isOnline) {
+    //   return;
+    // }
 
     const fetchRates = async () => {
       // 在開始請求前，確保 loading 是開啟的（這發生在非同步函數中，是安全的）
