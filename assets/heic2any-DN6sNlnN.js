@@ -1,1 +1,0 @@
-import{g as e}from"./react-vendor-DHe-TmYE.js";import{r as o}from"./heic-vendor-C_wLDDTr.js";const r=e(o()),t=Object.freeze(Object.defineProperty({__proto__:null,default:r},Symbol.toStringTag,{value:"Module"}));export{t as h};
