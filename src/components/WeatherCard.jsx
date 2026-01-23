@@ -52,10 +52,15 @@ const WeatherCard = memo(
                   {userWeather.locationName}
                   <button
                     onClick={handleWeatherDetailOpen}
-                    className={`p-2 rounded-xl transition-all hover:scale-125 active:scale-95 ${isDarkMode ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-black/5 text-stone-400 hover:text-stone-600"}`}
+                    className={`ml-1 flex items-center gap-1 px-2 py-0.5 rounded-full transition-all active:scale-95 ${
+                      isDarkMode
+                        ? "bg-white/10 text-white/90 hover:bg-white/20 ring-1 ring-white/10"
+                        : "bg-black/5 text-stone-600 hover:bg-black/10 ring-1 ring-black/5"
+                    }`}
                     title="查看詳細氣象資訊"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-bold">詳細天氣資訊</span>
+                    <ExternalLink className="w-3 h-3 opacity-70" />
                   </button>
                 </span>
               </div>
