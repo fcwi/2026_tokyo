@@ -1,4 +1,11 @@
-﻿import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
+﻿import React, {
+  useState,
+  useRef,
+  useEffect,
+  lazy,
+  Suspense,
+  useTransition,
+} from "react";
 import {
   Sun,
   CloudSnow,
@@ -191,6 +198,8 @@ const ItineraryApp = () => {
   const [hasLocationPermission, setHasLocationPermission] = useState(null);
   // 🚀 優化標記：閒置預載是否完成 (用於控制 Tab 預渲染)
   const [isIdlePreloadDone, setIsIdlePreloadDone] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [isPending, startTransition] = useTransition();
 
   // 圖片下載：處理 data URL 及一般 URL，避免另開分頁
   const handleDownloadPreview = async (e) => {
@@ -309,17 +318,25 @@ const ItineraryApp = () => {
           import("./components/AI/AIPanel.jsx"),
           import("./components/ChatInput.jsx"),
           import("./components/TestModePanel.jsx"),
+          // 加入 Tab 組件確保 Code Chunk 被下載
+          import("./components/Tabs/FinanceTab.jsx"),
+          import("./components/Tabs/ItineraryTab.jsx"),
         ];
 
         await Promise.all(componentsToLoad);
         if (isDev) console.log("✅ [Idle Preload] 背景預載完成");
 
         // 標記預載完成，開始預渲染 Tab
-        setIsIdlePreloadDone(true);
+        // 使用 startTransition 標記為非緊急更新，避免觸發 Suspense Fallback
+        startTransition(() => {
+          setIsIdlePreloadDone(true);
+        });
       } catch (e) {
         console.warn("⚠️ [Idle Preload] 預載失敗 (非致命):", e);
         // 即使失敗也設為 true，確保至少有機會渲染
-        setIsIdlePreloadDone(true);
+        startTransition(() => {
+          setIsIdlePreloadDone(true);
+        });
       }
     };
 
